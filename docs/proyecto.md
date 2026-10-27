@@ -21,7 +21,7 @@ Prototipo en desarrollo desde cero. Ya existen la maqueta UI/UX en Figma (tema o
 | Frontend | React + Vite, TypeScript, Tailwind CSS |
 | Backend | Python, FastAPI |
 | IA | Google Gemini API |
-| Datos de partidos | api.football-data.org (API v4) |
+| Datos de partidos | API-Football (v3.football.api-sports.io), endpoint `/fixtures` |
 | Persistencia | Por definir según los requisitos de almacenamiento del SENA. Por ahora, caché en memoria en el backend. |
 
 ## Hitos
@@ -32,8 +32,9 @@ Prototipo en desarrollo desde cero. Ya existen la maqueta UI/UX en Figma (tema o
 
 ## Reglas de arquitectura
 
-- **El backend centraliza todas las consultas externas.** El frontend habla solo con el backend de VYROX. Las credenciales (el `X-Auth-Token` de football-data.org y la clave de Gemini) viven únicamente en el backend.
-- **Rate limit de football-data.org:** 10 peticiones por minuto en el plan gratuito. La caché en memoria del backend existe para respetar ese límite.
+- **El backend centraliza todas las consultas externas.** El frontend habla solo con el backend de VYROX. Las credenciales (la `API_FOOTBALL_KEY`, enviada en el header `x-apisports-key`, y la clave de Gemini) viven únicamente en `backend/.env`, que no se sube al repo.
+- **Cuota de API-Football:** 100 peticiones por día en el plan gratuito. La caché en memoria del backend (`CACHE_TTL`, 300 s por defecto) existe para cuidar esa cuota; si la API falla o se agota la cuota, se sirven los últimos datos guardados.
+- **Zona horaria:** los partidos se piden por la fecha de hoy en Colombia (`timezone=America/Bogota`).
 - **Modo oscuro** como interfaz estándar, siguiendo la maqueta de Figma.
 
 ## Idioma

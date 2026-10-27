@@ -11,7 +11,7 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows (en macOS/Linux: source .venv/bin/activate)
 pip install -r requirements.txt
-copy .env.example .env          # pon tu token; sin token se sirven datos de ejemplo
+copy .env.example .env          # pon tu API key de API-Football; sin key se sirven datos de ejemplo
 uvicorn app.main:app --reload --env-file .env
 ```
 

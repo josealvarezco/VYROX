@@ -1,17 +1,17 @@
 # Graph Report - VYROX  (2026-10-27)
 
 ## Corpus Check
-- 21 files · ~3,861 words
+- 21 files · ~4,378 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 155 nodes · 176 edges · 13 communities (11 shown, 2 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.85)
+- 165 nodes · 192 edges · 14 communities (11 shown, 3 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c507ed12`
+- Built from commit: `ad8af93a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -26,6 +26,7 @@
 - Issue tracker: GitHub
 - Domain Docs
 - .oxlintrc.json
+- upstream
 - scripts
 - tsconfig.json
 - triage-labels.md
@@ -33,33 +34,35 @@
 ## God Nodes (most connected - your core abstractions)
 1. `compilerOptions` - 18 edges
 2. `compilerOptions` - 15 edges
-3. `fetch_matches()` - 9 edges
+3. `fetch_matches()` - 11 edges
 4. `VYROX: contexto del proyecto` - 8 edges
-5. `Issue tracker: GitHub` - 6 edges
-6. `scripts` - 5 edges
-7. `Domain Docs` - 5 edges
-8. `matches()` - 4 edges
-9. `upstream()` - 4 edges
-10. `react` - 4 edges
+5. `UpstreamError` - 6 edges
+6. `Issue tracker: GitHub` - 6 edges
+7. `matches()` - 5 edges
+8. `scripts` - 5 edges
+9. `Domain Docs` - 5 edges
+10. `to_match()` - 4 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `matches()` --uses--> `UpstreamError`  [INFERRED]
+  backend/app/main.py → backend/app/api_football.py
+- `test_quota_error_serves_stale_cache_and_waits_a_ttl_to_retry()` --calls--> `fetch_matches()`  [EXTRACTED]
+  backend/tests/test_matches.py → backend/app/api_football.py
 - `test_repeated_requests_within_ttl_hit_upstream_once()` --calls--> `fetch_matches()`  [EXTRACTED]
-  backend/tests/test_matches.py → backend/app/football_data.py
-- `test_upstream_error_serves_stale_cache()` --calls--> `fetch_matches()`  [EXTRACTED]
-  backend/tests/test_matches.py → backend/app/football_data.py
+  backend/tests/test_matches.py → backend/app/api_football.py
 - `matches()` --calls--> `fetch_matches()`  [EXTRACTED]
-  backend/app/main.py → backend/app/football_data.py
+  backend/app/main.py → backend/app/api_football.py
 - `matches()` --calls--> `group_by_competition()`  [EXTRACTED]
-  backend/app/main.py → backend/app/football_data.py
+  backend/app/main.py → backend/app/api_football.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (13 total, 2 thin omitted)
+## Communities (14 total, 3 thin omitted)
 
 ### Community 0 - "test_matches.py"
-Cohesion: 0.11
-Nodes (7): fetch_matches(), group_by_competition(), matches(), fresh_cache(), test_repeated_requests_within_ttl_hit_upstream_once(), test_upstream_error_serves_stale_cache(), upstream()
+Cohesion: 0.10
+Nodes (9): fetch_matches(), group_by_competition(), _team(), to_match(), UpstreamError, matches(), test_quota_error_serves_stale_cache_and_waits_a_ttl_to_retry(), test_repeated_requests_within_ttl_hit_upstream_once() (+1 more)
 
 ### Community 1 - "package.json"
 Cohesion: 0.12
@@ -102,17 +105,17 @@ Cohesion: 0.40
 Nodes (5): scripts, build, dev, lint, preview
 
 ## Knowledge Gaps
-- **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `App.tsx` to `package.json`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Should `test_matches.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.11396011396011396 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10080645161290322 - nodes in this community are weakly interconnected._
 - **Why does `scripts` connect `scripts` to `package.json`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.11666666666666667 - nodes in this community are weakly interconnected._
 - **Should `compilerOptions` be split into smaller, more focused modules?**

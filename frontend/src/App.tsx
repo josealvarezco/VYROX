@@ -12,7 +12,7 @@ type Match = {
 type Competition = { id: number; name: string; emblem: string; area: { name: string }; matches: Match[] }
 type MatchesResponse = { sample: boolean; competitions: Competition[] }
 
-// Matches the backend cache TTL; polling faster would only return the same data.
+// Cheap: the backend answers from its cache, so polling never spends API-Football quota.
 const REFRESH_MS = 60_000
 
 const LIVE = new Set(['IN_PLAY', 'PAUSED'])
@@ -83,7 +83,7 @@ export default function App() {
 
       {data?.sample && (
         <p className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
-          Mostrando datos de ejemplo: falta configurar FOOTBALL_DATA_TOKEN en el backend.
+          Mostrando datos de ejemplo: falta configurar API_FOOTBALL_KEY en el backend.
         </p>
       )}
       {error && (
