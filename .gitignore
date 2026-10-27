@@ -1,1 +1,7 @@
 graphify-out/cache/
+backend/.venv/
+.env
+__pycache__/
+.pytest_cache/
+graphify-out/.graphify_*
+graphify-out/manifest.json
