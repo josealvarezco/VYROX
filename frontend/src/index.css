@@ -1,5 +1,85 @@
 @import 'tailwindcss';
 
+/* VYROX brandbook: Inter Tight for interface text, Space Grotesk for numbers, and the official palette. */
+@theme {
+  --font-sans: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  --font-num: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+  --color-cream: #f7f5eb;
+  --color-forest: #0d331e;
+  --color-yellow: #f4d56d;
+  --color-orange: #ee761b;
+  --color-peach: #fbc193;
+  --color-sky: #8dc3e8;
+}
+
+/* Colors that follow the theme: light by default, dark under <html data-theme="dark">. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-modal: var(--modal);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-chip: var(--chip);
+  --color-gold: var(--gold);
+  --color-warn: var(--warn);
+  --color-sub-in: var(--sub-in);
+  --color-sub-out: var(--sub-out);
+}
+
 :root {
+  color-scheme: light;
+  --page: #efece0;
+  --surface: #f7f5eb; /* cards: sidebar, league blocks */
+  --surface-2: #efece0; /* inner panels, inputs, hover */
+  --modal: #f7f5eb;
+  --ink: #0d331e;
+  --muted: #3a5a47;
+  --line: rgb(13 51 30 / 0.12);
+  --chip: #0d331e; /* date pills, kickoff times, probability rails */
+  --gold: #7a5c00; /* the brand yellow is too light for text on cream */
+  --warn: #a64b0a;
+  --sub-in: #1d7a3e;
+  --sub-out: #b42318;
+}
+
+:root[data-theme='dark'] {
   color-scheme: dark;
+  --page: linear-gradient(160deg, #06180e 40%, #0e172c);
+  --surface: #0d331e;
+  --surface-2: #124026;
+  --modal: #071f12;
+  --ink: #f7f5eb;
+  --muted: #b8c7b9;
+  --line: rgb(247 245 235 / 0.1);
+  --chip: #124026;
+  --gold: #f4d56d;
+  --warn: #fbc193;
+  --sub-in: #7dd3a0;
+  --sub-out: #fca5a5;
+}
+
+@layer base {
+  body {
+    background: var(--page) fixed;
+    color: var(--ink);
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.025em;
+  }
+}
+
+@layer components {
+  /* Night match: dark green lit from the top by warm stadium floodlights. */
+  .hero {
+    background:
+      radial-gradient(40% 140% at 12% -25%, rgb(244 213 109 / 0.5), transparent 70%),
+      radial-gradient(40% 140% at 88% -25%, rgb(251 193 147 / 0.38), transparent 70%),
+      linear-gradient(180deg, #071f12, #0d331e);
+    color: #f7f5eb;
+  }
 }

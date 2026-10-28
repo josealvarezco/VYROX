@@ -22,7 +22,7 @@ Prototipo en desarrollo. Ya existen la maqueta UI/UX en Figma (tema oscuro) y la
 | Backend | Python, FastAPI |
 | IA | Google Gemini API vía REST con `httpx`: alias `gemini-flash-latest` y, si está saturado o lento, `gemini-flash-lite-latest` (`gemini-2.5-flash` ya no responde) |
 | Datos de partidos | API-Football (v3.football.api-sports.io), endpoint `/fixtures` |
-| Persistencia | Ninguna: arquitectura stateless, sin base de datos. Solo caché en memoria en el backend (se pierde al reiniciar). Los equipos seguidos se guardan en `localStorage` del navegador. |
+| Persistencia | Ninguna: arquitectura stateless, sin base de datos. Solo caché en memoria en el backend (se pierde al reiniciar). Los equipos seguidos y el tema se guardan en `localStorage` del navegador. |
 
 ## Hitos
 
@@ -40,7 +40,7 @@ Prototipo en desarrollo. Ya existen la maqueta UI/UX en Figma (tema oscuro) y la
 - **Match Center:** `GET /api/matches/{id}/details` gasta 2 peticiones de API-Football por partido: `/fixtures?id` (eventos, alineaciones y estadísticas) y `/fixtures/headtohead`. El plan gratuito no acepta el parámetro `last`, así que el backend recibe todo el historial y se queda con los 5 últimos partidos terminados, sin contar el propio partido. Caché por partido: 120 s si está en vivo, 6 h si terminó y, si no ha empezado, hasta el inicio. El H2H se guarda 6 h por pareja de equipos. El encabezado (minuto, jornada, estadio, árbitro) sale de `/api/matches` y no gasta cuota.
 - **Datos simulados:** si un partido ya jugado no trae alineaciones o estadísticas (ligas sin cobertura) o no hay API key, el backend genera datos de demostración estables por partido y los marca en `simulated`; la interfaz muestra el aviso "Datos simulados". Nunca se envían a Gemini.
 - **Pronósticos IA:** `POST /api/predictions` pide a Gemini un JSON con esquema fijo (ganador, probabilidades, ambos anotan, más/menos de 2.5, confianza, apuesta recomendada, justificación). El prompt incluye el H2H y las estadísticas reales del partido (del Match Center) para que Gemini cite datos concretos. Cada pronóstico se guarda 6 horas por `match_id`. Sin `GEMINI_API_KEY` o si Gemini falla, responde 200 con `fallback: true` y un mensaje.
-- **Modo oscuro** como interfaz estándar, siguiendo la maqueta de Figma.
+- **Temas claro y oscuro** con la paleta y las tipografías del brandbook (Inter Tight para la interfaz, Space Grotesk para los números). Los colores que cambian con el tema son variables CSS en `frontend/src/index.css` (`surface`, `ink`, `muted`, `chip`…); los colores de marca (`cream`, `forest`, `yellow`, `orange`, `peach`, `sky`) son fijos. El conmutador sol/luna de la cabecera guarda la elección en `localStorage` (`vyrox_theme`); sin elección, se sigue la preferencia del sistema.
 
 ## Idioma
 

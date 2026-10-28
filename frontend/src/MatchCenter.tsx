@@ -9,8 +9,8 @@ const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Pronóstico IA ✨'] 
 type Tab = (typeof TABS)[number]
 type Substitution = Extract<MatchEvent, { type: 'subst' }>
 const SIDES = ['home', 'away'] as const
-const SIDE_COLOR = { home: 'bg-sky-500', away: 'bg-rose-500' } as const
-const SIDE_RING = { home: 'ring-sky-500', away: 'ring-rose-500' } as const
+const SIDE_COLOR = { home: 'bg-sky', away: 'bg-orange' } as const
+const SIDE_RING = { home: 'ring-sky', away: 'ring-orange' } as const
 
 function Icon({ symbol, label }: { symbol: string; label: string }) {
   return (
@@ -21,12 +21,12 @@ function Icon({ symbol, label }: { symbol: string; label: string }) {
 }
 
 function Note({ children }: { children: ReactNode }) {
-  return <p className="py-8 text-center text-sm text-neutral-400">{children}</p>
+  return <p className="py-8 text-center text-sm text-muted">{children}</p>
 }
 
 function SimulatedBadge({ sample }: { sample: boolean }) {
   return (
-    <p className="mb-4 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-300">
+    <p className="mb-4 inline-flex rounded-full border border-orange/50 bg-orange/10 px-2.5 py-0.5 text-xs font-semibold text-warn">
       Datos simulados · {sample ? 'sin API key' : 'la liga no tiene cobertura'}
     </p>
   )
@@ -36,14 +36,14 @@ function TeamBadge({ team, followed, onFollow }: { team: Team; followed: boolean
   return (
     <div className="flex min-w-0 flex-col items-center gap-1.5">
       <img src={team.crest} alt="" className="size-12 object-contain sm:size-16" />
-      <span className="w-full truncate font-semibold">{team.shortName}</span>
+      <span className="w-full truncate text-lg font-bold tracking-tight">{team.shortName}</span>
       <button
         type="button"
         onClick={() => onFollow(team)}
         aria-pressed={followed}
         aria-label={`Seguir a ${team.shortName}`}
-        className={`rounded-full border px-2 py-0.5 text-xs ${
-          followed ? 'border-amber-400/50 text-amber-300' : 'border-neutral-700 text-neutral-400 hover:text-neutral-200'
+        className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+          followed ? 'border-yellow bg-yellow text-forest' : 'border-cream/25 text-cream/80 hover:bg-cream/10 hover:text-cream'
         }`}
       >
         {followed ? '★ Siguiendo' : '☆ Seguir'}
@@ -56,8 +56,8 @@ function EventText({ event }: { event: MatchEvent }) {
   if (event.type === 'subst')
     return (
       <span>
-        <Icon symbol="🔄" label="Cambio" /> <span className="text-emerald-400">↑ {event.player_in}</span>{' '}
-        <span className="text-red-400">↓ {event.player_out}</span>
+        <Icon symbol="🔄" label="Cambio" /> <span className="text-sub-in">↑ {event.player_in}</span>{' '}
+        <span className="text-sub-out">↓ {event.player_out}</span>
       </span>
     )
   if (event.type === 'goal')
@@ -65,7 +65,7 @@ function EventText({ event }: { event: MatchEvent }) {
       <span>
         <Icon symbol="⚽" label="Gol" /> <strong>{event.player}</strong>
         {event.detail && ` (${event.detail})`}
-        {event.assist && <span className="text-neutral-400"> · asist. {event.assist}</span>}
+        {event.assist && <span className="text-muted"> · asist. {event.assist}</span>}
       </span>
     )
   return (
@@ -93,7 +93,7 @@ function Summary({ match, events }: { match: Match; events: MatchEvent[] }) {
           {events.map((event, index) => (
             <li key={index} className="grid grid-cols-[minmax(0,1fr)_3.5rem_minmax(0,1fr)] items-start gap-2 text-sm">
               <div className="text-right">{event.team === 'home' && <EventText event={event} />}</div>
-              <span className="rounded-full bg-neutral-800 py-0.5 text-center text-xs font-semibold tabular-nums text-neutral-300">
+              <span className="rounded-full bg-chip py-0.5 text-center text-xs font-semibold font-num tabular-nums text-cream">
                 {event.minute}
               </span>
               <div>{event.team === 'away' && <EventText event={event} />}</div>
@@ -104,10 +104,10 @@ function Summary({ match, events }: { match: Match; events: MatchEvent[] }) {
         <Note>Sin goles, tarjetas ni cambios registrados.</Note>
       )}
       {facts.length > 0 && (
-        <dl className="grid gap-3 border-t border-neutral-800 pt-4 text-sm sm:grid-cols-3">
+        <dl className="grid gap-3 border-t border-line pt-4 text-sm sm:grid-cols-3">
           {facts.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-neutral-400">{label}</dt>
+              <dt className="text-muted">{label}</dt>
               <dd>{value}</dd>
             </div>
           ))}
@@ -127,21 +127,21 @@ function Statistics({ rows }: { rows: MatchDetails['statistics'] }) {
         return (
           <div key={label}>
             <div className="mb-1.5 flex items-baseline justify-between text-sm">
-              <span className="font-semibold tabular-nums">
+              <span className="font-semibold font-num tabular-nums">
                 {home}
                 {unit}
               </span>
-              <span className="text-neutral-400">{label}</span>
-              <span className="font-semibold tabular-nums">
+              <span className="text-muted">{label}</span>
+              <span className="font-semibold font-num tabular-nums">
                 {away}
                 {unit}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-1" aria-hidden="true">
-              <div className="flex h-2 justify-end overflow-hidden rounded-l-full bg-neutral-800">
+              <div className="flex h-2 justify-end overflow-hidden rounded-l-full bg-line">
                 <div className={`h-full ${SIDE_COLOR.home}`} style={{ width: `${(home / total) * 100}%` }} />
               </div>
-              <div className="h-2 overflow-hidden rounded-r-full bg-neutral-800">
+              <div className="h-2 overflow-hidden rounded-r-full bg-line">
                 <div className={`h-full ${SIDE_COLOR.away}`} style={{ width: `${(away / total) * 100}%` }} />
               </div>
             </div>
@@ -170,15 +170,15 @@ function PlayerSpot({ side, player, style }: { side: Side; player: Starter; styl
           src={`https://media.api-sports.io/football/players/${player.id}.png`}
           alt=""
           onError={() => setPhoto(false)}
-          className={`size-10 rounded-full bg-neutral-700 object-cover ring-2 ${SIDE_RING[side]}`}
+          className={`size-10 rounded-full bg-cream/10 object-cover ring-2 ${SIDE_RING[side]}`}
         />
       ) : (
-        <span className={`grid size-10 place-items-center rounded-full text-sm font-bold text-white ${SIDE_COLOR[side]}`}>
+        <span className={`grid size-10 place-items-center rounded-full font-num text-sm font-bold text-forest ${SIDE_COLOR[side]}`}>
           {player.number}
         </span>
       )}
-      <span className="mt-1 line-clamp-2 text-[11px] leading-tight font-semibold text-white">
-        <span className="text-neutral-400">{player.number}</span> {player.name}
+      <span className="mt-1 line-clamp-2 text-[11px] leading-tight font-semibold text-cream">
+        <span className="font-num font-bold text-yellow">{player.number}</span> {player.name}
       </span>
       <Marks player={player} />
     </div>
@@ -215,12 +215,12 @@ function Pitch({ lineups }: { lineups: Record<Side, Lineup> }) {
   return (
     // Phones scroll the pitch sideways: 22 players do not fit legibly in 340 px.
     <div className="overflow-x-auto">
-      <div className="relative aspect-[105/68] w-full min-w-[640px] overflow-hidden rounded-lg bg-neutral-800">
+      <div className="relative aspect-[105/68] w-full min-w-[640px] overflow-hidden rounded-2xl bg-forest">
         <svg
           viewBox="0 0 105 68"
           className="absolute inset-0 size-full"
           fill="none"
-          stroke="rgb(255 255 255 / 0.12)"
+          stroke="rgb(247 245 235 / 0.35)"
           strokeWidth="0.3"
           aria-hidden="true"
         >
@@ -231,7 +231,7 @@ function Pitch({ lineups }: { lineups: Record<Side, Lineup> }) {
           <rect x="1" y="24.84" width="5.5" height="18.32" />
           <rect x="87.5" y="13.84" width="16.5" height="40.32" />
           <rect x="98.5" y="24.84" width="5.5" height="18.32" />
-          <g fill="rgb(255 255 255 / 0.12)" stroke="none">
+          <g fill="rgb(247 245 235 / 0.35)" stroke="none">
             <circle cx="52.5" cy="34" r="0.6" />
             <circle cx="12" cy="34" r="0.5" />
             <circle cx="93" cy="34" r="0.5" />
@@ -251,8 +251,8 @@ function TeamLine({ team, lineup }: { team: Team; lineup: Lineup }) {
   return (
     <p className="flex flex-wrap items-center justify-center gap-x-2 text-sm">
       <img src={team.crest} alt="" className="size-5" />
-      <span className="font-semibold">{team.shortName}</span>
-      <span className="text-neutral-400">
+      <span className="font-bold">{team.shortName}</span>
+      <span className="text-muted">
         {lineup.formation}
         {lineup.coach && ` · DT ${lineup.coach}`}
       </span>
@@ -275,35 +275,35 @@ function Lineups({ match, details }: { match: Match; details: MatchDetails }) {
       <Pitch lineups={lineups} />
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold">Cambios realizados</h3>
+        <h3 className="mb-2 text-sm font-bold">Cambios realizados</h3>
         {substitutions.length ? (
           <ul className="space-y-1.5 text-sm">
             {substitutions.map((event, index) => (
               <li key={index} className="flex flex-wrap items-center gap-x-2">
-                <span className="w-12 text-xs tabular-nums text-neutral-400">{event.minute}</span>
+                <span className="w-12 text-xs font-num tabular-nums text-muted">{event.minute}</span>
                 <img src={teams[event.team].crest} alt={teams[event.team].shortName} className="size-4" />
-                <span className="text-emerald-400">↑ {event.player_in}</span>
-                <span className="text-red-400">↓ {event.player_out}</span>
+                <span className="text-sub-in">↑ {event.player_in}</span>
+                <span className="text-sub-out">↓ {event.player_out}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-neutral-400">Sin cambios todavía.</p>
+          <p className="text-sm text-muted">Sin cambios todavía.</p>
         )}
       </section>
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold">Banca de suplentes</h3>
+        <h3 className="mb-2 text-sm font-bold">Banca de suplentes</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           {SIDES.map((side) => (
             <div key={side}>
-              <p className="mb-1 text-xs text-neutral-400">{teams[side].shortName}</p>
+              <p className="mb-1 text-xs text-muted">{teams[side].shortName}</p>
               <ul className="space-y-1 text-sm">
                 {lineups[side].substitutes.map((player, index) => (
                   <li key={index} className="flex items-center gap-2">
-                    <span className="w-6 shrink-0 text-right text-xs tabular-nums text-neutral-400">{player.number}</span>
+                    <span className="w-6 shrink-0 text-right text-xs font-num tabular-nums text-muted">{player.number}</span>
                     <span className="truncate">{player.name}</span>
-                    {player.subbed_in && <span className="shrink-0 text-xs text-emerald-400">↑ {player.subbed_in}</span>}
+                    {player.subbed_in && <span className="shrink-0 font-num text-xs text-sub-in">↑ {player.subbed_in}</span>}
                   </li>
                 ))}
               </ul>
@@ -326,9 +326,9 @@ function HeadToHead({ h2h }: { h2h: MatchDetails['h2h'] }) {
 
   return (
     <section>
-      <h3 className="mb-2 text-sm font-semibold">Últimos {played} enfrentamientos directos</h3>
+      <h3 className="mb-2 text-sm font-bold">Últimos {played} enfrentamientos directos</h3>
       <table className="w-full table-fixed text-sm">
-        <thead className="text-xs text-neutral-400">
+        <thead className="text-xs text-muted">
           <tr>
             <th className="w-24 pb-1 text-left font-normal">Fecha</th>
             <th className="pb-1 text-right font-normal">Local</th>
@@ -336,14 +336,14 @@ function HeadToHead({ h2h }: { h2h: MatchDetails['h2h'] }) {
             <th className="pb-1 text-left font-normal">Visitante</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-800">
+        <tbody className="divide-y divide-line">
           {h2h.matches.map((meeting) => (
             <tr key={meeting.id}>
-              <td className="py-1.5 text-xs text-neutral-400" title={meeting.league}>
+              <td className="py-1.5 text-xs text-muted" title={meeting.league}>
                 {new Date(`${meeting.date}T12:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
               </td>
               <td className="truncate py-1.5 text-right">{meeting.home}</td>
-              <td className="py-1.5 text-center font-semibold tabular-nums">
+              <td className="py-1.5 text-center font-semibold font-num tabular-nums">
                 {meeting.home_goals} : {meeting.away_goals}
               </td>
               <td className="truncate py-1.5">{meeting.away}</td>
@@ -353,8 +353,8 @@ function HeadToHead({ h2h }: { h2h: MatchDetails['h2h'] }) {
       </table>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         {summary.map(([label, value]) => (
-          <span key={label} className="rounded-full border border-neutral-700 px-2.5 py-1">
-            <span className="text-neutral-400">{label}:</span> <span className="font-semibold">{value}</span>
+          <span key={label} className="rounded-full border border-line px-2.5 py-1">
+            <span className="text-muted">{label}:</span> <span className="font-num font-bold">{value}</span>
           </span>
         ))}
       </div>
@@ -414,10 +414,10 @@ export function MatchCenter({
       ref={dialog}
       onClose={onClose}
       aria-label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`}
-      className="m-auto max-h-[92vh] w-[calc(100%-2rem)] max-w-3xl flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 p-0 text-neutral-100 backdrop:bg-black/70 open:flex"
+      className="m-auto max-h-[92vh] w-[calc(100%-2rem)] max-w-3xl flex-col overflow-hidden rounded-3xl border border-line bg-modal p-0 text-ink backdrop:bg-black/70 open:flex"
     >
-      <header className="shrink-0 border-b border-neutral-800 px-5 pt-4">
-        <div className="flex items-center justify-between gap-3 text-sm text-neutral-400">
+      <header className="hero shrink-0 px-5 pt-4 pb-7">
+        <div className="flex items-center justify-between gap-3 text-sm text-cream/75">
           <span className="flex min-w-0 items-center gap-2">
             <img src={competition.league_logo} alt="" className="size-5 rounded bg-white/90 object-contain p-px" />
             <span className="truncate">
@@ -427,7 +427,7 @@ export function MatchCenter({
           <button
             type="button"
             onClick={() => dialog.current?.close()}
-            className="shrink-0 rounded-md px-2 py-1 text-neutral-300 hover:bg-neutral-800"
+            className="shrink-0 rounded-full px-3 py-1 font-semibold text-cream/85 hover:bg-cream/10 hover:text-cream"
           >
             Cerrar ✕
           </button>
@@ -436,19 +436,19 @@ export function MatchCenter({
         <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-center">
           <TeamBadge team={match.homeTeam} followed={isFollowed(match.homeTeam.id)} onFollow={onFollow} />
           <div>
-            <p className={`text-4xl font-bold tabular-nums ${live ? 'text-emerald-400' : ''}`}>
+            <p className="font-num text-5xl font-bold tabular-nums">
               {home ?? '-'} : {away ?? '-'}
             </p>
-            <p className={`mt-1 text-sm ${live ? 'text-emerald-400' : 'text-neutral-400'}`}>
+            <p className={`mt-1 text-sm ${live ? 'font-bold text-orange' : 'text-cream/70'}`}>
               {statusText(match)}
-              {live && match.minute ? ` · ${match.minute}'` : ''}
+              {live && match.minute ? <span className="font-num"> · {match.minute}'</span> : ''}
             </p>
           </div>
           <TeamBadge team={match.awayTeam} followed={isFollowed(match.awayTeam.id)} onFollow={onFollow} />
         </div>
-        <p className="mt-3 text-center text-xs text-neutral-400">{[kickoff, match.round].filter(Boolean).join(' · ')}</p>
+        <p className="mt-3 text-center text-xs text-cream/65">{[kickoff, match.round].filter(Boolean).join(' · ')}</p>
 
-        <div role="tablist" aria-label="Secciones del partido" className="mt-3 flex overflow-x-auto">
+        <div role="tablist" aria-label="Secciones del partido" className="mt-4 flex gap-1.5 overflow-x-auto">
           {TABS.map((name, index) => (
             <button
               key={name}
@@ -458,8 +458,12 @@ export function MatchCenter({
               aria-selected={tab === name}
               aria-controls="match-tab-panel"
               onClick={() => openTab(name)}
-              className={`shrink-0 border-b-2 px-3 py-2 text-sm whitespace-nowrap ${
-                tab === name ? 'border-violet-400 font-semibold text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap ${
+                tab === name
+                  ? 'bg-yellow font-bold text-forest'
+                  : name === 'Pronóstico IA ✨'
+                    ? 'text-yellow hover:bg-cream/10'
+                    : 'text-cream/75 hover:bg-cream/10 hover:text-cream'
               }`}
             >
               {name}
@@ -472,7 +476,7 @@ export function MatchCenter({
         id="match-tab-panel"
         role="tabpanel"
         aria-labelledby={`match-tab-${TABS.indexOf(tab)}`}
-        className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+        className="relative -mt-4 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-modal px-5 py-5"
       >
         {tab === 'Pronóstico IA ✨' ? (
           <div className="space-y-6">

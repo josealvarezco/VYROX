@@ -5,9 +5,9 @@ import type { Competition, Team } from './types'
 
 function Card({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+    <section className="rounded-2xl border border-line bg-surface p-3">
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-sm font-bold">{title}</h2>
         {action}
       </div>
       {children}
@@ -21,8 +21,8 @@ function LeagueButton({ name, logo, selected, onClick }: { name: string; logo: s
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm ${
-        selected ? 'bg-violet-500/15 text-violet-200' : 'text-neutral-200 hover:bg-neutral-800'
+      className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm ${
+        selected ? 'bg-yellow font-bold text-forest' : 'text-ink hover:bg-surface-2'
       }`}
     >
       <img src={logo} alt="" className="size-6 shrink-0 rounded-md bg-white/90 object-contain p-0.5" />
@@ -57,17 +57,17 @@ function AllLeagues({ groups, league, onLeague }: { groups: Competition[]; leagu
 
   return (
     <Card title="Todas las ligas">
-      <label className="mb-2 flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm">
+      <label className="mb-2 flex items-center gap-2 rounded-full border border-line bg-surface-2 px-2 py-1.5 text-sm">
         <FilterIcon />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Filtro"
           aria-label="Filtrar países y ligas"
-          className="w-full bg-transparent outline-none placeholder:text-neutral-500"
+          className="w-full bg-transparent outline-none placeholder:text-muted"
         />
       </label>
-      {shown.length === 0 && <p className="px-1 py-2 text-xs text-neutral-400">Ningún país o liga coincide.</p>}
+      {shown.length === 0 && <p className="px-1 py-2 text-xs text-muted">Ningún país o liga coincide.</p>}
       <ul className="space-y-0.5">
         {shown.map(({ country, flag, leagues }) => {
           const expanded = search !== '' || open.has(country)
@@ -77,14 +77,14 @@ function AllLeagues({ groups, league, onLeague }: { groups: Competition[]; leagu
                 type="button"
                 onClick={() => toggle(country)}
                 aria-expanded={expanded}
-                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-neutral-800"
+                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-surface-2"
               >
                 <Flag country={country} flag={flag} />
                 <span className="flex-1 truncate">{countryLabel(country)}</span>
-                <Chevron direction={expanded ? 'up' : 'down'} className="text-neutral-500" />
+                <Chevron direction={expanded ? 'up' : 'down'} className="text-muted" />
               </button>
               {expanded && (
-                <ul className="mb-1 ml-6 space-y-0.5 border-l border-neutral-800 pl-2">
+                <ul className="mb-1 ml-6 space-y-0.5 border-l border-line pl-2">
                   {leagues.map((group) => (
                     <li key={group.league_id}>
                       <LeagueButton
@@ -130,7 +130,7 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => onTeam(team)}
-                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-neutral-800"
+                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-surface-2"
                 >
                   <img src={team.crest} alt="" className="size-5 shrink-0 object-contain" />
                   <span className="truncate">{team.shortName}</span>
@@ -139,7 +139,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => onUnfollow(team)}
                   aria-label={`Dejar de seguir a ${team.shortName}`}
-                  className="rounded-md px-2 py-1 text-amber-400 hover:bg-neutral-800"
+                  className="rounded-xl px-2 py-1 text-gold hover:bg-surface-2"
                 >
                   ★
                 </button>
@@ -147,7 +147,7 @@ export function Sidebar({
             ))}
           </ul>
         ) : (
-          <p className="px-1 text-xs text-neutral-400">Abre un partido y toca ☆ junto a un equipo para seguirlo.</p>
+          <p className="px-1 text-xs text-muted">Abre un partido y toca ☆ junto a un equipo para seguirlo.</p>
         )}
       </Card>
 
@@ -155,7 +155,7 @@ export function Sidebar({
         title="Mejores ligas"
         action={
           league !== null && (
-            <button type="button" onClick={() => onLeague(null)} className="text-xs text-violet-300 hover:underline">
+            <button type="button" onClick={() => onLeague(null)} className="text-xs font-semibold text-gold hover:underline">
               Ver todas
             </button>
           )
