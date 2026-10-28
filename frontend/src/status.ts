@@ -11,9 +11,10 @@ const STATUS_LABEL: Record<string, string> = {
   AWARDED: 'Adjudicado',
 }
 
+export function kickoffTime(match: Match) {
+  return new Date(match.utcDate).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Bogota' })
+}
+
 export function statusText(match: Match) {
-  return (
-    STATUS_LABEL[match.status] ??
-    new Date(match.utcDate).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
-  )
+  return STATUS_LABEL[match.status] ?? kickoffTime(match)
 }

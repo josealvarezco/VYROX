@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import type { Match, Prediction } from './types'
-import { usePrediction } from './usePrediction'
+import type { Prediction } from './types'
+import type { usePrediction } from './usePrediction'
 
 function PredictionCards({ prediction }: { prediction: Prediction }) {
   if (prediction.fallback) return <p className="text-amber-300">{prediction.reasoning}</p>
@@ -46,33 +45,5 @@ export function PredictionView({ prediction, state }: Pick<ReturnType<typeof use
       {state === 'error' && <p className="text-red-300">No se pudo conectar con el servidor. Vuelve a intentarlo.</p>}
       {prediction && <PredictionCards prediction={prediction} />}
     </div>
-  )
-}
-
-export function AiPrediction({ match, league }: { match: Match; league: string }) {
-  const [open, setOpen] = useState(false)
-  const { prediction, state, load } = usePrediction(match, league)
-
-  const toggle = () => {
-    setOpen(!open)
-    if (!open) load()
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        className="col-span-full justify-self-end rounded-md border border-violet-500/40 px-2 py-1 text-xs text-violet-200 hover:bg-violet-500/10 sm:col-span-1"
-      >
-        Pronóstico IA ✨
-      </button>
-      {open && (
-        <div className="col-span-full mt-2 rounded-lg bg-neutral-950/60 p-3">
-          <PredictionView prediction={prediction} state={state} />
-        </div>
-      )}
-    </>
   )
 }

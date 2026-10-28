@@ -8,7 +8,7 @@ from app.api_football import API_BASE
 
 FIXTURE_ID, KASHIMA, POHANG = 1629958, 290, 2764
 NAMES = {KASHIMA: "Kashima", POHANG: "Pohang Steelers"}
-LEAGUE = {"id": 17, "name": "AFC Champions League Elite", "country": "World", "logo": "https://media.api-sports.io/football/leagues/17.png", "round": "League Stage - 4"}
+LEAGUE = {"id": 17, "name": "AFC Champions League Elite", "country": "World", "logo": "https://media.api-sports.io/football/leagues/17.png", "flag": None, "round": "League Stage - 4"}
 
 
 def team(team_id):

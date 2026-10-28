@@ -3,7 +3,7 @@ from datetime import date, timedelta
 import httpx
 from fastapi import FastAPI, HTTPException, Query
 
-from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetch_matches, group_by_competition
+from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetch_matches, group_by_league
 from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
 
@@ -20,7 +20,7 @@ async def matches(day: date | None = Query(None, alias="date")):
         data, sample = await fetch_matches(day)
     except (httpx.HTTPError, UpstreamError) as error:
         raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
-    return {"sample": sample, "competitions": group_by_competition(data)}
+    return {"sample": sample, "competitions": group_by_league(data)}
 
 
 @app.get("/api/matches/{match_id}/details")
