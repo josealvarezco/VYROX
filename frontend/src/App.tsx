@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { Chevron, FilterIcon, Flag } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
@@ -53,6 +53,7 @@ export default function App() {
   const [league, setLeague] = useState<number | null>(null)
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const [showSidebar, setShowSidebar] = useState(false)
+  const [sidebarKey, setSidebarKey] = useState(0)
   const followed = useFollowed()
 
   useEffect(() => {
@@ -83,6 +84,21 @@ export default function App() {
     setData(null)
     setError(false)
     setSelectedId(null)
+  }
+
+  // The logo is a home link: a plain click resets the screen in place, a modified click still opens a new tab.
+  const resetAll = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    goTo(TODAY)
+    setSelectedId(null)
+    setLeague(null)
+    setQuery('')
+    setFilter('Todos')
+    setCollapsed(new Set())
+    setShowSidebar(false)
+    setSidebarKey((key) => key + 1) // remounting the sidebar clears its filter and closes its countries
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }
 
   const pickLeague = (id: number | null) => {
@@ -131,18 +147,23 @@ export default function App() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <header className="hero mb-5 flex items-center justify-between gap-3 rounded-3xl px-5 py-5 sm:px-7">
-        <div>
+        <a
+          href="/"
+          onClick={resetAll}
+          aria-label="VYROX: volver al inicio"
+          className="cursor-pointer rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
+        >
           <h1 className="text-2xl leading-none font-extrabold sm:text-3xl">
             VYRO<span className="text-yellow">X</span>
           </h1>
           <p className="mt-1.5 hidden text-sm text-cream/70 sm:block">Analítica de fútbol en tiempo real</p>
-        </div>
+        </a>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowSidebar(!showSidebar)}
             aria-expanded={showSidebar}
-            className="rounded-full border border-cream/25 px-3 py-1.5 text-sm font-semibold whitespace-nowrap hover:bg-cream/10 md:hidden"
+            className="rounded-full border border-cream/25 px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/10 active:scale-[0.98] md:hidden"
           >
             Ligas y equipos
           </button>
@@ -155,6 +176,7 @@ export default function App() {
           className={`${showSidebar ? 'mb-5 block' : 'hidden'} md:sticky md:top-6 md:block md:max-h-[calc(100vh-3rem)] md:overflow-y-auto`}
         >
           <Sidebar
+            key={sidebarKey}
             groups={allGroups}
             league={league}
             onLeague={pickLeague}
@@ -176,7 +198,7 @@ export default function App() {
                 onClick={() => goTo(shiftDay(date, -1))}
                 disabled={!(shiftDay(date, -1) in DAYS)}
                 aria-label="Día anterior"
-                className="grid size-9 place-items-center rounded-full hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent"
+                className="grid size-9 place-items-center rounded-full transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98] disabled:opacity-30 disabled:hover:bg-transparent"
               >
                 <Chevron direction="left" className="size-5" />
               </button>
@@ -187,7 +209,7 @@ export default function App() {
                   onClick={() => goTo(day)}
                   aria-pressed={day === date}
                   aria-label={`${label}, ${longDate(day)}`}
-                  className={`flex w-14 flex-col items-center rounded-2xl py-2 ${
+                  className={`flex w-14 flex-col items-center rounded-2xl py-2 transition-all duration-200 ease-out active:scale-[0.98] ${
                     day === date ? 'bg-yellow text-forest' : 'bg-chip text-cream hover:opacity-85'
                   }`}
                 >
@@ -200,7 +222,7 @@ export default function App() {
                 onClick={() => goTo(shiftDay(date, 1))}
                 disabled={!(shiftDay(date, 1) in DAYS)}
                 aria-label="Día siguiente"
-                className="grid size-9 place-items-center rounded-full hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent"
+                className="grid size-9 place-items-center rounded-full transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98] disabled:opacity-30 disabled:hover:bg-transparent"
               >
                 <Chevron direction="right" className="size-5" />
               </button>
@@ -214,7 +236,7 @@ export default function App() {
                 type="button"
                 onClick={() => setFilter(name)}
                 aria-pressed={filter === name}
-                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold ${
+                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out active:scale-[0.98] ${
                   filter === name ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink hover:bg-surface-2'
                 }`}
               >
