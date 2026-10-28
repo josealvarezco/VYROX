@@ -12,7 +12,7 @@ VYROX es una plataforma web de analítica de fútbol en tiempo real. Toma datos 
 
 ## Etapa actual
 
-Prototipo en desarrollo desde cero. Ya existen la maqueta UI/UX en Figma (tema oscuro) y la arquitectura base de frontend y backend; el código se construye en este repo.
+Prototipo en desarrollo. Ya existen la maqueta UI/UX en Figma (tema oscuro) y la arquitectura base de frontend y backend; el código se construye en este repo. Hito 1 completo (partidos en vivo por liga, selector de fecha y vista de detalle) y pronósticos con Gemini integrados; falta el modelo Poisson del Hito 2.
 
 ## Stack
 
@@ -34,7 +34,8 @@ Prototipo en desarrollo desde cero. Ya existen la maqueta UI/UX en Figma (tema o
 
 - **El backend centraliza todas las consultas externas.** El frontend habla solo con el backend de VYROX. Las credenciales (la `API_FOOTBALL_KEY`, enviada en el header `x-apisports-key`, y la clave de Gemini) viven únicamente en `backend/.env`, que no se sube al repo.
 - **Cuota de API-Football:** 100 peticiones por día en el plan gratuito. La caché en memoria del backend (`CACHE_TTL`, 300 s por defecto) existe para cuidar esa cuota; si la API falla o se agota la cuota, se sirven los últimos datos guardados.
-- **Zona horaria:** los partidos se piden por la fecha de hoy en Colombia (`timezone=America/Bogota`).
+- **Fechas:** `GET /api/matches?date=YYYY-MM-DD` (por defecto, hoy en Colombia; `timezone=America/Bogota`). El plan gratuito de API-Football solo sirve ayer, hoy y mañana; el backend rechaza otras fechas con 400 sin gastar cuota. La caché es por fecha, y un día ya terminado sin partidos en vivo no se vuelve a pedir.
+- **Vista de detalle:** usa los campos que ya trae `/fixtures` (minuto, jornada, estadio, árbitro, marcador al medio tiempo), así que abrirla no gasta cuota. Eventos, alineaciones y estadísticas costarían una petición por partido.
 - **Pronósticos IA:** `POST /api/predictions` pide a Gemini un JSON con esquema fijo (ganador, probabilidades, ambos anotan, más/menos de 2.5, confianza, apuesta recomendada, justificación). Cada pronóstico se guarda 6 horas por `match_id`. Sin `GEMINI_API_KEY` o si Gemini falla, responde 200 con `fallback: true` y un mensaje.
 - **Modo oscuro** como interfaz estándar, siguiendo la maqueta de Figma.
 

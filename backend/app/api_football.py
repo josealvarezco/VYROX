@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -11,6 +11,7 @@ API_URL = "https://v3.football.api-sports.io/fixtures"
 CACHE_TTL = int(os.environ.get("CACHE_TTL", 300))  # seconds; the free plan allows 100 requests per day
 SAMPLE_FILE = Path(__file__).parent / "sample_matches.json"
 COLOMBIA = timezone(timedelta(hours=-5))  # Colombia has no DST, so a fixed offset is exact
+DAYS_AVAILABLE = 1  # the free plan only serves yesterday, today and tomorrow; other dates answer a "plan" error
 
 # API-Football short status -> status names the frontend understands
 STATUS = {
@@ -24,7 +25,9 @@ STATUS = {
     "AWD": "AWARDED", "WO": "AWARDED",
 }
 
-_cache: dict = {"at": 0.0, "matches": None}
+# day -> {"at": monotonic fetch time, "on": Colombia date of the fetch, "matches": [...]}
+# shortcut: one entry per day ever requested, never evicted; fine for browsing a few weeks, prune if memory matters
+_cache: dict[date, dict] = {}
 _lock = asyncio.Lock()
 
 
@@ -47,26 +50,46 @@ def to_match(item: dict) -> dict:
         "area": {"name": league["country"]},
         "homeTeam": _team(teams["home"]),
         "awayTeam": _team(teams["away"]),
-        "score": {"fullTime": {"home": goals["home"], "away": goals["away"]}},
+        "score": {
+            "fullTime": {"home": goals["home"], "away": goals["away"]},
+            "halfTime": item["score"]["halftime"],
+        },
+        "minute": fixture["status"]["elapsed"],
+        "round": league["round"],
+        "venue": fixture["venue"],
+        "referee": fixture["referee"],
     }
 
 
-async def fetch_matches() -> tuple[list[dict], bool]:
-    """Return today's matches (Colombia date) and whether they are sample data."""
+def colombia_today() -> date:
+    return datetime.now(COLOMBIA).date()
+
+
+def _fresh(day: date, entry: dict) -> bool:
+    # A day fetched after it ended with no match still live is final, so it never needs another request.
+    final = day < entry["on"] and not any(m["status"] in ("IN_PLAY", "PAUSED") for m in entry["matches"])
+    return final or time.monotonic() - entry["at"] < CACHE_TTL
+
+
+async def fetch_matches(day: date | None = None) -> tuple[list[dict], bool]:
+    """Return the day's matches (default: today in Colombia) and whether they are sample data."""
     key = os.environ.get("API_FOOTBALL_KEY")
     if not key:
         return json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))["matches"], True
 
+    today = colombia_today()
+    day = day or today
     # The lock makes concurrent cache misses share one upstream request.
     async with _lock:
-        if _cache["matches"] is not None and time.monotonic() - _cache["at"] < CACHE_TTL:
-            return _cache["matches"], False
+        entry = _cache.get(day)
+        if entry and _fresh(day, entry):
+            return entry["matches"], False
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 response = await client.get(
                     API_URL,
                     headers={"x-apisports-key": key},
-                    params={"date": datetime.now(COLOMBIA).date().isoformat(), "timezone": "America/Bogota"},
+                    params={"date": day.isoformat(), "timezone": "America/Bogota"},
                 )
                 response.raise_for_status()
             body = response.json()
@@ -74,12 +97,12 @@ async def fetch_matches() -> tuple[list[dict], bool]:
             if body["errors"]:
                 raise UpstreamError(body["errors"])
         except (httpx.HTTPError, UpstreamError):
-            if _cache["matches"] is not None:
-                _cache["at"] = time.monotonic()  # wait a full TTL before spending another request
-                return _cache["matches"], False
+            if entry:
+                entry["at"] = time.monotonic()  # wait a full TTL before spending another request
+                return entry["matches"], False
             raise
-        _cache.update(at=time.monotonic(), matches=[to_match(item) for item in body["response"]])
-        return _cache["matches"], False
+        _cache[day] = {"at": time.monotonic(), "on": today, "matches": [to_match(item) for item in body["response"]]}
+        return _cache[day]["matches"], False
 
 
 def group_by_competition(matches: list[dict]) -> list[dict]:
