@@ -5,6 +5,7 @@ import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
 import { Sidebar } from './Sidebar'
 import { LIVE } from './status'
+import { ThemeToggle } from './ThemeToggle'
 import type { Match, MatchesResponse, Team } from './types'
 import { useFollowed } from './useFollowed'
 
@@ -24,12 +25,17 @@ function shiftDay(day: string, offset: number) {
 const DAYS = { [shiftDay(TODAY, -1)]: 'Ayer', [TODAY]: 'Hoy', [shiftDay(TODAY, 1)]: 'Mañana' }
 const FILTERS = ['Todos', 'En vivo', 'Por horario'] as const
 
+const longDate = (day: string) =>
+  new Date(`${day}T12:00:00`).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+const shortWeekday = (day: string) =>
+  new Date(`${day}T12:00:00`).toLocaleDateString('es-CO', { weekday: 'short' }).replace('.', '')
+
 function Message({ children, alert = false }: { children: ReactNode; alert?: boolean }) {
   return (
     <p
       role={alert ? 'alert' : undefined}
-      className={`rounded-xl border px-4 py-3 text-sm ${
-        alert ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-neutral-800 bg-neutral-900 text-neutral-400'
+      className={`rounded-2xl border px-4 py-3 text-sm ${
+        alert ? 'border-orange/50 bg-orange/10 text-ink' : 'border-line bg-surface text-muted'
       }`}
     >
       {children}
@@ -71,10 +77,9 @@ export default function App() {
     }
   }, [date])
 
-  const changeDay = (offset: number) => {
-    const next = shiftDay(date, offset)
-    if (!(next in DAYS)) return
-    setDate(next)
+  const goTo = (day: string) => {
+    if (!(day in DAYS) || day === date) return
+    setDate(day)
     setData(null)
     setError(false)
     setSelectedId(null)
@@ -125,16 +130,24 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
-      <header className="mb-5 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-wide">VYROX</h1>
-        <button
-          type="button"
-          onClick={() => setShowSidebar(!showSidebar)}
-          aria-expanded={showSidebar}
-          className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800 md:hidden"
-        >
-          Ligas y equipos
-        </button>
+      <header className="hero mb-5 flex items-center justify-between gap-3 rounded-3xl px-5 py-5 sm:px-7">
+        <div>
+          <h1 className="text-2xl leading-none font-extrabold sm:text-3xl">
+            VYRO<span className="text-yellow">X</span>
+          </h1>
+          <p className="mt-1.5 hidden text-sm text-cream/70 sm:block">Analítica de fútbol en tiempo real</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowSidebar(!showSidebar)}
+            aria-expanded={showSidebar}
+            className="rounded-full border border-cream/25 px-3 py-1.5 text-sm font-semibold whitespace-nowrap hover:bg-cream/10 md:hidden"
+          >
+            Ligas y equipos
+          </button>
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-6">
@@ -152,31 +165,46 @@ export default function App() {
         </aside>
 
         <main className="min-w-0 space-y-4">
-          <div className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900 p-2">
-            <button
-              type="button"
-              onClick={() => changeDay(-1)}
-              disabled={!(shiftDay(date, -1) in DAYS)}
-              aria-label="Día anterior"
-              className="rounded-md p-2 hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent"
-            >
-              <Chevron direction="left" className="size-5" />
-            </button>
-            <p className="text-center">
-              <span className="block font-semibold">{DAYS[date]}</span>
-              <span className="block text-xs text-neutral-400">
-                {new Date(`${date}T12:00:00`).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </span>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface p-4">
+            <p>
+              <span className="block text-lg leading-tight font-bold tracking-tight">{DAYS[date]}</span>
+              <span className="block text-sm text-muted">{longDate(date)}</span>
             </p>
-            <button
-              type="button"
-              onClick={() => changeDay(1)}
-              disabled={!(shiftDay(date, 1) in DAYS)}
-              aria-label="Día siguiente"
-              className="rounded-md p-2 hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent"
-            >
-              <Chevron direction="right" className="size-5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => goTo(shiftDay(date, -1))}
+                disabled={!(shiftDay(date, -1) in DAYS)}
+                aria-label="Día anterior"
+                className="grid size-9 place-items-center rounded-full hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                <Chevron direction="left" className="size-5" />
+              </button>
+              {Object.entries(DAYS).map(([day, label]) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => goTo(day)}
+                  aria-pressed={day === date}
+                  aria-label={`${label}, ${longDate(day)}`}
+                  className={`flex w-14 flex-col items-center rounded-2xl py-2 ${
+                    day === date ? 'bg-yellow text-forest' : 'bg-chip text-cream hover:opacity-85'
+                  }`}
+                >
+                  <span className="font-num text-2xl leading-none font-bold">{day.slice(8)}</span>
+                  <span className="mt-1 text-[11px] font-bold uppercase">{shortWeekday(day)}</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => goTo(shiftDay(date, 1))}
+                disabled={!(shiftDay(date, 1) in DAYS)}
+                aria-label="Día siguiente"
+                className="grid size-9 place-items-center rounded-full hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                <Chevron direction="right" className="size-5" />
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -186,31 +214,31 @@ export default function App() {
                 type="button"
                 onClick={() => setFilter(name)}
                 aria-pressed={filter === name}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${
-                  filter === name ? 'border-violet-400 bg-violet-500/15 text-white' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold ${
+                  filter === name ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink hover:bg-surface-2'
                 }`}
               >
-                {name === 'En vivo' && <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-red-500" />}
+                {name === 'En vivo' && <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-orange" />}
                 {name}
-                {name === 'En vivo' && liveCount > 0 && <span className="text-neutral-400">{liveCount}</span>}
+                {name === 'En vivo' && liveCount > 0 && <span className="font-num opacity-70">{liveCount}</span>}
               </button>
             ))}
-            <label className="flex w-full min-w-0 items-center gap-2 rounded-full border border-neutral-700 bg-neutral-900 px-3 py-1 text-sm sm:ml-auto sm:w-auto sm:max-w-64 sm:flex-1">
+            <label className="flex w-full min-w-0 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm sm:ml-auto sm:w-auto sm:max-w-64 sm:flex-1">
               <FilterIcon />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Filtro"
                 aria-label="Buscar equipo o liga"
-                className="w-full min-w-0 bg-transparent outline-none placeholder:text-neutral-500"
+                className="w-full min-w-0 bg-transparent outline-none placeholder:text-muted"
               />
             </label>
           </div>
 
           {league !== null && (
-            <p className="flex items-center gap-2 text-sm text-neutral-400">
-              Mostrando <span className="font-semibold text-neutral-100">{leagueName}</span>
-              <button type="button" onClick={() => pickLeague(null)} className="text-violet-300 hover:underline">
+            <p className="flex items-center gap-2 text-sm text-muted">
+              Mostrando <span className="font-semibold text-ink">{leagueName}</span>
+              <button type="button" onClick={() => pickLeague(null)} className="font-semibold text-gold hover:underline">
                 Ver todas
               </button>
             </p>
@@ -229,7 +257,7 @@ export default function App() {
           )}
 
           {following.length > 0 && (
-            <MatchCard title={<span className="text-amber-300">★ Siguiendo</span>} matches={following} onSelect={open} showLeague />
+            <MatchCard title={<span className="text-gold">★ Siguiendo</span>} matches={following} onSelect={open} showLeague />
           )}
 
           {filter === 'Por horario'

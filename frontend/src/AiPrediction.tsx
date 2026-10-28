@@ -1,39 +1,45 @@
 import type { Prediction } from './types'
 import type { usePrediction } from './usePrediction'
 
+// Warm to cool accents of the palette: high confidence is orange, low is sky blue.
+const CONFIDENCE: Record<string, string> = { Alta: 'bg-orange', Media: 'bg-peach', Baja: 'bg-sky' }
+
 function PredictionCards({ prediction }: { prediction: Prediction }) {
-  if (prediction.fallback) return <p className="text-amber-300">{prediction.reasoning}</p>
+  if (prediction.fallback) return <p className="text-warn">{prediction.reasoning}</p>
   const { home, draw, away } = prediction.probabilities
   const bars = [['Local', home], ['Empate', draw], ['Visitante', away]] as const
+  const confidence = (
+    <span className={`rounded-full px-2.5 py-0.5 text-forest ${CONFIDENCE[prediction.confidence]}`}>{prediction.confidence}</span>
+  )
   const cards = [
     ['Apuesta Recomendada', prediction.recommended_bet],
-    ['Confianza', prediction.confidence],
+    ['Confianza', confidence],
     ['Ambos Anotan', prediction.both_teams_to_score],
     ['Goles (2.5)', prediction.over_under_2_5],
   ] as const
   return (
     <div className="space-y-3">
-      <div className="space-y-1.5 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
+      <div className="space-y-2 rounded-2xl border border-line bg-surface p-4">
         {bars.map(([label, value]) => (
-          <div key={label} className="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-2">
-            <span className="text-neutral-400">{label}</span>
-            <div className="h-2 overflow-hidden rounded-full bg-neutral-800" aria-hidden="true">
-              <div className="h-full rounded-full bg-violet-500" style={{ width: `${value}%` }} />
+          <div key={label} className="grid grid-cols-[4.5rem_1fr_3rem] items-center gap-3">
+            <span className="text-muted">{label}</span>
+            <div className="h-2.5 overflow-hidden rounded-full bg-chip" aria-hidden="true">
+              <div className="h-full rounded-full bg-yellow" style={{ width: `${value}%` }} />
             </div>
-            <span className="text-right tabular-nums">{value}%</span>
+            <span className="text-right font-num font-bold tabular-nums">{value}%</span>
           </div>
         ))}
       </div>
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {cards.map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-2.5 first:col-span-2 sm:first:col-span-1">
-            <dt className="text-xs text-neutral-400">{label}</dt>
-            <dd className="mt-0.5 font-semibold text-violet-100">{value}</dd>
+          <div key={label} className="rounded-2xl bg-forest p-3 text-cream first:col-span-2 sm:first:col-span-1">
+            <dt className="text-xs text-cream/70">{label}</dt>
+            <dd className="mt-1 font-bold">{value}</dd>
           </div>
         ))}
       </dl>
-      <p className="text-neutral-300">{prediction.reasoning}</p>
-      <p className="text-xs text-neutral-500">Pronóstico generado por IA con fines informativos; no garantiza resultados.</p>
+      <p>{prediction.reasoning}</p>
+      <p className="text-xs text-muted">Pronóstico generado por IA con fines informativos; no garantiza resultados.</p>
     </div>
   )
 }
@@ -41,8 +47,8 @@ function PredictionCards({ prediction }: { prediction: Prediction }) {
 export function PredictionView({ prediction, state }: Pick<ReturnType<typeof usePrediction>, 'prediction' | 'state'>) {
   return (
     <div aria-live="polite" className="text-sm">
-      {state === 'loading' && <p className="text-neutral-400">Analizando partido con Gemini IA...</p>}
-      {state === 'error' && <p className="text-red-300">No se pudo conectar con el servidor. Vuelve a intentarlo.</p>}
+      {state === 'loading' && <p className="text-muted">Analizando partido con Gemini IA...</p>}
+      {state === 'error' && <p className="text-warn">No se pudo conectar con el servidor. Vuelve a intentarlo.</p>}
       {prediction && <PredictionCards prediction={prediction} />}
     </div>
   )
