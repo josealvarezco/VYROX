@@ -1,10 +1,18 @@
 export type Side = 'home' | 'away'
 export type Team = { id: number; shortName: string; crest: string }
 export type Goals = { home: number | null; away: number | null }
+export type League = {
+  league_id: number
+  league_name: string
+  country: string // "World" for international competitions
+  league_logo: string
+  country_flag: string | null
+}
 export type Match = {
   id: number
   utcDate: string
   status: string
+  league: League
   homeTeam: Team
   awayTeam: Team
   score: { fullTime: Goals; halfTime?: Goals }
@@ -14,7 +22,7 @@ export type Match = {
   venue?: { name: string | null; city: string | null }
   referee?: string | null
 }
-export type Competition = { id: number; name: string; emblem: string; area: { name: string }; matches: Match[] }
+export type Competition = League & { matches: Match[] }
 export type MatchesResponse = { sample: boolean; competitions: Competition[] }
 export type Prediction =
   | { fallback: true; reasoning: string }

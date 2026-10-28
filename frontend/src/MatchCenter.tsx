@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { PredictionView } from './AiPrediction'
+import { countryLabel } from './leagues'
 import { LIVE, statusText } from './status'
 import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Player, Side, Starter, Team } from './types'
 import { usePrediction } from './usePrediction'
@@ -30,11 +31,22 @@ function SimulatedBadge({ sample }: { sample: boolean }) {
   )
 }
 
-function TeamBadge({ team }: { team: Team }) {
+function TeamBadge({ team, followed, onFollow }: { team: Team; followed: boolean; onFollow: (team: Team) => void }) {
   return (
-    <div className="flex min-w-0 flex-col items-center gap-2">
-      <img src={team.crest} alt="" className="size-12 sm:size-16" />
+    <div className="flex min-w-0 flex-col items-center gap-1.5">
+      <img src={team.crest} alt="" className="size-12 object-contain sm:size-16" />
       <span className="w-full truncate font-semibold">{team.shortName}</span>
+      <button
+        type="button"
+        onClick={() => onFollow(team)}
+        aria-pressed={followed}
+        aria-label={`Seguir a ${team.shortName}`}
+        className={`rounded-full border px-2 py-0.5 text-xs ${
+          followed ? 'border-amber-400/50 text-amber-300' : 'border-neutral-700 text-neutral-400 hover:text-neutral-200'
+        }`}
+      >
+        {followed ? '★ Siguiendo' : '☆ Seguir'}
+      </button>
     </div>
   )
 }
@@ -336,12 +348,24 @@ function HeadToHead({ h2h }: { h2h: MatchDetails['h2h'] }) {
   )
 }
 
-export function MatchCenter({ match, competition, onClose }: { match: Match; competition: Competition; onClose: () => void }) {
+export function MatchCenter({
+  match,
+  competition,
+  isFollowed,
+  onFollow,
+  onClose,
+}: {
+  match: Match
+  competition: Competition
+  isFollowed: (teamId: number) => boolean
+  onFollow: (team: Team) => void
+  onClose: () => void
+}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [tab, setTab] = useState<Tab>('Resumen')
   const [details, setDetails] = useState<MatchDetails | null>(null)
   const [failed, setFailed] = useState(false)
-  const prediction = usePrediction(match, competition.name)
+  const prediction = usePrediction(match, competition.league_name)
 
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal()
@@ -368,7 +392,7 @@ export function MatchCenter({ match, competition, onClose }: { match: Match; com
 
   const { home, away } = match.score.fullTime
   const live = LIVE.has(match.status)
-  const kickoff = new Date(match.utcDate).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' })
+  const kickoff = new Date(match.utcDate).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Bogota' })
   const waiting = <Note>{failed ? 'No se pudieron cargar los datos del partido.' : 'Cargando datos del partido…'}</Note>
 
   return (
@@ -381,9 +405,9 @@ export function MatchCenter({ match, competition, onClose }: { match: Match; com
       <header className="shrink-0 border-b border-neutral-800 px-5 pt-4">
         <div className="flex items-center justify-between gap-3 text-sm text-neutral-400">
           <span className="flex min-w-0 items-center gap-2">
-            <img src={competition.emblem} alt="" className="size-5" />
+            <img src={competition.league_logo} alt="" className="size-5 rounded bg-white/90 object-contain p-px" />
             <span className="truncate">
-              {competition.name} · {competition.area.name}
+              {competition.league_name} · {countryLabel(competition.country)}
             </span>
           </span>
           <button
@@ -396,7 +420,7 @@ export function MatchCenter({ match, competition, onClose }: { match: Match; com
         </div>
 
         <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-center">
-          <TeamBadge team={match.homeTeam} />
+          <TeamBadge team={match.homeTeam} followed={isFollowed(match.homeTeam.id)} onFollow={onFollow} />
           <div>
             <p className={`text-4xl font-bold tabular-nums ${live ? 'text-emerald-400' : ''}`}>
               {home ?? '-'} : {away ?? '-'}
@@ -406,7 +430,7 @@ export function MatchCenter({ match, competition, onClose }: { match: Match; com
               {live && match.minute ? ` · ${match.minute}'` : ''}
             </p>
           </div>
-          <TeamBadge team={match.awayTeam} />
+          <TeamBadge team={match.awayTeam} followed={isFollowed(match.awayTeam.id)} onFollow={onFollow} />
         </div>
         <p className="mt-3 text-center text-xs text-neutral-400">{[kickoff, match.round].filter(Boolean).join(' · ')}</p>
 

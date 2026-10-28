@@ -12,6 +12,8 @@ CACHE_TTL = int(os.environ.get("CACHE_TTL", 300))  # seconds; the free plan allo
 SAMPLE_FILE = Path(__file__).parent / "sample_matches.json"
 COLOMBIA = timezone(timedelta(hours=-5))  # Colombia has no DST, so a fixed offset is exact
 DAYS_AVAILABLE = 1  # the free plan only serves yesterday, today and tomorrow; other dates answer a "plan" error
+# "Mejores ligas" in display order (API-Football league ids); the rest follow by country and name.
+TOP_LEAGUES = [39, 239, 2, 140, 78, 135, 1, 61, 3, 13, 11, 253]
 
 # API-Football short status -> status names the frontend understands
 STATUS = {
@@ -60,8 +62,13 @@ def to_match(item: dict) -> dict:
         "id": fixture["id"],
         "utcDate": fixture["date"],  # ISO 8601 with the Bogota offset; the frontend parses it with Date
         "status": STATUS.get(fixture["status"]["short"], "TIMED"),
-        "competition": {"id": league["id"], "name": league["name"], "emblem": league["logo"]},
-        "area": {"name": league["country"]},
+        "league": {
+            "league_id": league["id"],
+            "league_name": league["name"],
+            "country": league["country"],
+            "league_logo": league["logo"],
+            "country_flag": league["flag"],
+        },
         "homeTeam": _team(teams["home"]),
         "awayTeam": _team(teams["away"]),
         "score": {
@@ -108,10 +115,18 @@ async def fetch_matches(day: date | None = None) -> tuple[list[dict], bool]:
         return _cache[day]["matches"], False
 
 
-def group_by_competition(matches: list[dict]) -> list[dict]:
+def _league_order(group: dict) -> tuple:
+    if group["league_id"] in TOP_LEAGUES:
+        return (0, TOP_LEAGUES.index(group["league_id"]), "", "")
+    # International competitions ("World") lead the rest, as in the frontend's league directory.
+    country = group["country"] or ""
+    return (1, country != "World", country.casefold(), group["league_name"].casefold())
+
+
+def group_by_league(matches: list[dict]) -> list[dict]:
+    """Group matches by league: the "Mejores ligas" first in TOP_LEAGUES order, then by country and name."""
     groups: dict[int, dict] = {}
     for match in sorted(matches, key=lambda m: m["utcDate"]):
-        competition = match["competition"]
-        group = groups.setdefault(competition["id"], {**competition, "area": match["area"], "matches": []})
-        group["matches"].append(match)
-    return list(groups.values())
+        league = match["league"]
+        groups.setdefault(league["league_id"], {**league, "matches": []})["matches"].append(match)
+    return sorted(groups.values(), key=_league_order)

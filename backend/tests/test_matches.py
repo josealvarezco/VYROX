@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 from app import api_football
 from app.main import app
 
-PRIMERA_A = {"id": 239, "name": "Primera A", "country": "Colombia", "logo": "https://media.api-sports.io/football/leagues/239.png", "round": "Clausura - 15"}
-PREMIER = {"id": 39, "name": "Premier League", "country": "England", "logo": "https://media.api-sports.io/football/leagues/39.png", "round": "Regular Season - 9"}
+PRIMERA_A = {"id": 239, "name": "Primera A", "country": "Colombia", "logo": "https://media.api-sports.io/football/leagues/239.png", "flag": "https://media.api-sports.io/flags/co.svg", "round": "Clausura - 15"}
+PREMIER = {"id": 39, "name": "Premier League", "country": "England", "logo": "https://media.api-sports.io/football/leagues/39.png", "flag": "https://media.api-sports.io/flags/gb-eng.svg", "round": "Regular Season - 9"}
 COLOMBIA_TODAY = datetime.now(timezone(timedelta(hours=-5))).date()
 
 
@@ -32,7 +32,7 @@ UPSTREAM = {
                 "status": {"long": "Second Half", "short": "2H", "elapsed": 67},
             },
             "league": PRIMERA_A,
-            "teams": {"home": team(1137, "Millonarios"), "away": team(1135, "Atletico Nacional")},
+            "teams": {"home": team(1125, "Millonarios"), "away": team(1137, "Atletico Nacional")},
             "goals": {"home": 1, "away": 0},
             "score": {"halftime": {"home": 1, "away": 0}},
         },
@@ -89,15 +89,21 @@ def expire_cache():
         entry["at"] -= api_football.CACHE_TTL + 1
 
 
-def test_without_key_serves_sample_grouped_by_competition(monkeypatch):
+def test_without_key_serves_sample_grouped_by_league(monkeypatch):
     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
 
     body = TestClient(app).get("/api/matches").json()
 
     assert body["sample"] is True
-    assert [c["name"] for c in body["competitions"]] == ["Premier League", "Primera Division"]
+    assert [c["league_name"] for c in body["competitions"]] == [
+        "Premier League",
+        "Primera A",
+        "UEFA Champions League",
+        "La Liga",
+        "Liga Profesional Argentina",
+    ]
     premier = body["competitions"][0]
-    assert premier["area"]["name"] == "England"
+    assert (premier["league_id"], premier["country"], premier["country_flag"]) == (39, "England", "https://media.api-sports.io/flags/gb-eng.svg")
     times = [m["utcDate"] for m in premier["matches"]]
     assert times == sorted(times) and len(times) == 3
 
@@ -107,24 +113,27 @@ def test_maps_api_football_fixtures_to_frontend_format(upstream):
 
     assert upstream["dates"] == [COLOMBIA_TODAY.isoformat()]
     assert body["sample"] is False
-    premier, primera_a = body["competitions"]  # ordered by first kickoff
-    assert premier["name"] == "Premier League"
+    premier, primera_a = body["competitions"]  # 39 before 239 in TOP_LEAGUES
+    assert premier["league_name"] == "Premier League"
     assert premier["matches"][0]["status"] == "TIMED"
     assert premier["matches"][0]["score"] == {"fullTime": {"home": None, "away": None}, "halfTime": {"home": None, "away": None}}
+    league = {
+        "league_id": 239,
+        "league_name": "Primera A",
+        "country": "Colombia",
+        "league_logo": "https://media.api-sports.io/football/leagues/239.png",
+        "country_flag": "https://media.api-sports.io/flags/co.svg",
+    }
     assert primera_a == {
-        "id": 239,
-        "name": "Primera A",
-        "emblem": "https://media.api-sports.io/football/leagues/239.png",
-        "area": {"name": "Colombia"},
+        **league,
         "matches": [
             {
                 "id": 2002,
                 "utcDate": "2026-10-27T20:00:00-05:00",
                 "status": "IN_PLAY",
-                "competition": {"id": 239, "name": "Primera A", "emblem": "https://media.api-sports.io/football/leagues/239.png"},
-                "area": {"name": "Colombia"},
-                "homeTeam": {"id": 1137, "shortName": "Millonarios", "crest": "https://media.api-sports.io/football/teams/1137.png"},
-                "awayTeam": {"id": 1135, "shortName": "Atletico Nacional", "crest": "https://media.api-sports.io/football/teams/1135.png"},
+                "league": league,
+                "homeTeam": {"id": 1125, "shortName": "Millonarios", "crest": "https://media.api-sports.io/football/teams/1125.png"},
+                "awayTeam": {"id": 1137, "shortName": "Atletico Nacional", "crest": "https://media.api-sports.io/football/teams/1137.png"},
                 "score": {"fullTime": {"home": 1, "away": 0}, "halfTime": {"home": 1, "away": 0}},
                 "minute": 67,
                 "round": "Clausura - 15",
@@ -133,6 +142,42 @@ def test_maps_api_football_fixtures_to_frontend_format(upstream):
             }
         ],
     }
+
+
+def league_fixture(fixture_id, league_id, name, country):
+    item = UPSTREAM["response"][1]  # a not started Premier League fixture, retargeted to another league
+    return {
+        **item,
+        "fixture": {**item["fixture"], "id": fixture_id, "date": f"2026-10-27T{8 + fixture_id:02d}:00:00-05:00"},
+        "league": {**PREMIER, "id": league_id, "name": name, "country": country},
+    }
+
+
+def test_top_leagues_come_first_then_world_then_country_and_name(upstream):
+    leagues = [
+        (136, "Serie B", "Italy"),
+        (128, "Liga Profesional Argentina", "Argentina"),
+        (78, "Bundesliga", "Germany"),
+        (14, "UEFA Youth League", "World"),
+        (239, "Primera A", "Colombia"),
+        (137, "Coppa Italia", "Italy"),
+        (39, "Premier League", "England"),
+        (188, "A-League", "Australia"),
+    ]
+    upstream["reply"] = {"errors": [], "response": [league_fixture(i, *league) for i, league in enumerate(leagues)]}
+
+    groups = TestClient(app).get("/api/matches").json()["competitions"]
+
+    assert [g["league_name"] for g in groups] == [
+        "Premier League",  # top leagues in TOP_LEAGUES order, whatever their kickoff
+        "Primera A",
+        "Bundesliga",
+        "UEFA Youth League",  # then international competitions
+        "Liga Profesional Argentina",  # then by country and league name
+        "A-League",
+        "Coppa Italia",
+        "Serie B",
+    ]
 
 
 def test_date_param_is_sent_and_each_date_is_cached_separately(upstream):
