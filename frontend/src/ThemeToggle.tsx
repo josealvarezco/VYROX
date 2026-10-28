@@ -24,7 +24,7 @@ export function ThemeToggle() {
       aria-label="Modo oscuro"
       title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       onClick={toggle}
-      className="relative flex h-8 w-16 shrink-0 items-center justify-between rounded-full border border-cream/20 bg-cream/10 px-2 text-cream/60 transition-all duration-200 ease-out hover:bg-cream/15 active:scale-[0.98]"
+      className="relative flex h-8 w-16 shrink-0 cursor-pointer items-center justify-between rounded-full border border-cream/20 bg-cream/10 px-2 text-cream/60 transition-all duration-200 ease-out hover:bg-cream/15 active:scale-[0.98]"
     >
       <SunIcon />
       <MoonIcon />

@@ -29,6 +29,7 @@
   --color-warn: var(--warn);
   --color-sub-in: var(--sub-in);
   --color-sub-out: var(--sub-out);
+  --color-hover: var(--hover);
 }
 
 :root {
@@ -47,6 +48,7 @@
   --sub-out: #b42318;
   --scroll: rgb(13 51 30 / 0.22);
   --scroll-hover: rgb(13 51 30 / 0.4);
+  --hover: rgb(13 51 30 / 0.04); /* match rows */
 }
 
 :root[data-theme='dark'] {
@@ -65,6 +67,7 @@
   --sub-out: #fca5a5;
   --scroll: rgb(247 245 235 / 0.18);
   --scroll-hover: rgb(247 245 235 / 0.32);
+  --hover: rgb(247 245 235 / 0.05);
 }
 
 @layer base {
@@ -77,6 +80,20 @@
   h2,
   h3 {
     letter-spacing: -0.025em;
+  }
+
+  /* Tailwind v4 resets buttons to the default arrow; every clickable element shows the hand again. */
+  button,
+  [role='button'],
+  a,
+  label,
+  select,
+  summary,
+  .interactive {
+    cursor: pointer;
+  }
+  :disabled {
+    cursor: default;
   }
 
   /* Thin rounded scrollbars in the theme colors; Firefox has no ::-webkit-scrollbar, so it gets the standard properties. */

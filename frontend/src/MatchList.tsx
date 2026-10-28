@@ -14,7 +14,7 @@ function MatchRow({ match, showLeague, onSelect }: { match: Match; showLeague: b
       <button
         type="button"
         onClick={() => onSelect(match)}
-        className={`grid w-full items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out hover:bg-surface-2 sm:px-4 ${
+        className={`grid w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out hover:bg-hover hover:shadow-[inset_3px_0_0_0_#F4D56D] sm:px-4 ${
           showLeague ? 'grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]'
         }`}
       >
@@ -79,7 +79,7 @@ export function MatchCard({
             type="button"
             onClick={onToggle}
             aria-expanded={!collapsed}
-            className={`${header} transition-all duration-200 ease-out hover:bg-surface-2/60`}
+            className={`${header} cursor-pointer transition-all duration-200 ease-out hover:bg-surface-2/60`}
           >
             {title}
             <Chevron direction={collapsed ? 'down' : 'up'} className="ml-auto text-muted" />
