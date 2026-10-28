@@ -6,6 +6,8 @@ from typing import Annotated, Literal
 import httpx
 from pydantic import BaseModel, Field, model_validator
 
+from app.details import get_details
+
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 # Aliases for the current models (gemini-2.5-flash is still listed but answers 404). Flash-Lite is tried
 # when Flash fails, because Flash often answers 503 "high demand" or takes over a minute.
@@ -73,10 +75,13 @@ Fecha: {date}
 Estado: {status}
 Marcador: {score}
 
-- probabilities: porcentajes enteros de victoria local (home), empate (draw) y victoria visitante (away); deben sumar exactamente 100.
+{context}
+
+- probabilities: porcentajes enteros de victoria local (home), empate (draw) y victoria visitante (away); deben sumar exactamente 100. Básalos en los datos de arriba.
 - recommended_bet: la jugada principal en pocas palabras, por ejemplo "Local o Empate + Más de 1.5 goles".
-- reasoning: análisis directo de 2 a 3 líneas en español explicando el porqué del pronóstico.
+- reasoning: análisis directo de 2 a 3 líneas en español explicando el porqué del pronóstico. Cita datos concretos del historial directo o de las estadísticas cuando existan y no inventes datos que no aparezcan aquí.
 - Si el partido ya empezó o terminó, ten en cuenta el estado y el marcador."""
+NO_CONTEXT = "No hay historial directo ni estadísticas disponibles para este partido."
 
 NO_KEY = "El pronóstico con IA no está disponible: falta configurar GEMINI_API_KEY en el backend."
 FAILED = "No se pudo generar el pronóstico con Gemini en este momento. Intenta de nuevo en unos minutos."
@@ -98,6 +103,29 @@ async def _generate(client: httpx.AsyncClient, model: str, prompt: str) -> Predi
     return Prediction.model_validate_json(response.json()["candidates"][0]["content"]["parts"][0]["text"])
 
 
+async def _context(match_id: int) -> str:
+    """Real head-to-head and match statistics for the prompt; simulated demo data never reaches Gemini."""
+    try:
+        details = await get_details(match_id)
+    except Exception as error:  # the prediction still works without context
+        log.warning("No context for match %s: %r", match_id, error)
+        return NO_CONTEXT
+    lines = []
+    h2h = details["h2h"]
+    if h2h and h2h["matches"]:
+        played = len(h2h["matches"])
+        lines.append(f"Historial directo (últimos {played} partidos terminados):")
+        lines += [f"- {m['date']}: {m['home']} {m['home_goals']}-{m['away_goals']} {m['away']} ({m['league']})" for m in h2h["matches"]]
+        lines.append(
+            f"Promedio de goles: {h2h['avg_goals']}. Ambos anotaron en {h2h['btts']} de {played}. "
+            f"Más de 2.5 goles en {h2h['over_2_5']} de {played}."
+        )
+    if details["statistics"] and "statistics" not in details["simulated"]:
+        lines.append("Estadísticas de este partido (local - visitante):")
+        lines += [f"- {row['label']}: {row['home']} - {row['away']}" for row in details["statistics"]]
+    return "\n".join(lines) or NO_CONTEXT
+
+
 async def predict(match: MatchInfo) -> dict:
     """Return Gemini's prediction for the match, or a fallback explaining why there is none."""
     cached = _cache.get(match.match_id)
@@ -108,7 +136,8 @@ async def predict(match: MatchInfo) -> dict:
         return {"fallback": True, "reasoning": NO_KEY}
 
     score = "sin goles registrados" if match.score.home is None else f"{match.score.home}-{match.score.away}"
-    prompt = PROMPT.format(**match.model_dump(exclude={"score"}), score=score)
+    context = await _context(match.match_id)
+    prompt = PROMPT.format(**match.model_dump(exclude={"score"}), score=score, context=context)
     async with httpx.AsyncClient(timeout=30) as client:
         for model in MODELS:
             try:

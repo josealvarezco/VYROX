@@ -12,7 +12,7 @@ VYROX es una plataforma web de analítica de fútbol en tiempo real. Toma datos 
 
 ## Etapa actual
 
-Prototipo en desarrollo. Ya existen la maqueta UI/UX en Figma (tema oscuro) y la arquitectura base de frontend y backend; el código se construye en este repo. Hito 1 completo (partidos en vivo por liga, selector de fecha y vista de detalle) y pronósticos con Gemini integrados; falta el modelo Poisson del Hito 2.
+Prototipo en desarrollo. Ya existen la maqueta UI/UX en Figma (tema oscuro) y la arquitectura base de frontend y backend; el código se construye en este repo. Hito 1 completo (partidos en vivo por liga, selector de fecha y Match Center con resumen, estadísticas, alineaciones y pronóstico) y pronósticos con Gemini integrados; falta el modelo Poisson del Hito 2.
 
 ## Stack
 
@@ -35,8 +35,9 @@ Prototipo en desarrollo. Ya existen la maqueta UI/UX en Figma (tema oscuro) y la
 - **El backend centraliza todas las consultas externas.** El frontend habla solo con el backend de VYROX. Las credenciales (la `API_FOOTBALL_KEY`, enviada en el header `x-apisports-key`, y la clave de Gemini) viven únicamente en `backend/.env`, que no se sube al repo.
 - **Cuota de API-Football:** 100 peticiones por día en el plan gratuito. La caché en memoria del backend (`CACHE_TTL`, 300 s por defecto) existe para cuidar esa cuota; si la API falla o se agota la cuota, se sirven los últimos datos guardados.
 - **Fechas:** `GET /api/matches?date=YYYY-MM-DD` (por defecto, hoy en Colombia; `timezone=America/Bogota`). El plan gratuito de API-Football solo sirve ayer, hoy y mañana; el backend rechaza otras fechas con 400 sin gastar cuota. La caché es por fecha, y un día ya terminado sin partidos en vivo no se vuelve a pedir.
-- **Vista de detalle:** usa los campos que ya trae `/fixtures` (minuto, jornada, estadio, árbitro, marcador al medio tiempo), así que abrirla no gasta cuota. Eventos, alineaciones y estadísticas costarían una petición por partido.
-- **Pronósticos IA:** `POST /api/predictions` pide a Gemini un JSON con esquema fijo (ganador, probabilidades, ambos anotan, más/menos de 2.5, confianza, apuesta recomendada, justificación). Cada pronóstico se guarda 6 horas por `match_id`. Sin `GEMINI_API_KEY` o si Gemini falla, responde 200 con `fallback: true` y un mensaje.
+- **Match Center:** `GET /api/matches/{id}/details` gasta 2 peticiones de API-Football por partido: `/fixtures?id` (eventos, alineaciones y estadísticas) y `/fixtures/headtohead`. El plan gratuito no acepta el parámetro `last`, así que el backend recibe todo el historial y se queda con los 5 últimos partidos terminados, sin contar el propio partido. Caché por partido: 120 s si está en vivo, 6 h si terminó y, si no ha empezado, hasta el inicio. El H2H se guarda 6 h por pareja de equipos. El encabezado (minuto, jornada, estadio, árbitro) sale de `/api/matches` y no gasta cuota.
+- **Datos simulados:** si un partido ya jugado no trae alineaciones o estadísticas (ligas sin cobertura) o no hay API key, el backend genera datos de demostración estables por partido y los marca en `simulated`; la interfaz muestra el aviso "Datos simulados". Nunca se envían a Gemini.
+- **Pronósticos IA:** `POST /api/predictions` pide a Gemini un JSON con esquema fijo (ganador, probabilidades, ambos anotan, más/menos de 2.5, confianza, apuesta recomendada, justificación). El prompt incluye el H2H y las estadísticas reales del partido (del Match Center) para que Gemini cite datos concretos. Cada pronóstico se guarda 6 horas por `match_id`. Sin `GEMINI_API_KEY` o si Gemini falla, responde 200 con `fallback: true` y un mensaje.
 - **Modo oscuro** como interfaz estándar, siguiendo la maqueta de Figma.
 
 ## Idioma

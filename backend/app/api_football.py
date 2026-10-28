@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 
-API_URL = "https://v3.football.api-sports.io/fixtures"
+API_BASE = "https://v3.football.api-sports.io"
 CACHE_TTL = int(os.environ.get("CACHE_TTL", 300))  # seconds; the free plan allows 100 requests per day
 SAMPLE_FILE = Path(__file__).parent / "sample_matches.json"
 COLOMBIA = timezone(timedelta(hours=-5))  # Colombia has no DST, so a fixed offset is exact
@@ -33,6 +33,20 @@ _lock = asyncio.Lock()
 
 class UpstreamError(Exception):
     """API-Football answered with an error such as a bad key or an exhausted daily quota."""
+
+
+async def api_get(path: str, params: dict) -> list[dict]:
+    """GET an API-Football endpoint and return its "response" list."""
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.get(
+            f"{API_BASE}{path}", headers={"x-apisports-key": os.environ["API_FOOTBALL_KEY"]}, params=params
+        )
+        response.raise_for_status()
+    body = response.json()
+    # API-Football reports a bad key, an exhausted quota or a plan limit with HTTP 200 and an "errors" field.
+    if body["errors"]:
+        raise UpstreamError(body["errors"])
+    return body["response"]
 
 
 def _team(team: dict) -> dict:
@@ -73,8 +87,7 @@ def _fresh(day: date, entry: dict) -> bool:
 
 async def fetch_matches(day: date | None = None) -> tuple[list[dict], bool]:
     """Return the day's matches (default: today in Colombia) and whether they are sample data."""
-    key = os.environ.get("API_FOOTBALL_KEY")
-    if not key:
+    if not os.environ.get("API_FOOTBALL_KEY"):
         return json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))["matches"], True
 
     today = colombia_today()
@@ -85,23 +98,13 @@ async def fetch_matches(day: date | None = None) -> tuple[list[dict], bool]:
         if entry and _fresh(day, entry):
             return entry["matches"], False
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(
-                    API_URL,
-                    headers={"x-apisports-key": key},
-                    params={"date": day.isoformat(), "timezone": "America/Bogota"},
-                )
-                response.raise_for_status()
-            body = response.json()
-            # API-Football reports a bad key or an exhausted quota with HTTP 200 and an "errors" field.
-            if body["errors"]:
-                raise UpstreamError(body["errors"])
+            items = await api_get("/fixtures", {"date": day.isoformat(), "timezone": "America/Bogota"})
         except (httpx.HTTPError, UpstreamError):
             if entry:
                 entry["at"] = time.monotonic()  # wait a full TTL before spending another request
                 return entry["matches"], False
             raise
-        _cache[day] = {"at": time.monotonic(), "on": today, "matches": [to_match(item) for item in body["response"]]}
+        _cache[day] = {"at": time.monotonic(), "on": today, "matches": [to_match(item) for item in items]}
         return _cache[day]["matches"], False
 
 

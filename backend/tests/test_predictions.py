@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app import gemini
 from app.main import app
+from fake_api_football import FIXTURE_ID, fixture, install
 
 MATCH = {
     "match_id": 2002,
@@ -129,3 +130,36 @@ def test_gemini_failure_returns_fallback_and_is_not_cached(upstream, reply):
 
 def test_rejects_oversized_fields():
     assert post({**MATCH, "home_team": "x" * 101}).status_code == 422
+
+
+def sent_prompt(upstream):
+    return upstream["requests"][0]["json"]["contents"][0]["parts"][0]["text"]
+
+
+def test_prompt_includes_real_h2h_and_match_statistics(upstream, monkeypatch):
+    install(monkeypatch)
+
+    post({**MATCH, "match_id": FIXTURE_ID})
+
+    prompt = sent_prompt(upstream)
+    assert "Historial directo (últimos 5 partidos terminados):" in prompt
+    assert "- 2025-04-01: Kashima 2-1 Pohang Steelers (AFC Champions League Elite)" in prompt
+    assert "Promedio de goles: 2.2. Ambos anotaron en 3 de 5. Más de 2.5 goles en 2 de 5." in prompt
+    assert "Estadísticas de este partido (local - visitante):\n- Posesión: 71 - 29" in prompt
+
+
+def test_simulated_statistics_never_reach_gemini(upstream, monkeypatch):
+    api = install(monkeypatch)
+    api["fixture"] = fixture(lineups=[], statistics=[])
+
+    post({**MATCH, "match_id": FIXTURE_ID})
+
+    prompt = sent_prompt(upstream)
+    assert "Historial directo" in prompt and "Estadísticas de este partido" not in prompt
+
+
+def test_prediction_without_match_data_still_works(upstream, monkeypatch):
+    monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)  # match 2002 is not in the sample data
+
+    assert post().json()["fallback"] is False
+    assert gemini.NO_CONTEXT in sent_prompt(upstream)
