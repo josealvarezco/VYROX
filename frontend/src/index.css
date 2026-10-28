@@ -11,6 +11,9 @@
   --color-orange: #ee761b;
   --color-peach: #fbc193;
   --color-sky: #8dc3e8;
+
+  --animate-tab-in: tab-in 150ms ease-out;
+  --animate-grow: grow 500ms ease-out;
 }
 
 /* Colors that follow the theme: light by default, dark under <html data-theme="dark">. */
@@ -42,6 +45,8 @@
   --warn: #a64b0a;
   --sub-in: #1d7a3e;
   --sub-out: #b42318;
+  --scroll: rgb(13 51 30 / 0.22);
+  --scroll-hover: rgb(13 51 30 / 0.4);
 }
 
 :root[data-theme='dark'] {
@@ -58,6 +63,8 @@
   --warn: #fbc193;
   --sub-in: #7dd3a0;
   --sub-out: #fca5a5;
+  --scroll: rgb(247 245 235 / 0.18);
+  --scroll-hover: rgb(247 245 235 / 0.32);
 }
 
 @layer base {
@@ -71,6 +78,52 @@
   h3 {
     letter-spacing: -0.025em;
   }
+
+  /* Thin rounded scrollbars in the theme colors; Firefox has no ::-webkit-scrollbar, so it gets the standard properties. */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--scroll);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scroll-hover);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scroll) transparent;
+    }
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+@keyframes tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
 }
 
 @layer components {
@@ -81,5 +134,29 @@
       radial-gradient(40% 140% at 88% -25%, rgb(251 193 147 / 0.38), transparent 70%),
       linear-gradient(180deg, #071f12, #0d331e);
     color: #f7f5eb;
+  }
+
+  /* Match Center: the page behind blurs and fades in while the card rises. */
+  dialog[open] {
+    animation: rise-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  dialog::backdrop {
+    background: rgb(6 24 14 / 0.55);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    animation: fade-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  :root[data-theme='dark'] dialog::backdrop {
+    background: rgb(0 0 0 / 0.65);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
   }
 }

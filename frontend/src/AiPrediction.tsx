@@ -24,7 +24,10 @@ function PredictionCards({ prediction }: { prediction: Prediction }) {
           <div key={label} className="grid grid-cols-[4.5rem_1fr_3rem] items-center gap-3">
             <span className="text-muted">{label}</span>
             <div className="h-2.5 overflow-hidden rounded-full bg-chip" aria-hidden="true">
-              <div className="h-full rounded-full bg-yellow" style={{ width: `${value}%` }} />
+              <div
+                className="h-full origin-left animate-grow rounded-full bg-yellow transition-all duration-500 ease-out"
+                style={{ width: `${value}%` }}
+              />
             </div>
             <span className="text-right font-num font-bold tabular-nums">{value}%</span>
           </div>

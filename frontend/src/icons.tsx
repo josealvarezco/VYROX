@@ -14,7 +14,7 @@ const ROTATION = { down: '', up: 'rotate-180', left: 'rotate-90', right: '-rotat
 
 export function Chevron({ direction = 'down', className = '' }: { direction?: keyof typeof ROTATION; className?: string }) {
   return (
-    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className={`size-4 shrink-0 ${ROTATION[direction]} ${className}`}>
+    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className={`size-4 shrink-0 transition-transform duration-200 ease-out ${ROTATION[direction]} ${className}`}>
       <path
         fillRule="evenodd"
         clipRule="evenodd"

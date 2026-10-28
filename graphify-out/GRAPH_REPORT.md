@@ -1,17 +1,17 @@
 # Graph Report - VYROX  (2026-10-28)
 
 ## Corpus Check
-- 37 files · ~14,642 words
+- 38 files · ~14,908 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 348 nodes · 657 edges · 15 communities (13 shown, 2 thin omitted)
+- 350 nodes · 665 edges · 15 communities (13 shown, 2 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8ad4fe8d`
+- Built from commit: `83f732e3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -42,7 +42,7 @@
 7. `MatchCenter()` - 14 edges
 8. `get()` - 13 edges
 9. `post()` - 12 edges
-10. `react` - 10 edges
+10. `react` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `fresh_cache()` --references--> `fixture()`  [EXTRACTED]
@@ -74,8 +74,8 @@ Cohesion: 0.10
 Nodes (19): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+11 more)
 
 ### Community 3 - "MatchCenter.tsx"
-Cohesion: 0.08
-Nodes (44): CONFIDENCE, PredictionCards(), PredictionView(), EventText(), HeadToHead(), Icon(), Lineups(), Marks() (+36 more)
+Cohesion: 0.09
+Nodes (37): CONFIDENCE, PredictionCards(), PredictionView(), EventText(), HeadToHead(), Icon(), Lineups(), Marks() (+29 more)
 
 ### Community 4 - "compilerOptions"
 Cohesion: 0.12
@@ -110,8 +110,8 @@ Cohesion: 0.08
 Nodes (33): fixture(), install(), meeting(), team(), api(), expire(), get(), test_finished_match_is_cached_for_six_hours() (+25 more)
 
 ### Community 14 - "App.tsx"
-Cohesion: 0.15
-Nodes (28): App(), DAYS, FILTERS, longDate(), Message(), shiftDay(), shortWeekday(), TODAY (+20 more)
+Cohesion: 0.12
+Nodes (36): App(), DAYS, FILTERS, longDate(), Message(), shiftDay(), shortWeekday(), TODAY (+28 more)
 
 ## Knowledge Gaps
 - **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
@@ -120,7 +120,7 @@ Nodes (28): App(), DAYS, FILTERS, longDate(), Message(), shiftDay(), shortWeekda
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `App.tsx` to `package.json`, `MatchCenter.tsx`?**
-  _High betweenness centrality (0.048) - this node is a cross-community bridge._
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Should `test_matches.py` be split into smaller, more focused modules?**
   _Cohesion score 0.12681159420289856 - nodes in this community are weakly interconnected._
 - **Why does `fixture()` connect `test_details.py` to `test_matches.py`?**
@@ -130,6 +130,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.1 - nodes in this community are weakly interconnected._
 - **Should `MatchCenter.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.08326530612244898 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09390243902439024 - nodes in this community are weakly interconnected._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._

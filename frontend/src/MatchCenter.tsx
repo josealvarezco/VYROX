@@ -42,7 +42,7 @@ function TeamBadge({ team, followed, onFollow }: { team: Team; followed: boolean
         onClick={() => onFollow(team)}
         aria-pressed={followed}
         aria-label={`Seguir a ${team.shortName}`}
-        className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+        className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] ${
           followed ? 'border-yellow bg-yellow text-forest' : 'border-cream/25 text-cream/80 hover:bg-cream/10 hover:text-cream'
         }`}
       >
@@ -139,10 +139,16 @@ function Statistics({ rows }: { rows: MatchDetails['statistics'] }) {
             </div>
             <div className="grid grid-cols-2 gap-1" aria-hidden="true">
               <div className="flex h-2 justify-end overflow-hidden rounded-l-full bg-line">
-                <div className={`h-full ${SIDE_COLOR.home}`} style={{ width: `${(home / total) * 100}%` }} />
+                <div
+                  className={`h-full origin-right animate-grow transition-all duration-500 ease-out ${SIDE_COLOR.home}`}
+                  style={{ width: `${(home / total) * 100}%` }}
+                />
               </div>
               <div className="h-2 overflow-hidden rounded-r-full bg-line">
-                <div className={`h-full ${SIDE_COLOR.away}`} style={{ width: `${(away / total) * 100}%` }} />
+                <div
+                  className={`h-full origin-left animate-grow transition-all duration-500 ease-out ${SIDE_COLOR.away}`}
+                  style={{ width: `${(away / total) * 100}%` }}
+                />
               </div>
             </div>
           </div>
@@ -414,7 +420,7 @@ export function MatchCenter({
       ref={dialog}
       onClose={onClose}
       aria-label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`}
-      className="m-auto max-h-[92vh] w-[calc(100%-2rem)] max-w-3xl flex-col overflow-hidden rounded-3xl border border-line bg-modal p-0 text-ink backdrop:bg-black/70 open:flex"
+      className="m-auto max-h-[92vh] w-[calc(100%-2rem)] max-w-3xl flex-col overflow-hidden rounded-3xl border border-line bg-modal p-0 text-ink open:flex"
     >
       <header className="hero shrink-0 px-5 pt-4 pb-7">
         <div className="flex items-center justify-between gap-3 text-sm text-cream/75">
@@ -427,7 +433,7 @@ export function MatchCenter({
           <button
             type="button"
             onClick={() => dialog.current?.close()}
-            className="shrink-0 rounded-full px-3 py-1 font-semibold text-cream/85 hover:bg-cream/10 hover:text-cream"
+            className="shrink-0 rounded-full px-3 py-1 font-semibold text-cream/85 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream active:scale-[0.98]"
           >
             Cerrar ✕
           </button>
@@ -458,7 +464,7 @@ export function MatchCenter({
               aria-selected={tab === name}
               aria-controls="match-tab-panel"
               onClick={() => openTab(name)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap ${
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out active:scale-[0.98] ${
                 tab === name
                   ? 'bg-yellow font-bold text-forest'
                   : name === 'Pronóstico IA ✨'
@@ -478,26 +484,29 @@ export function MatchCenter({
         aria-labelledby={`match-tab-${TABS.indexOf(tab)}`}
         className="relative -mt-4 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-modal px-5 py-5"
       >
-        {tab === 'Pronóstico IA ✨' ? (
-          <div className="space-y-6">
-            <PredictionView prediction={prediction.prediction} state={prediction.state} />
-            {details ? <HeadToHead h2h={details.h2h} /> : waiting}
-          </div>
-        ) : !details ? (
-          waiting
-        ) : tab === 'Resumen' ? (
-          <Summary match={match} events={details.events} />
-        ) : tab === 'Estadísticas' ? (
-          <>
-            {details.simulated.includes('statistics') && <SimulatedBadge sample={details.sample} />}
-            <Statistics rows={details.statistics} />
-          </>
-        ) : (
-          <>
-            {details.simulated.includes('lineups') && <SimulatedBadge sample={details.sample} />}
-            <Lineups match={match} details={details} />
-          </>
-        )}
+        {/* Keyed by tab so each switch replays the short entrance. */}
+        <div key={tab} className="animate-tab-in">
+          {tab === 'Pronóstico IA ✨' ? (
+            <div className="space-y-6">
+              <PredictionView prediction={prediction.prediction} state={prediction.state} />
+              {details ? <HeadToHead h2h={details.h2h} /> : waiting}
+            </div>
+          ) : !details ? (
+            waiting
+          ) : tab === 'Resumen' ? (
+            <Summary match={match} events={details.events} />
+          ) : tab === 'Estadísticas' ? (
+            <>
+              {details.simulated.includes('statistics') && <SimulatedBadge sample={details.sample} />}
+              <Statistics rows={details.statistics} />
+            </>
+          ) : (
+            <>
+              {details.simulated.includes('lineups') && <SimulatedBadge sample={details.sample} />}
+              <Lineups match={match} details={details} />
+            </>
+          )}
+        </div>
       </div>
     </dialog>
   )

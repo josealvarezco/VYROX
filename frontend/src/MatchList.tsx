@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Collapse } from './Collapse'
 import { Chevron } from './icons'
 import { LIVE, kickoffTime, statusText } from './status'
 import type { Match } from './types'
@@ -13,7 +14,7 @@ function MatchRow({ match, showLeague, onSelect }: { match: Match; showLeague: b
       <button
         type="button"
         onClick={() => onSelect(match)}
-        className={`grid w-full items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-surface-2 sm:px-4 ${
+        className={`grid w-full items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out hover:bg-surface-2 sm:px-4 ${
           showLeague ? 'grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]'
         }`}
       >
@@ -72,9 +73,14 @@ export function MatchCard({
   const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight'
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <h2 className={collapsed ? '' : 'border-b border-line'}>
+      <h2>
         {onToggle ? (
-          <button type="button" onClick={onToggle} aria-expanded={!collapsed} className={`${header} hover:bg-surface-2/60`}>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={!collapsed}
+            className={`${header} transition-all duration-200 ease-out hover:bg-surface-2/60`}
+          >
             {title}
             <Chevron direction={collapsed ? 'down' : 'up'} className="ml-auto text-muted" />
           </button>
@@ -82,13 +88,13 @@ export function MatchCard({
           <span className={header}>{title}</span>
         )}
       </h2>
-      {!collapsed && (
-        <ul className="divide-y divide-line">
+      <Collapse open={!collapsed}>
+        <ul className="divide-y divide-line border-t border-line">
           {matches.map((match) => (
             <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} />
           ))}
         </ul>
-      )}
+      </Collapse>
     </section>
   )
 }
