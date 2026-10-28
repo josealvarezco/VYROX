@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { PredictionView } from './AiPrediction'
 import { countryLabel } from './leagues'
 import { LIVE, statusText } from './status'
@@ -10,6 +10,7 @@ type Tab = (typeof TABS)[number]
 type Substitution = Extract<MatchEvent, { type: 'subst' }>
 const SIDES = ['home', 'away'] as const
 const SIDE_COLOR = { home: 'bg-sky-500', away: 'bg-rose-500' } as const
+const SIDE_RING = { home: 'ring-sky-500', away: 'ring-rose-500' } as const
 
 function Icon({ symbol, label }: { symbol: string; label: string }) {
   return (
@@ -155,8 +156,33 @@ function spot(side: Side, player: Starter, starters: Starter[]) {
   const rows = Math.max(...starters.map((p) => p.row))
   const across = ((player.col - 0.5) / starters.filter((p) => p.row === player.row).length) * 100
   const depth = ((player.row - 0.5) / rows) * 50 // share of the pitch between the team's own goal line and halfway
-  // Home defends the bottom goal and away the top one; column 1 goes on each team's right flank.
-  return side === 'home' ? { left: `${100 - across}%`, top: `${100 - depth}%` } : { left: `${across}%`, top: `${depth}%` }
+  // Home attacks to the right and away to the left. Grid column 1 is each team's left flank (Inter's
+  // lineup has Dimarco at 3:1 and Diouf at 3:5), so it goes on top for home and at the bottom for away.
+  return side === 'home' ? { left: `${depth}%`, top: `${across}%` } : { left: `${100 - depth}%`, top: `${100 - across}%` }
+}
+
+function PlayerSpot({ side, player, style }: { side: Side; player: Starter; style: CSSProperties }) {
+  const [photo, setPhoto] = useState(player.id !== null) // simulated players have no id, hence no photo
+  return (
+    <div className="absolute flex w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center" style={style}>
+      {photo ? (
+        <img
+          src={`https://media.api-sports.io/football/players/${player.id}.png`}
+          alt=""
+          onError={() => setPhoto(false)}
+          className={`size-10 rounded-full bg-neutral-700 object-cover ring-2 ${SIDE_RING[side]}`}
+        />
+      ) : (
+        <span className={`grid size-10 place-items-center rounded-full text-sm font-bold text-white ${SIDE_COLOR[side]}`}>
+          {player.number}
+        </span>
+      )}
+      <span className="mt-1 line-clamp-2 text-[11px] leading-tight font-semibold text-white">
+        <span className="text-neutral-400">{player.number}</span> {player.name}
+      </span>
+      <Marks player={player} />
+    </div>
+  )
 }
 
 function Marks({ player }: { player: Player }) {
@@ -187,50 +213,36 @@ function Marks({ player }: { player: Player }) {
 
 function Pitch({ lineups }: { lineups: Record<Side, Lineup> }) {
   return (
-    <div
-      className="relative mx-auto aspect-[68/105] w-full max-w-md overflow-hidden rounded-lg bg-emerald-800"
-      style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgb(255 255 255 / 0.04) 0 10%, transparent 10% 20%)' }}
-    >
-      <svg
-        viewBox="0 0 68 105"
-        className="absolute inset-0 size-full"
-        fill="none"
-        stroke="rgb(255 255 255 / 0.45)"
-        strokeWidth="0.35"
-        aria-hidden="true"
-      >
-        <rect x="1" y="1" width="66" height="103" />
-        <line x1="1" y1="52.5" x2="67" y2="52.5" />
-        <circle cx="34" cy="52.5" r="9.15" />
-        <rect x="13.84" y="1" width="40.32" height="16.5" />
-        <rect x="24.84" y="1" width="18.32" height="5.5" />
-        <rect x="13.84" y="87.5" width="40.32" height="16.5" />
-        <rect x="24.84" y="98.5" width="18.32" height="5.5" />
-        <g fill="rgb(255 255 255 / 0.45)" stroke="none">
-          <circle cx="34" cy="52.5" r="0.6" />
-          <circle cx="34" cy="12" r="0.5" />
-          <circle cx="34" cy="93" r="0.5" />
-        </g>
-      </svg>
-      {SIDES.map((side) =>
-        lineups[side].starters.map((player, index, starters) => (
-          <div
-            key={`${side}-${index}`}
-            className="absolute flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center"
-            style={spot(side, player, starters)}
-          >
-            <span
-              className={`grid size-7 place-items-center rounded-full text-xs font-bold text-white ring-2 ring-white/80 ${SIDE_COLOR[side]}`}
-            >
-              {player.number}
-            </span>
-            <span className="mt-0.5 w-full truncate text-[10px] leading-tight font-medium text-white [text-shadow:0_1px_2px_rgb(0_0_0)]">
-              {player.name}
-            </span>
-            <Marks player={player} />
-          </div>
-        )),
-      )}
+    // Phones scroll the pitch sideways: 22 players do not fit legibly in 340 px.
+    <div className="overflow-x-auto">
+      <div className="relative aspect-[105/68] w-full min-w-[640px] overflow-hidden rounded-lg bg-neutral-800">
+        <svg
+          viewBox="0 0 105 68"
+          className="absolute inset-0 size-full"
+          fill="none"
+          stroke="rgb(255 255 255 / 0.12)"
+          strokeWidth="0.3"
+          aria-hidden="true"
+        >
+          <rect x="1" y="1" width="103" height="66" />
+          <line x1="52.5" y1="1" x2="52.5" y2="67" />
+          <circle cx="52.5" cy="34" r="9.15" />
+          <rect x="1" y="13.84" width="16.5" height="40.32" />
+          <rect x="1" y="24.84" width="5.5" height="18.32" />
+          <rect x="87.5" y="13.84" width="16.5" height="40.32" />
+          <rect x="98.5" y="24.84" width="5.5" height="18.32" />
+          <g fill="rgb(255 255 255 / 0.12)" stroke="none">
+            <circle cx="52.5" cy="34" r="0.6" />
+            <circle cx="12" cy="34" r="0.5" />
+            <circle cx="93" cy="34" r="0.5" />
+          </g>
+        </svg>
+        {SIDES.map((side) =>
+          lineups[side].starters.map((player, index, starters) => (
+            <PlayerSpot key={`${side}-${index}`} side={side} player={player} style={spot(side, player, starters)} />
+          )),
+        )}
+      </div>
     </div>
   )
 }
@@ -256,9 +268,11 @@ function Lineups({ match, details }: { match: Match; details: MatchDetails }) {
 
   return (
     <div className="space-y-5">
-      <TeamLine team={match.awayTeam} lineup={lineups.away} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <TeamLine team={match.homeTeam} lineup={lineups.home} />
+        <TeamLine team={match.awayTeam} lineup={lineups.away} />
+      </div>
       <Pitch lineups={lineups} />
-      <TeamLine team={match.homeTeam} lineup={lineups.home} />
 
       <section>
         <h3 className="mb-2 text-sm font-semibold">Cambios realizados</h3>

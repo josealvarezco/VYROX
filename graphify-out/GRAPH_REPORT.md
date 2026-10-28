@@ -1,17 +1,17 @@
 # Graph Report - VYROX  (2026-10-28)
 
 ## Corpus Check
-- 36 files · ~13,975 words
+- 36 files · ~14,077 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 339 nodes · 637 edges · 16 communities (14 shown, 2 thin omitted)
+- 341 nodes · 640 edges · 16 communities (14 shown, 2 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a1f1ad99`
+- Built from commit: `16b722f6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -63,7 +63,7 @@
 ## Communities (16 total, 2 thin omitted)
 
 ### Community 0 - "test_matches.py"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (13): expire_cache(), fetch(), fresh_cache(), league_fixture(), test_dates_outside_the_free_plan_return_400_without_spending_quota(), test_finished_past_day_is_never_requested_again(), test_future_day_is_not_treated_as_final(), test_past_day_refreshes_after_ttl_until_it_is_final() (+5 more)
 
 ### Community 1 - "package.json"
@@ -75,8 +75,8 @@ Cohesion: 0.10
 Nodes (19): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+11 more)
 
 ### Community 3 - "MatchCenter.tsx"
-Cohesion: 0.10
-Nodes (34): PredictionCards(), PredictionView(), EventText(), HeadToHead(), Icon(), Lineups(), Marks(), MatchCenter() (+26 more)
+Cohesion: 0.09
+Nodes (42): PredictionCards(), PredictionView(), EventText(), HeadToHead(), Icon(), Lineups(), Marks(), MatchCenter() (+34 more)
 
 ### Community 4 - "compilerOptions"
 Cohesion: 0.12
@@ -111,8 +111,8 @@ Cohesion: 0.08
 Nodes (33): fixture(), install(), meeting(), team(), api(), expire(), get(), test_finished_match_is_cached_for_six_hours() (+25 more)
 
 ### Community 14 - "App.tsx"
-Cohesion: 0.14
-Nodes (30): App(), DAYS, FILTERS, Message(), shiftDay(), TODAY, Chevron(), FilterIcon() (+22 more)
+Cohesion: 0.17
+Nodes (24): App(), DAYS, FILTERS, Message(), shiftDay(), TODAY, Chevron(), FilterIcon() (+16 more)
 
 ### Community 15 - "gemini.py"
 Cohesion: 0.14
@@ -125,9 +125,9 @@ Nodes (8): _context(), _generate(), MatchInfo, predict(), Prediction, Probabilit
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `App.tsx` to `package.json`, `MatchCenter.tsx`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
 - **Should `test_matches.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.12681159420289856 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.12 - nodes in this community are weakly interconnected._
 - **Why does `fixture()` connect `test_details.py` to `test_matches.py`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Should `package.json` be split into smaller, more focused modules?**
@@ -135,6 +135,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.1 - nodes in this community are weakly interconnected._
 - **Should `MatchCenter.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.10384068278805121 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08776595744680851 - nodes in this community are weakly interconnected._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._
