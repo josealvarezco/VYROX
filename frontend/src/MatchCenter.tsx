@@ -1,24 +1,29 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { PredictionView } from './AiPrediction'
+import {
+  BallIcon,
+  CardIcon,
+  CrossIcon,
+  JerseyIcon,
+  PitchIcon,
+  SparklesIcon,
+  StarIcon,
+  StopwatchIcon,
+  SubIcon,
+  WhistleIcon,
+} from './icons'
 import { countryLabel } from './leagues'
 import { LIVE, statusText } from './status'
-import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Player, Side, Starter, Team } from './types'
+import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Side, Starter, Team } from './types'
 import { usePrediction } from './usePrediction'
 
-const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Pronóstico IA ✨'] as const
+const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Pronóstico IA'] as const
 type Tab = (typeof TABS)[number]
 type Substitution = Extract<MatchEvent, { type: 'subst' }>
 const SIDES = ['home', 'away'] as const
 const SIDE_COLOR = { home: 'bg-sky', away: 'bg-orange' } as const
 const SIDE_RING = { home: 'ring-sky', away: 'ring-orange' } as const
-
-function Icon({ symbol, label }: { symbol: string; label: string }) {
-  return (
-    <span role="img" aria-label={label}>
-      {symbol}
-    </span>
-  )
-}
+const INLINE_ICON = 'mr-1 inline-block size-4 align-[-3px]'
 
 function Note({ children }: { children: ReactNode }) {
   return <p className="py-8 text-center text-sm text-muted">{children}</p>
@@ -42,11 +47,12 @@ function TeamBadge({ team, followed, onFollow }: { team: Team; followed: boolean
         onClick={() => onFollow(team)}
         aria-pressed={followed}
         aria-label={`Seguir a ${team.shortName}`}
-        className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] ${
+        className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] ${
           followed ? 'border-yellow bg-yellow text-forest' : 'border-cream/25 text-cream/80 hover:bg-cream/10 hover:text-cream'
         }`}
       >
-        {followed ? '★ Siguiendo' : '☆ Seguir'}
+        <StarIcon filled={followed} className="size-3.5" />
+        {followed ? 'Siguiendo' : 'Seguir'}
       </button>
     </div>
   )
@@ -56,21 +62,29 @@ function EventText({ event }: { event: MatchEvent }) {
   if (event.type === 'subst')
     return (
       <span>
-        <Icon symbol="🔄" label="Cambio" /> <span className="text-sub-in">↑ {event.player_in}</span>{' '}
-        <span className="text-sub-out">↓ {event.player_out}</span>
+        <SubIcon label="Cambio" className={INLINE_ICON} />
+        <span className="font-semibold text-sub-in">
+          <span className="sr-only">entra </span>
+          {event.player_in}
+        </span>{' '}
+        <span className="text-sub-out">
+          <span className="sr-only">sale </span>
+          {event.player_out}
+        </span>
       </span>
     )
   if (event.type === 'goal')
     return (
       <span>
-        <Icon symbol="⚽" label="Gol" /> <strong>{event.player}</strong>
+        <BallIcon own={event.detail === 'autogol'} label={event.detail === 'autogol' ? 'Autogol' : 'Gol'} className={INLINE_ICON} />
+        <strong>{event.player}</strong>
         {event.detail && ` (${event.detail})`}
         {event.assist && <span className="text-muted"> · asist. {event.assist}</span>}
       </span>
     )
   return (
     <span>
-      {event.type === 'yellow' ? <Icon symbol="🟨" label="Tarjeta amarilla" /> : <Icon symbol="🟥" label="Tarjeta roja" />}{' '}
+      <CardIcon variant={event.type} label={event.type === 'yellow' ? 'Tarjeta amarilla' : 'Tarjeta roja'} className={INLINE_ICON} />
       {event.player}
     </span>
   )
@@ -80,11 +94,11 @@ function Summary({ match, events }: { match: Match; events: MatchEvent[] }) {
   const halfTime = match.score.halfTime
   const facts = (
     [
-      ['Estadio', [match.venue?.name, match.venue?.city].filter(Boolean).join(', ')],
-      ['Árbitro', match.referee],
-      ['Medio tiempo', halfTime?.home != null ? `${halfTime.home} : ${halfTime.away}` : null],
-    ] as [string, string | null | undefined][]
-  ).filter(([, value]) => value)
+      [PitchIcon, 'Estadio', [match.venue?.name, match.venue?.city].filter(Boolean).join(', ')],
+      [WhistleIcon, 'Árbitro', match.referee],
+      [StopwatchIcon, 'Medio tiempo', halfTime?.home != null ? `${halfTime.home} : ${halfTime.away}` : null],
+    ] as [typeof PitchIcon, string, string | null | undefined][]
+  ).filter(([, , value]) => value)
 
   return (
     <div className="space-y-6">
@@ -105,9 +119,12 @@ function Summary({ match, events }: { match: Match; events: MatchEvent[] }) {
       )}
       {facts.length > 0 && (
         <dl className="grid gap-3 border-t border-line pt-4 text-sm sm:grid-cols-3">
-          {facts.map(([label, value]) => (
+          {facts.map(([FactIcon, label, value]) => (
             <div key={label}>
-              <dt className="text-muted">{label}</dt>
+              <dt className="flex items-center gap-1.5 text-muted">
+                <FactIcon />
+                {label}
+              </dt>
               <dd>{value}</dd>
             </div>
           ))}
@@ -162,58 +179,65 @@ function spot(side: Side, player: Starter, starters: Starter[]) {
   const rows = Math.max(...starters.map((p) => p.row))
   const across = ((player.col - 0.5) / starters.filter((p) => p.row === player.row).length) * 100
   const depth = ((player.row - 0.5) / rows) * 50 // share of the pitch between the team's own goal line and halfway
+  const width = `${50 / rows - 1}%` // one line's share minus a gap, so one-line names never touch the next line
   // Home attacks to the right and away to the left. Grid column 1 is each team's left flank (Inter's
   // lineup has Dimarco at 3:1 and Diouf at 3:5), so it goes on top for home and at the bottom for away.
-  return side === 'home' ? { left: `${depth}%`, top: `${across}%` } : { left: `${100 - depth}%`, top: `${100 - across}%` }
+  return side === 'home'
+    ? { left: `${depth}%`, top: `${across}%`, width }
+    : { left: `${100 - depth}%`, top: `${100 - across}%`, width }
 }
 
 function PlayerSpot({ side, player, style }: { side: Side; player: Starter; style: CSSProperties }) {
   const [photo, setPhoto] = useState(player.id !== null) // simulated players have no id, hence no photo
+  const { goals, yellow, red, subbed_out } = player
+  const card = red ? (yellow ? 'second-yellow' : 'red') : yellow ? 'yellow' : null
   return (
-    <div className="absolute flex w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center" style={style}>
-      {photo ? (
-        <img
-          src={`https://media.api-sports.io/football/players/${player.id}.png`}
-          alt=""
-          onError={() => setPhoto(false)}
-          className={`size-10 rounded-full bg-cream/10 object-cover ring-2 ${SIDE_RING[side]}`}
-        />
-      ) : (
-        <span className={`grid size-10 place-items-center rounded-full font-num text-sm font-bold text-forest ${SIDE_COLOR[side]}`}>
-          {player.number}
-        </span>
-      )}
-      <span className="mt-1 line-clamp-2 text-[11px] leading-tight font-semibold text-cream">
+    <div className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center" style={style}>
+      {/* Events float on the avatar's edge, so the name below always stays on one clean line. */}
+      <div className="relative">
+        {photo ? (
+          <img
+            src={`https://media.api-sports.io/football/players/${player.id}.png`}
+            alt=""
+            onError={() => setPhoto(false)}
+            className={`size-10 rounded-full bg-cream/10 object-cover ring-2 ${SIDE_RING[side]}`}
+          />
+        ) : (
+          <span className={`grid size-10 place-items-center rounded-full font-num text-sm font-bold text-forest ${SIDE_COLOR[side]}`}>
+            {player.number}
+          </span>
+        )}
+        {card && (
+          <CardIcon
+            variant={card}
+            label={{ yellow: 'Tarjeta amarilla', red: 'Tarjeta roja', 'second-yellow': 'Doble amarilla' }[card]}
+            className="absolute -top-1 -left-1 size-4"
+          />
+        )}
+        {subbed_out && (
+          <span className="absolute -top-1 -right-1 flex translate-x-1/2 items-center gap-0.5 rounded-full bg-forest py-px pr-1 pl-px font-num text-[9px] leading-none font-bold text-cream ring-1 ring-cream/30">
+            <SubIcon label="Salió" className="size-3.5" />
+            {subbed_out}
+          </span>
+        )}
+        {goals > 0 && (
+          <span className="absolute -right-1 -bottom-1">
+            <BallIcon label={goals > 1 ? `${goals} goles` : 'Gol'} />
+            {goals > 1 && (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1.5 -right-1.5 grid size-3 place-items-center rounded-full bg-yellow font-num text-[8px] font-bold text-forest"
+              >
+                {goals}
+              </span>
+            )}
+          </span>
+        )}
+      </div>
+      <span title={player.name} className="mt-1 w-full truncate text-[11px] leading-tight font-semibold text-cream">
         <span className="font-num font-bold text-yellow">{player.number}</span> {player.name}
       </span>
-      <Marks player={player} />
     </div>
-  )
-}
-
-function Marks({ player }: { player: Player }) {
-  const { goals, yellow, red, subbed_in, subbed_out } = player
-  if (!goals && !yellow && !red && !subbed_in && !subbed_out) return null
-  return (
-    <span className="flex items-center gap-0.5 text-[10px] leading-tight [text-shadow:0_1px_2px_rgb(0_0_0)]">
-      {Array.from({ length: goals }, (_, index) => (
-        <Icon key={index} symbol="⚽" label="Gol" />
-      ))}
-      {yellow && <Icon symbol="🟨" label="Tarjeta amarilla" />}
-      {red && <Icon symbol="🟥" label="Tarjeta roja" />}
-      {subbed_out && (
-        <span className="text-red-300">
-          <Icon symbol="🔄" label="Salió" />
-          {subbed_out}
-        </span>
-      )}
-      {subbed_in && (
-        <span className="text-emerald-300">
-          <Icon symbol="🔄" label="Entró" />
-          {subbed_in}
-        </span>
-      )}
-    </span>
   )
 }
 
@@ -243,11 +267,14 @@ function Pitch({ lineups }: { lineups: Record<Side, Lineup> }) {
             <circle cx="93" cy="34" r="0.5" />
           </g>
         </svg>
-        {SIDES.map((side) =>
-          lineups[side].starters.map((player, index, starters) => (
-            <PlayerSpot key={`${side}-${index}`} side={side} player={player} style={spot(side, player, starters)} />
-          )),
-        )}
+        {/* Inset so the players on the touchlines are never cut off at the pitch edge. */}
+        <div className="absolute inset-x-2 inset-y-6">
+          {SIDES.map((side) =>
+            lineups[side].starters.map((player, index, starters) => (
+              <PlayerSpot key={`${side}-${index}`} side={side} player={player} style={spot(side, player, starters)} />
+            )),
+          )}
+        </div>
       </div>
     </div>
   )
@@ -281,15 +308,26 @@ function Lineups({ match, details }: { match: Match; details: MatchDetails }) {
       <Pitch lineups={lineups} />
 
       <section>
-        <h3 className="mb-2 text-sm font-bold">Cambios realizados</h3>
+        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold">
+          <SubIcon />
+          Cambios realizados
+        </h3>
         {substitutions.length ? (
           <ul className="space-y-1.5 text-sm">
             {substitutions.map((event, index) => (
               <li key={index} className="flex flex-wrap items-center gap-x-2">
-                <span className="w-12 text-xs font-num tabular-nums text-muted">{event.minute}</span>
+                <span className="w-12 rounded-full bg-chip py-0.5 text-center font-num text-xs font-semibold tabular-nums text-cream">
+                  {event.minute}
+                </span>
                 <img src={teams[event.team].crest} alt={teams[event.team].shortName} className="size-4" />
-                <span className="text-sub-in">↑ {event.player_in}</span>
-                <span className="text-sub-out">↓ {event.player_out}</span>
+                <span className="font-semibold text-sub-in">
+                  <span className="sr-only">entra </span>
+                  {event.player_in}
+                </span>
+                <span className="text-sub-out">
+                  <span className="sr-only">sale </span>
+                  {event.player_out}
+                </span>
               </li>
             ))}
           </ul>
@@ -299,7 +337,10 @@ function Lineups({ match, details }: { match: Match; details: MatchDetails }) {
       </section>
 
       <section>
-        <h3 className="mb-2 text-sm font-bold">Banca de suplentes</h3>
+        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold">
+          <JerseyIcon className="size-4 text-muted" />
+          Banca de suplentes
+        </h3>
         <div className="grid gap-4 sm:grid-cols-2">
           {SIDES.map((side) => (
             <div key={side}>
@@ -309,7 +350,12 @@ function Lineups({ match, details }: { match: Match; details: MatchDetails }) {
                   <li key={index} className="flex items-center gap-2">
                     <span className="w-6 shrink-0 text-right text-xs font-num tabular-nums text-muted">{player.number}</span>
                     <span className="truncate">{player.name}</span>
-                    {player.subbed_in && <span className="shrink-0 font-num text-xs text-sub-in">↑ {player.subbed_in}</span>}
+                    {player.subbed_in && (
+                      <span className="inline-flex shrink-0 items-center gap-1 font-num text-xs text-sub-in">
+                        <SubIcon label="Entró" className="size-3.5" />
+                        {player.subbed_in}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -407,7 +453,7 @@ export function MatchCenter({
 
   const openTab = (next: Tab) => {
     setTab(next)
-    if (next === 'Pronóstico IA ✨') prediction.load() // Gemini is only asked when someone opens its tab
+    if (next === 'Pronóstico IA') prediction.load() // Gemini is only asked when someone opens its tab
   }
 
   const { home, away } = match.score.fullTime
@@ -433,9 +479,10 @@ export function MatchCenter({
           <button
             type="button"
             onClick={() => dialog.current?.close()}
-            className="shrink-0 rounded-full px-3 py-1 font-semibold text-cream/85 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream active:scale-[0.98]"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-3 py-1 font-semibold text-cream/85 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream active:scale-[0.98]"
           >
-            Cerrar ✕
+            Cerrar
+            <CrossIcon className="size-3.5" />
           </button>
         </div>
 
@@ -464,15 +511,16 @@ export function MatchCenter({
               aria-selected={tab === name}
               aria-controls="match-tab-panel"
               onClick={() => openTab(name)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out active:scale-[0.98] ${
+              className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out active:scale-[0.98] ${
                 tab === name
                   ? 'bg-yellow font-bold text-forest'
-                  : name === 'Pronóstico IA ✨'
+                  : name === 'Pronóstico IA'
                     ? 'text-yellow hover:bg-cream/10'
                     : 'text-cream/75 hover:bg-cream/10 hover:text-cream'
               }`}
             >
               {name}
+              {name === 'Pronóstico IA' && <SparklesIcon />}
             </button>
           ))}
         </div>
@@ -486,7 +534,7 @@ export function MatchCenter({
       >
         {/* Keyed by tab so each switch replays the short entrance. */}
         <div key={tab} className="animate-tab-in">
-          {tab === 'Pronóstico IA ✨' ? (
+          {tab === 'Pronóstico IA' ? (
             <div className="space-y-6">
               <PredictionView prediction={prediction.prediction} state={prediction.state} />
               {details ? <HeadToHead h2h={details.h2h} /> : waiting}

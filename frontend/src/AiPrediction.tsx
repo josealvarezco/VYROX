@@ -1,3 +1,4 @@
+import { CheckIcon, CrossIcon } from './icons'
 import type { Prediction } from './types'
 import type { usePrediction } from './usePrediction'
 
@@ -11,10 +12,20 @@ function PredictionCards({ prediction }: { prediction: Prediction }) {
   const confidence = (
     <span className={`rounded-full px-2.5 py-0.5 text-forest ${CONFIDENCE[prediction.confidence]}`}>{prediction.confidence}</span>
   )
+  const bothScore = (
+    <span className="inline-flex items-center gap-1">
+      {prediction.both_teams_to_score === 'Sí' ? (
+        <CheckIcon className="size-4 text-[#22C55E]" />
+      ) : (
+        <CrossIcon className="size-4 text-[#EF4444]" />
+      )}
+      {prediction.both_teams_to_score}
+    </span>
+  )
   const cards = [
     ['Apuesta Recomendada', prediction.recommended_bet],
     ['Confianza', confidence],
-    ['Ambos Anotan', prediction.both_teams_to_score],
+    ['Ambos Anotan', bothScore],
     ['Goles (2.5)', prediction.over_under_2_5],
   ] as const
   return (

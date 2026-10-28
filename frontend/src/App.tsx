@@ -1,5 +1,5 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
-import { Chevron, FilterIcon, Flag } from './icons'
+import { CalendarIcon, Chevron, FilterIcon, Flag, StarIcon } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
@@ -163,7 +163,7 @@ export default function App() {
             type="button"
             onClick={() => setShowSidebar(!showSidebar)}
             aria-expanded={showSidebar}
-            className="rounded-full border border-cream/25 px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/10 active:scale-[0.98] md:hidden"
+            className="cursor-pointer rounded-full border border-cream/25 px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/10 active:scale-[0.98] md:hidden"
           >
             Ligas y equipos
           </button>
@@ -189,7 +189,10 @@ export default function App() {
         <main className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface p-4">
             <p>
-              <span className="block text-lg leading-tight font-bold tracking-tight">{DAYS[date]}</span>
+              <span className="flex items-center gap-1.5 text-lg leading-tight font-bold tracking-tight">
+                <CalendarIcon className="size-5 text-muted" />
+                {DAYS[date]}
+              </span>
               <span className="block text-sm text-muted">{longDate(date)}</span>
             </p>
             <div className="flex items-center gap-1.5">
@@ -198,7 +201,7 @@ export default function App() {
                 onClick={() => goTo(shiftDay(date, -1))}
                 disabled={!(shiftDay(date, -1) in DAYS)}
                 aria-label="Día anterior"
-                className="grid size-9 place-items-center rounded-full transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98] disabled:opacity-30 disabled:hover:bg-transparent"
+                className="grid size-9 cursor-pointer place-items-center rounded-full transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-surface-2 active:translate-y-0 disabled:cursor-default disabled:opacity-30 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
               >
                 <Chevron direction="left" className="size-5" />
               </button>
@@ -209,7 +212,7 @@ export default function App() {
                   onClick={() => goTo(day)}
                   aria-pressed={day === date}
                   aria-label={`${label}, ${longDate(day)}`}
-                  className={`flex w-14 flex-col items-center rounded-2xl py-2 transition-all duration-200 ease-out active:scale-[0.98] ${
+                  className={`flex w-14 cursor-pointer flex-col items-center rounded-2xl py-2 transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
                     day === date ? 'bg-yellow text-forest' : 'bg-chip text-cream hover:opacity-85'
                   }`}
                 >
@@ -222,7 +225,7 @@ export default function App() {
                 onClick={() => goTo(shiftDay(date, 1))}
                 disabled={!(shiftDay(date, 1) in DAYS)}
                 aria-label="Día siguiente"
-                className="grid size-9 place-items-center rounded-full transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98] disabled:opacity-30 disabled:hover:bg-transparent"
+                className="grid size-9 cursor-pointer place-items-center rounded-full transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-surface-2 active:translate-y-0 disabled:cursor-default disabled:opacity-30 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
               >
                 <Chevron direction="right" className="size-5" />
               </button>
@@ -236,7 +239,7 @@ export default function App() {
                 type="button"
                 onClick={() => setFilter(name)}
                 aria-pressed={filter === name}
-                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out active:scale-[0.98] ${
+                className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
                   filter === name ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink hover:bg-surface-2'
                 }`}
               >
@@ -260,7 +263,7 @@ export default function App() {
           {league !== null && (
             <p className="flex items-center gap-2 text-sm text-muted">
               Mostrando <span className="font-semibold text-ink">{leagueName}</span>
-              <button type="button" onClick={() => pickLeague(null)} className="font-semibold text-gold hover:underline">
+              <button type="button" onClick={() => pickLeague(null)} className="cursor-pointer font-semibold text-gold hover:underline">
                 Ver todas
               </button>
             </p>
@@ -279,7 +282,17 @@ export default function App() {
           )}
 
           {following.length > 0 && (
-            <MatchCard title={<span className="text-gold">★ Siguiendo</span>} matches={following} onSelect={open} showLeague />
+            <MatchCard
+              title={
+                <span className="inline-flex items-center gap-1.5 text-gold">
+                  <StarIcon filled />
+                  Siguiendo
+                </span>
+              }
+              matches={following}
+              onSelect={open}
+              showLeague
+            />
           )}
 
           {filter === 'Por horario'

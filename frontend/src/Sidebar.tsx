@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Collapse } from './Collapse'
-import { Chevron, FilterIcon, Flag } from './icons'
+import { Chevron, FilterIcon, Flag, StarIcon } from './icons'
 import { TOP_LEAGUES, WORLD, countryLabel, fold, leagueLogo } from './leagues'
 import type { Competition, Team } from './types'
 
@@ -22,7 +22,7 @@ function LeagueButton({ name, logo, selected, onClick }: { name: string; logo: s
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition-all duration-200 ease-out ${
+      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition-all duration-200 ease-out ${
         selected ? 'bg-yellow font-bold text-forest' : 'text-ink hover:bg-surface-2'
       }`}
     >
@@ -78,7 +78,7 @@ function AllLeagues({ groups, league, onLeague }: { groups: Competition[]; leagu
                 type="button"
                 onClick={() => toggle(country)}
                 aria-expanded={expanded}
-                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition-all duration-200 ease-out hover:bg-surface-2"
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition-all duration-200 ease-out hover:bg-surface-2"
               >
                 <Flag country={country} flag={flag} />
                 <span className="flex-1 truncate">{countryLabel(country)}</span>
@@ -131,7 +131,7 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => onTeam(team)}
-                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition-all duration-200 ease-out hover:bg-surface-2"
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition-all duration-200 ease-out hover:bg-surface-2"
                 >
                   <img src={team.crest} alt="" className="size-5 shrink-0 object-contain" />
                   <span className="truncate">{team.shortName}</span>
@@ -140,15 +140,17 @@ export function Sidebar({
                   type="button"
                   onClick={() => onUnfollow(team)}
                   aria-label={`Dejar de seguir a ${team.shortName}`}
-                  className="rounded-xl px-2 py-1 text-gold transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98]"
+                  className="cursor-pointer rounded-xl px-2 py-1.5 text-gold transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98]"
                 >
-                  ★
+                  <StarIcon filled />
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="px-1 text-xs text-muted">Abre un partido y toca ☆ junto a un equipo para seguirlo.</p>
+          <p className="px-1 text-xs text-muted">
+            Abre un partido y toca <StarIcon className="inline-block size-3.5 align-[-2px]" /> junto a un equipo para seguirlo.
+          </p>
         )}
       </Card>
 
@@ -156,7 +158,7 @@ export function Sidebar({
         title="Mejores ligas"
         action={
           league !== null && (
-            <button type="button" onClick={() => onLeague(null)} className="text-xs font-semibold text-gold hover:underline">
+            <button type="button" onClick={() => onLeague(null)} className="cursor-pointer text-xs font-semibold text-gold hover:underline">
               Ver todas
             </button>
           )
