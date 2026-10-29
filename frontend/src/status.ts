@@ -1,4 +1,4 @@
-import type { Match } from './types'
+import type { Match } from './types.ts' // with its extension: goals.ts brings this file into Node's tests
 
 export const LIVE = new Set(['IN_PLAY', 'PAUSED'])
 const STATUS_LABEL: Record<string, string> = {

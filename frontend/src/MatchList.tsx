@@ -4,7 +4,7 @@ import { Chevron } from './icons'
 import { LIVE, kickoffTime, statusText } from './status'
 import type { Match } from './types'
 
-function MatchRow({ match, showLeague, onSelect }: { match: Match; showLeague: boolean; onSelect: (match: Match) => void }) {
+function MatchRow({ match, showLeague, onSelect, goal }: { match: Match; showLeague: boolean; onSelect: (match: Match) => void; goal: boolean }) {
   const { home, away } = match.score.fullTime
   const live = LIVE.has(match.status)
   const note = match.status === 'TIMED' ? null : live && match.minute ? `${match.minute}'` : statusText(match)
@@ -16,7 +16,7 @@ function MatchRow({ match, showLeague, onSelect }: { match: Match; showLeague: b
         onClick={() => onSelect(match)}
         className={`grid w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out hover:bg-hover hover:shadow-[inset_3px_0_0_0_#F4D56D] sm:px-4 ${
           showLeague ? 'grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]'
-        }`}
+        } ${goal ? 'animate-goal bg-yellow/10' : ''}`}
       >
         {showLeague && (
           <img
@@ -40,9 +40,14 @@ function MatchRow({ match, showLeague, onSelect }: { match: Match; showLeague: b
               {home} - {away}
             </span>
           )}
-          {note && (
-            <span className={`text-[11px] ${live ? 'rounded-full bg-orange px-1.5 font-num font-bold text-forest' : 'text-muted'}`}>
-              {note}
+          {(note || goal) && (
+            <span className="flex items-center gap-1">
+              {note && (
+                <span className={`text-[11px] ${live ? 'rounded-full bg-orange px-1.5 font-num font-bold text-forest' : 'text-muted'}`}>
+                  {note}
+                </span>
+              )}
+              {goal && <span className="animate-pulse rounded-full bg-yellow px-1.5 text-[11px] font-extrabold text-forest">¡GOL!</span>}
             </span>
           )}
         </span>
@@ -62,6 +67,7 @@ export function MatchCard({
   showLeague = false,
   collapsed = false,
   onToggle,
+  scored,
 }: {
   title: ReactNode
   matches: Match[]
@@ -69,6 +75,7 @@ export function MatchCard({
   showLeague?: boolean
   collapsed?: boolean
   onToggle?: () => void
+  scored?: (matchId: number) => boolean // matches that just scored, which glow for a few seconds
 }) {
   const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight'
   return (
@@ -91,7 +98,7 @@ export function MatchCard({
       <Collapse open={!collapsed}>
         <ul className="divide-y divide-line border-t border-line">
           {matches.map((match) => (
-            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} />
+            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} goal={scored?.(match.id) ?? false} />
           ))}
         </ul>
       </Collapse>

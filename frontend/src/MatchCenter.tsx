@@ -7,6 +7,7 @@ import {
   CrossIcon,
   JerseyIcon,
   PitchIcon,
+  ShareIcon,
   SparklesIcon,
   StarIcon,
   StopwatchIcon,
@@ -14,8 +15,10 @@ import {
   WhistleIcon,
 } from './icons'
 import { countryLabel } from './leagues'
+import { ShareButton } from './ShareButton'
+import { forecastCard } from './shareCard'
 import { LIVE, statusText } from './status'
-import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Side, Starter, Team } from './types'
+import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Prediction, Side, Starter, Team } from './types'
 import type { useBetSlip } from './useBetSlip'
 import { usePrediction } from './usePrediction'
 
@@ -545,6 +548,19 @@ export function MatchCenter({
           <div key={tab} className="animate-tab-in">
             {tab === 'Pronóstico IA' ? (
               <div className="space-y-6">
+                {prediction.prediction && !prediction.prediction.fallback && (
+                  <div className="-mb-3 flex justify-end">
+                    <ShareButton
+                      draw={() => forecastCard(match, competition.league_name, prediction.prediction as Extract<Prediction, { fallback: false }>)}
+                      filename={`vyrox-pronostico-${match.id}.png`}
+                      label="Compartir Pronóstico"
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98]"
+                    >
+                      <ShareIcon />
+                      Compartir Pronóstico
+                    </ShareButton>
+                  </div>
+                )}
                 <PredictionView prediction={prediction.prediction} state={prediction.state} />
                 {details ? <HeadToHead h2h={details.h2h} /> : waiting}
                 {prediction.prediction &&

@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
-import { CalendarIcon, Chevron, FilterIcon, Flag, RadarIcon, StarIcon } from './icons'
+import { GoalToasts } from './GoalToasts'
+import { BellRingIcon, CalendarIcon, Chevron, FilterIcon, Flag, RadarIcon, StarIcon } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
@@ -12,6 +13,7 @@ import { ThemeToggle } from './ThemeToggle'
 import type { Match, MatchesResponse, Team } from './types'
 import { useBetSlip } from './useBetSlip'
 import { useFollowed } from './useFollowed'
+import { useGoalAlerts } from './useGoalAlerts'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
 const REFRESH_MS = 60_000
@@ -62,6 +64,8 @@ export default function App() {
   const followed = useFollowed()
   const slip = useBetSlip()
   const { track } = slip
+  const goalAlerts = useGoalAlerts()
+  const { check } = goalAlerts
 
   useEffect(() => {
     let current = true // drop answers for a date the user already left
@@ -75,7 +79,9 @@ export default function App() {
           if (!current) return
           setData(body)
           setError(false)
-          track(body.competitions.flatMap((group) => group.matches)) // settles registered plays with these scores
+          const list = body.competitions.flatMap((group) => group.matches)
+          track(list) // settles registered plays with these scores
+          check(list) // goal alerts for the live matches whose score went up
         })
         .catch(() => current && setError(true))
     load()
@@ -84,7 +90,7 @@ export default function App() {
       current = false
       clearInterval(id)
     }
-  }, [date, track])
+  }, [date, track, check])
 
   const goTo = (day: string) => {
     if (!(day in DAYS) || day === date) return
@@ -92,6 +98,7 @@ export default function App() {
     setData(null)
     setError(false)
     setSelectedId(null)
+    goalAlerts.reset()
   }
 
   // The logo is a home link: a plain click resets the screen in place, a modified click still opens a new tab.
@@ -153,6 +160,7 @@ export default function App() {
     .find(({ match }) => match.id === selectedId)
   const open = (match: Match) => setSelectedId(match.id)
 
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <header className="hero mb-5 flex items-center justify-between gap-3 rounded-3xl px-5 py-5 sm:px-7">
@@ -175,6 +183,27 @@ export default function App() {
             className="cursor-pointer rounded-full border border-cream/25 px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/10 active:scale-[0.98] md:hidden"
           >
             Ligas y equipos
+          </button>
+          {import.meta.env.DEV && (
+            <button
+              type="button"
+              onClick={() => goalAlerts.simulate(allGroups.flatMap((group) => group.matches))}
+              className="hidden cursor-pointer rounded-full border border-dashed border-cream/30 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-cream/70 transition-all duration-200 ease-out hover:bg-cream/10 sm:block"
+            >
+              Simular gol
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={goalAlerts.toggle}
+            aria-pressed={goalAlerts.on}
+            aria-label="Alertas de gol en vivo"
+            title={goalAlerts.on ? 'Silenciar las alertas de gol' : 'Activar las alertas de gol'}
+            className={`grid size-8 shrink-0 cursor-pointer place-items-center rounded-full border border-cream/20 bg-cream/10 transition-all duration-200 ease-out hover:bg-cream/15 active:scale-[0.98] ${
+              goalAlerts.on ? 'text-yellow' : 'text-cream/60'
+            }`}
+          >
+            <BellRingIcon muted={!goalAlerts.on} />
           </button>
           <ThemeToggle />
         </div>
@@ -317,6 +346,7 @@ export default function App() {
               matches={following}
               onSelect={open}
               showLeague
+              scored={goalAlerts.glowing}
             />
           )}
 
@@ -329,6 +359,7 @@ export default function App() {
                   matches={[...shown].sort((a, b) => Date.parse(a.utcDate) - Date.parse(b.utcDate))}
                   onSelect={open}
                   showLeague
+                  scored={goalAlerts.glowing}
                 />
               )
             : groups.map((group) => (
@@ -346,6 +377,7 @@ export default function App() {
                   onSelect={open}
                   collapsed={collapsed.has(group.league_id)}
                   onToggle={() => toggleCollapsed(group.league_id)}
+                  scored={goalAlerts.glowing}
                 />
               ))}
         </main>
@@ -364,6 +396,7 @@ export default function App() {
       )}
       {/* With a match open, the Match Center docks the slip itself, above its blur. */}
       {!selected && <BetSlip slip={slip} />}
+      <GoalToasts alerts={goalAlerts.alerts} onOpen={setSelectedId} onDismiss={goalAlerts.dismiss} isFollowed={followed.isFollowed} />
     </div>
   )
 }

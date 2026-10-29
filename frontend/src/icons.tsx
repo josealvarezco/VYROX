@@ -205,6 +205,45 @@ export function CrossIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+export function ShareIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <circle cx="14.5" cy="4.75" r="2.25" />
+      <circle cx="5.5" cy="10" r="2.25" />
+      <circle cx="14.5" cy="15.25" r="2.25" />
+      <path d="m7.5 8.9 5-2.9m-5 5.1 5 2.9" />
+    </svg>
+  )
+}
+
+export function DownloadIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M10 3v9.5m-4-4 4 4 4-4M4 15.5v1h12v-1" />
+    </svg>
+  )
+}
+
+export function CopyIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <rect x="7" y="7" width="9.5" height="9.5" rx="2" />
+      <path d="M13 4.5V4a1.5 1.5 0 0 0-1.5-1.5h-7A1.5 1.5 0 0 0 3 4v7a1.5 1.5 0 0 0 1.5 1.5H5" />
+    </svg>
+  )
+}
+
+// A bell ringing with alert waves; crossed out while the alerts are muted.
+export function BellRingIcon({ muted = false, className = 'size-4', label }: IconProps & { muted?: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M5.5 13.5V9a4.5 4.5 0 0 1 9 0v4.5l1.25 1.5H4.25Z" />
+      <path d="M8.5 17.25h3" />
+      {muted ? <path d="m3 3 14 14" /> : <path d="M2.75 7.75a7.5 7.5 0 0 1 2-4.25m12.5 4.25a7.5 7.5 0 0 0-2-4.25" />}
+    </svg>
+  )
+}
+
 function GlobeIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={1.5} className={`shrink-0 ${className}`} {...a11y(label)}>
