@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeVar
 
 import httpx
 from pydantic import BaseModel, Field, computed_field, model_validator
@@ -20,6 +20,7 @@ log = logging.getLogger("uvicorn.error")
 
 Text = Annotated[str, Field(max_length=100)]
 Percent = Annotated[int, Field(ge=0, le=100)]
+Answer = TypeVar("Answer", bound=BaseModel)
 
 
 class Score(BaseModel):
@@ -109,7 +110,7 @@ NO_KEY = "VYROX IA no está disponible: falta configurar la clave del motor de I
 FAILED = "VYROX IA no pudo generar el pronóstico en este momento. Intenta de nuevo en unos minutos."
 
 
-async def _generate(client: httpx.AsyncClient, model: str, prompt: str) -> Prediction:
+async def _generate(client: httpx.AsyncClient, model: str, prompt: str, schema: type[Answer]) -> Answer:
     response = await client.post(
         API_URL.format(model=model),
         headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
@@ -117,12 +118,23 @@ async def _generate(client: httpx.AsyncClient, model: str, prompt: str) -> Predi
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "responseMimeType": "application/json",
-                "responseJsonSchema": Prediction.model_json_schema(),
+                "responseJsonSchema": schema.model_json_schema(),
             },
         },
     )
     response.raise_for_status()
-    return Prediction.model_validate_json(response.json()["candidates"][0]["content"]["parts"][0]["text"])
+    return schema.model_validate_json(response.json()["candidates"][0]["content"]["parts"][0]["text"])
+
+
+async def ask_vyrox_ia(prompt: str, schema: type[Answer], subject: str) -> Answer | None:
+    """Ask Gemini (Flash, then Flash-Lite) for JSON matching `schema`; None when both fail."""
+    async with httpx.AsyncClient(timeout=30) as client:
+        for model in MODELS:
+            try:
+                return await _generate(client, model, prompt, schema)
+            except (httpx.HTTPError, KeyError, IndexError, ValueError) as error:  # ValueError: bad JSON or schema
+                log.warning("Gemini %s failed for %s: %r", model, subject, error)
+    return None
 
 
 async def _context(match_id: int) -> str:
@@ -160,15 +172,9 @@ async def predict(match: MatchInfo) -> dict:
     score = "sin goles registrados" if match.score.home is None else f"{match.score.home}-{match.score.away}"
     context = await _context(match.match_id)
     prompt = PROMPT.format(**match.model_dump(exclude={"score"}), score=score, context=context)
-    async with httpx.AsyncClient(timeout=30) as client:
-        for model in MODELS:
-            try:
-                prediction = await _generate(client, model, prompt)
-                break
-            except (httpx.HTTPError, KeyError, IndexError, ValueError) as error:  # ValueError: bad JSON or schema
-                log.warning("Gemini %s failed for match %s: %r", model, match.match_id, error)
-        else:
-            return {"fallback": True, "reasoning": FAILED}
+    prediction = await ask_vyrox_ia(prompt, Prediction, f"match {match.match_id}")
+    if prediction is None:
+        return {"fallback": True, "reasoning": FAILED}
 
     result = {"fallback": False, **prediction.model_dump()}
     _cache[match.match_id] = (time.monotonic(), result)

@@ -6,16 +6,22 @@ from fastapi import FastAPI, HTTPException, Query
 from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetch_matches, group_by_league
 from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
+from app.parlays import get_parlays
 
 app = FastAPI(title="VYROX API")
 
 
-@app.get("/api/matches")
-async def matches(day: date | None = Query(None, alias="date")):
+def check_available(day: date | None) -> None:
+    """Reject dates the free plan does not serve before any quota is spent."""
     today = colombia_today()
-    if day and abs((day - today).days) > DAYS_AVAILABLE:  # checked here so a bad date never spends quota
+    if day and abs((day - today).days) > DAYS_AVAILABLE:
         first, last = today - timedelta(DAYS_AVAILABLE), today + timedelta(DAYS_AVAILABLE)
         raise HTTPException(status_code=400, detail=f"Solo hay partidos del {first} al {last} (plan gratuito de API-Football).")
+
+
+@app.get("/api/matches")
+async def matches(day: date | None = Query(None, alias="date")):
+    check_available(day)
     try:
         data, sample = await fetch_matches(day)
     except (httpx.HTTPError, UpstreamError) as error:
@@ -29,6 +35,15 @@ async def match_details(match_id: int):
         return await get_details(match_id)
     except MatchNotFound:
         raise HTTPException(status_code=404, detail="Partido no encontrado")
+    except (httpx.HTTPError, UpstreamError) as error:
+        raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
+
+
+@app.get("/api/parlays")
+async def parlays(day: date | None = Query(None, alias="date")):
+    check_available(day)
+    try:
+        return await get_parlays(day)
     except (httpx.HTTPError, UpstreamError) as error:
         raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
 

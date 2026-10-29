@@ -40,6 +40,31 @@ export type Prediction =
       fair_odds: Record<'recommended' | 'home' | 'draw' | 'away' | 'over_2_5' | 'btts_yes', number | null>
     }
 
+// GET /api/parlays: odds are VYROX fair odds (100 / probability), never a bookmaker's
+export type ParlayLeg = {
+  match_id: number
+  league_name: string
+  league_logo: string
+  country_flag: string | null
+  home_team: string
+  away_team: string
+  kickoff_label: string // "28/10 20:05", Colombia time
+  market_selection: string
+  probability: number
+  odd: number
+  popularity_label: string
+}
+export type Parlay = {
+  key: 'segura' | 'valor' | 'tendencia'
+  title: string
+  badge: string
+  legs: ParlayLeg[]
+  total_odd: number
+  probability: number
+}
+// simulated: VYROX IA was unavailable, so the slips are stable demo data
+export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null }
+
 // GET /api/matches/{id}/details
 export type MatchEvent = { minute: string; team: Side } & (
   | { type: 'goal'; player: string; assist: string | null; detail: string | null }
