@@ -184,15 +184,6 @@ export default function App() {
           >
             Ligas y equipos
           </button>
-          {import.meta.env.DEV && (
-            <button
-              type="button"
-              onClick={() => goalAlerts.simulate(allGroups.flatMap((group) => group.matches))}
-              className="hidden cursor-pointer rounded-full border border-dashed border-cream/30 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-cream/70 transition-all duration-200 ease-out hover:bg-cream/10 sm:block"
-            >
-              Simular gol
-            </button>
-          )}
           <button
             type="button"
             onClick={goalAlerts.toggle}
@@ -396,7 +387,13 @@ export default function App() {
       )}
       {/* With a match open, the Match Center docks the slip itself, above its blur. */}
       {!selected && <BetSlip slip={slip} />}
-      <GoalToasts alerts={goalAlerts.alerts} onOpen={setSelectedId} onDismiss={goalAlerts.dismiss} isFollowed={followed.isFollowed} />
+      <GoalToasts
+        alerts={goalAlerts.alerts}
+        tickets={slip.tickets}
+        onOpen={setSelectedId}
+        onDismiss={goalAlerts.dismiss}
+        isFollowed={followed.isFollowed}
+      />
     </div>
   )
 }

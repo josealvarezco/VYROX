@@ -1,4 +1,5 @@
-// Type-only imports with their extension, so Node runs this file's test without a bundler.
+// Imports with their extension, so Node runs this file's test without a bundler.
+import { LIVE } from './status.ts'
 import type { Match, SavedTicket, SlipLeg, TicketLeg } from './types.ts'
 
 // Whether a pick wins with a final score; null for the free-text recommended play, which only the user can settle.
@@ -12,14 +13,32 @@ export function legResult(leg: SlipLeg, home: number, away: number): boolean | n
   return null
 }
 
-// Pending tickets settled with the final scores among `matches`, and the returns their wins pay into the bank.
-// Settled tickets are never touched again, so a win is paid once. Same array back when nothing changed.
+// Goals only add up, so once a live score passes a line or both teams have scored, these markets cannot change:
+// "Más de 2.5" is won and "Menos de 2.5" lost, both teams scoring wins "Sí" and loses "No".
+const DECIDED: Record<string, (home: number, away: number) => boolean> = {
+  goals: (home, away) => home + away > 2.5,
+  over_1_5: (home, away) => home + away > 1.5,
+  btts: (home, away) => home > 0 && away > 0,
+}
+
+// A pick's outcome with a live score, only once it can no longer change; null while it is still open.
+export function liveResult(leg: SlipLeg, home: number, away: number): boolean | null {
+  return DECIDED[leg.market_category]?.(home, away) ? legResult(leg, home, away) : null
+}
+
+// Pending tickets settled with the scores among `matches`: each pick at the final whistle, or live as soon as its
+// market cannot change. One lost pick loses the ticket at once; all picks won win it, and its return goes into the
+// bank. Settled tickets are never touched again, so a win is paid once. Same array back when nothing changed.
 // shortcut: fullTime is API-Football's "goals", extra time included, so a cup tie that goes past 90 minutes
 // settles on its 120-minute score; have the backend send the 90-minute score if those ties matter.
+// shortcut: a goal that VAR takes back after a pick settled live leaves the pick settled; re-check settled picks
+// at the final whistle if that matters.
 export function settle(tickets: SavedTicket[], matches: Match[], now: string) {
-  const finals = new Map(
+  const scores = new Map(
     matches.flatMap(({ id, status, score: { fullTime } }) =>
-      status === 'FINISHED' && fullTime.home !== null && fullTime.away !== null ? [[id, [fullTime.home, fullTime.away]] as const] : [],
+      (status === 'FINISHED' || LIVE.has(status)) && fullTime.home !== null && fullTime.away !== null
+        ? [[id, { final: status === 'FINISHED', home: fullTime.home, away: fullTime.away }] as const]
+        : [],
     ),
   )
   let credit = 0
@@ -27,8 +46,8 @@ export function settle(tickets: SavedTicket[], matches: Match[], now: string) {
   const next = tickets.map((ticket): SavedTicket => {
     if (ticket.status !== 'pending') return ticket
     const legs = ticket.legs.map((leg): TicketLeg => {
-      const score = finals.get(leg.match_id)
-      const won = leg.status === 'pending' && score ? legResult(leg, ...score) : null
+      const score = scores.get(leg.match_id)
+      const won = leg.status === 'pending' && score ? (score.final ? legResult : liveResult)(leg, score.home, score.away) : null
       return won === null ? leg : { ...leg, status: won ? 'won' : 'lost' }
     })
     if (legs.every((leg, index) => leg === ticket.legs[index])) return ticket

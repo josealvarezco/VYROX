@@ -32,6 +32,8 @@
   --color-sub-in: var(--sub-in);
   --color-sub-out: var(--sub-out);
   --color-hover: var(--hover);
+  --color-win: var(--win);
+  --color-loss: var(--loss);
 }
 
 :root {
@@ -51,6 +53,8 @@
   --scroll: rgb(13 51 30 / 0.22);
   --scroll-hover: rgb(13 51 30 / 0.4);
   --hover: rgb(13 51 30 / 0.04); /* match rows */
+  --win: #16a34a; /* a pick or play won */
+  --loss: #dc2626; /* a pick or play lost */
 }
 
 :root[data-theme='dark'] {
@@ -70,6 +74,8 @@
   --scroll: rgb(247 245 235 / 0.18);
   --scroll-hover: rgb(247 245 235 / 0.32);
   --hover: rgb(247 245 235 / 0.05);
+  --win: #22c55e;
+  --loss: #ef4444;
 }
 
 @layer base {

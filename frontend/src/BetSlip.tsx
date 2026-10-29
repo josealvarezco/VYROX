@@ -18,9 +18,13 @@ const PROFILES = [
 
 const BADGES = {
   pending: { label: 'PENDIENTE', style: 'bg-yellow text-forest', Icon: StopwatchIcon },
-  won: { label: 'GANADA', style: 'bg-[#1d7a3e] text-cream', Icon: CheckIcon },
-  lost: { label: 'PERDIDA', style: 'bg-orange text-forest', Icon: CrossIcon },
+  won: { label: 'GANADA', style: 'bg-[#16A34A] text-white', Icon: CheckIcon },
+  lost: { label: 'PERDIDA', style: 'bg-[#DC2626] text-white', Icon: CrossIcon },
 }
+// A settled play gets a green or red frame; each settled pick a soft green or red line (lighter in dark mode).
+const CARD = { pending: 'border border-line', won: 'border-2 border-[#16A34A]', lost: 'border-2 border-[#DC2626]' }
+const PICK = { pending: 'border-transparent', won: 'border-win/40 bg-win/10', lost: 'border-loss/40 bg-loss/10' }
+const ODD = { pending: '', won: 'text-win', lost: 'text-loss' }
 
 const pill = (active: boolean) =>
   `cursor-pointer rounded-full border px-2.5 py-1 text-xs font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
@@ -186,7 +190,7 @@ function TicketCard({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
     .replace(',', '')
 
   return (
-    <article className="rounded-2xl border border-line bg-surface p-3">
+    <article className={`rounded-2xl bg-surface p-3 ${CARD[ticket.status]}`}>
       <header className="flex items-center gap-2">
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide ${style}`}>
           <Icon className="size-3" />
@@ -218,16 +222,16 @@ function TicketCard({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
         </span>
       </header>
 
-      <ul className="mt-1 divide-y divide-dashed divide-line">
+      <ul className="mt-2 space-y-1">
         {ticket.legs.map((leg) => {
           const match = slip.matches.find((item) => item.id === leg.match_id)
           const { home, away } = match?.score.fullTime ?? { home: null, away: null }
           return (
-            <li key={slipKey(leg)} className="flex items-center gap-2 py-1.5">
+            <li key={slipKey(leg)} className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 ${PICK[leg.status]}`}>
               {leg.status === 'won' ? (
-                <CheckIcon className="size-4 text-sub-in" label="Cumplida" />
+                <CheckIcon className="size-4 text-win" label="Cumplida" />
               ) : leg.status === 'lost' ? (
-                <CrossIcon className="size-4 text-sub-out" label="Fallida" />
+                <CrossIcon className="size-4 text-loss" label="Fallida" />
               ) : (
                 <StopwatchIcon className="size-4 text-muted" label="Pendiente" />
               )}
@@ -238,7 +242,7 @@ function TicketCard({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
                   <span className="font-num">{match && home !== null ? `${home}-${away} ${statusText(match)}` : leg.kickoff_label}</span>
                 </p>
               </div>
-              <span className="font-num font-bold">{leg.odd.toFixed(2)}</span>
+              <span className={`font-num font-bold ${ODD[leg.status]}`}>{leg.odd.toFixed(2)}</span>
             </li>
           )
         })}
@@ -255,8 +259,9 @@ function TicketCard({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
         </div>
         <div>
           <dt className="text-muted">{pending ? 'Retorno posible / Profit' : 'Retorno / Profit'}</dt>
-          <dd className="font-num font-semibold">
-            {pesos(back)} / <span className={ticket.status === 'lost' ? 'text-warn' : 'text-gold'}>{signed(back - ticket.stake)}</span>
+          <dd className={`font-num font-semibold ${ODD[ticket.status]}`}>
+            {pesos(back)} /{' '}
+            <span className={ticket.status === 'pending' ? 'text-gold' : ticket.status === 'won' ? 'font-bold' : ''}>{signed(back - ticket.stake)}</span>
           </dd>
         </div>
       </dl>
@@ -295,8 +300,8 @@ function MyBets({ slip }: { slip: Slip }) {
         <p className="py-4 text-center text-muted">Aún no registras jugadas. Arma tu cupón y toca "Registrar Jugada".</p>
       )}
       <p className="text-[11px] text-muted">
-        Las jugadas se liquidan solas cuando su partido termina en la fecha que estás viendo; las de otras fechas, con los
-        botones de cada jugada.
+        Cada selección se decide sola en la fecha que estás viendo: en vivo en cuanto ya no puede cambiar (se pasa la línea
+        de goles o anotan ambos) y las demás al final de su partido. Las de otras fechas, con los botones de cada jugada.
       </p>
     </div>
   )
