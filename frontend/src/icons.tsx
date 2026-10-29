@@ -124,6 +124,18 @@ export function SparklesIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// Concentric rings, a sweep and a blip: VYROX IA scanning the day's markets.
+export function RadarIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <circle cx="10" cy="10" r="7.75" />
+      <circle cx="10" cy="10" r="4.25" />
+      <path d="M10 10 15.5 4.5" />
+      <circle cx="13.25" cy="12.75" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 // A podium: the league table's top three.
 export function StandingsIcon({ className = 'size-4', label }: IconProps) {
   return (

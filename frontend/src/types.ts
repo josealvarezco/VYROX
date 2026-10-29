@@ -86,6 +86,19 @@ export type SavedTicket = {
 // simulated: VYROX IA was unavailable, so the slips are stable demo data
 export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null }
 
+// GET /api/radar: the date's strongest picks per market, from the parlays' VYROX IA forecast
+export type RadarItem = Omit<ParlayLeg, 'odd' | 'popularity_label'> & {
+  league_id: number
+  home_logo: string
+  away_logo: string
+  fair_odd: number // 100 / probability, as the parlays' odd
+  confidence_badge: 'ALTA' | 'MEDIA'
+  insight: string
+}
+export type RadarCategory = { key: 'bankers_1x2' | 'over_2_5' | 'btts_yes' | 'under_2_5'; title: string; items: RadarItem[] }
+// played: the date has no match left to play, so its picks are a reference that takes no plays
+export type RadarResponse = { categories: RadarCategory[]; simulated: boolean; played: boolean; message: string | null }
+
 // GET /api/leagues/{league_id}/standings: the table of the match's group, simulated when there is none to show
 export type Result = 'V' | 'E' | 'D' // victoria, empate, derrota
 export type Standing = {

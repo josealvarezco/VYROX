@@ -273,13 +273,16 @@ def test_future_day_is_not_treated_as_final(upstream):
 
 @pytest.fixture
 def keys(monkeypatch):
-    """Two keys, "spent" first; state[key] is what API-Football answers that key (default: the fixtures)."""
+    """Two keys, "spent" first; state[key] is what API-Football answers that key (default: the fixtures), or 429."""
     state = {"used": []}
 
     async def fake_get(self, url, headers, params):
         key = headers["x-apisports-key"]
         state["used"].append(key)
-        return httpx.Response(200, json=state.get(key, UPSTREAM), request=httpx.Request("GET", url))
+        reply = state.get(key, UPSTREAM)
+        if reply == 429:
+            return httpx.Response(429, request=httpx.Request("GET", url))
+        return httpx.Response(200, json=reply, request=httpx.Request("GET", url))
 
     monkeypatch.setenv("API_FOOTBALL_KEYS", "spent, fresh")
     monkeypatch.setattr(api_football, "_turn", 0)
@@ -287,8 +290,12 @@ def keys(monkeypatch):
     return state
 
 
-def test_a_spent_key_hands_the_same_request_to_the_next_one(keys):
-    keys["spent"] = QUOTA_ERROR
+RATE_LIMIT = {"errors": {"rateLimit": "Too many requests. Your rate limit is 10 requests per minute."}, "response": []}
+
+
+@pytest.mark.parametrize("spent", [QUOTA_ERROR, RATE_LIMIT, 429], ids=["daily quota", "rate limit", "HTTP 429"])
+def test_a_spent_key_hands_the_same_request_to_the_next_one(keys, spent):
+    keys["spent"] = spent
 
     assert TestClient(app).get("/api/matches").json()["competitions"]
     expire_cache()
