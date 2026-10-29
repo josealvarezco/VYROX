@@ -473,7 +473,7 @@ export function MatchCenter({
       onClose={onClose}
       aria-label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`}
       className={`m-0 size-full max-h-none max-w-none grid-cols-[minmax(0,48rem)] items-center justify-center overflow-hidden border-0 bg-transparent p-4 text-ink transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] open:grid ${
-        slip.legs.length ? 'lg:grid-cols-[minmax(0,48rem)_25rem]' : 'lg:grid-cols-[minmax(0,48rem)_0rem]'
+        slip.docks ? 'lg:grid-cols-[minmax(0,48rem)_25rem]' : 'lg:grid-cols-[minmax(0,48rem)_0rem]'
       }`}
     >
       <div className="flex max-h-[92vh] flex-col overflow-hidden rounded-3xl border border-line bg-modal">

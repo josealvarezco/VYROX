@@ -169,6 +169,14 @@ export function TicketSlipIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+export function TrashIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M3.5 5.5h13M8 5.5v-2h4v2M5 5.5l.8 11h8.4l.8-11M8.5 9v4.5M11.5 9v4.5" />
+    </svg>
+  )
+}
+
 export function CheckIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2.25} className={`shrink-0 ${className}`} {...a11y(label)}>
