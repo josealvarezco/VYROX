@@ -24,8 +24,14 @@ PREDICTION = {
     "over_under_2_5": "Menos de 2.5 goles",
     "confidence": "Media",
     "recommended_bet": "Local o Empate + Menos de 3.5 goles",
+    "recommended_bet_probability": 70,
+    "over_2_5_probability": 40,
+    "btts_probability": 45,
     "reasoning": "Millonarios gana 1-0 en casa y controla el partido.",
 }
+# 100 / probability, rounded to 2 decimals
+FAIR_ODDS = {"recommended": 1.43, "home": 1.82, "draw": 4.0, "away": 5.0, "over_2_5": 2.5, "btts_yes": 2.22}
+EXPECTED = {"fallback": False, **PREDICTION, "fair_odds": FAIR_ODDS}
 
 
 def gemini_body(payload):
@@ -67,19 +73,28 @@ def test_returns_gemini_prediction(upstream):
     response = post()
 
     assert response.status_code == 200
-    assert response.json() == {"fallback": False, **PREDICTION}
+    assert response.json() == EXPECTED
     sent = upstream["requests"][0]
     assert sent["url"].endswith("/models/gemini-flash-latest:generateContent")
     assert sent["headers"] == {"x-goog-api-key": "test-key"}
     assert sent["json"]["generationConfig"]["responseMimeType"] == "application/json"
+    asked = sent["json"]["generationConfig"]["responseJsonSchema"]["properties"]
+    assert "btts_probability" in asked and "fair_odds" not in asked  # odds are computed here, never asked
     prompt = sent["json"]["contents"][0]["parts"][0]["text"]
     assert "Millonarios (local) vs Atletico Nacional (visitante)" in prompt and "Marcador: 1-0" in prompt
+    assert prompt.startswith("Eres VYROX IA, el motor propietario de analítica avanzada y predicción deportiva de VYROX")
+    assert "nunca te presentes como Gemini, Google" in prompt
+
+
+def test_fallback_messages_say_vyrox_ia_and_never_gemini():
+    for message in (gemini.NO_KEY, gemini.FAILED):
+        assert "VYROX IA" in message and "gemini" not in message.lower()
 
 
 def test_overloaded_flash_falls_back_to_flash_lite(upstream):
     upstream["overloaded"] = {"gemini-flash-latest"}
 
-    assert post().json() == {"fallback": False, **PREDICTION}
+    assert post().json() == EXPECTED
     models = [sent["url"].split("/models/")[1].split(":")[0] for sent in upstream["requests"]]
     assert models == ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
@@ -101,6 +116,21 @@ def test_probabilities_are_rescaled_to_sum_100(upstream):
     upstream["reply"] = {**PREDICTION, "probabilities": {"home": 50, "draw": 30, "away": 30}}
 
     assert post().json()["probabilities"] == {"home": 46, "draw": 27, "away": 27}
+
+
+def test_fair_odds_follow_the_rescaled_probabilities_and_skip_zero(upstream):
+    upstream["reply"] = {**PREDICTION, "probabilities": {"home": 50, "draw": 30, "away": 30}, "btts_probability": 0}
+
+    odds = post().json()["fair_odds"]
+
+    assert (odds["home"], odds["draw"], odds["away"]) == (2.17, 3.7, 3.7)  # from 46/27/27, not 50/30/30
+    assert odds["btts_yes"] is None  # no fair odds for an event VYROX IA gives no chance
+
+
+def test_missing_market_probability_is_outside_schema(upstream):
+    upstream["reply"] = {key: value for key, value in PREDICTION.items() if key != "over_2_5_probability"}
+
+    assert post().json() == {"fallback": True, "reasoning": gemini.FAILED}
 
 
 def test_without_key_returns_fallback(monkeypatch):
