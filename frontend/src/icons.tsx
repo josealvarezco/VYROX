@@ -9,6 +9,8 @@ const a11y = (label?: string) => (label ? { role: 'img', 'aria-label': label } :
 const FOREST = '#0D331E'
 const CREAM = '#F7F5EB'
 const RED = '#D93829'
+const ORANGE = '#EE761B'
+const YELLOW = '#F4D56D'
 const stroked = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
 export function BallIcon({ own = false, className = 'size-4', label }: IconProps & { own?: boolean }) {
@@ -22,7 +24,7 @@ export function BallIcon({ own = false, className = 'size-4', label }: IconProps
   )
 }
 
-const CARD = { yellow: '#F4D56D', red: RED }
+const CARD = { yellow: YELLOW, red: RED }
 
 export function CardIcon({ variant, className = 'size-4', label }: IconProps & { variant: 'yellow' | 'red' | 'second-yellow' }) {
   const edge = { stroke: FOREST, strokeOpacity: 0.25 }
@@ -126,6 +128,43 @@ export function TrendUpIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
       <path d="M2.5 14.5 8 9l3.5 3.5 6-6M13 6.5h4.5V11" />
+    </svg>
+  )
+}
+
+export function FlameIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path
+        fill={ORANGE}
+        d="M10 1.5c.6 2.6 2.4 4 3.8 5.6 1.5 1.7 2.7 3.5 2.7 5.9a6.5 6.5 0 0 1-13 0c0-2.3 1-4.1 2.4-5.4.2 1.3.8 2.3 1.8 2.9C7.3 7.6 8.2 4.2 10 1.5Z"
+      />
+      <path fill={YELLOW} d="M10 9.5c.3 1.3 1.2 2 1.9 2.8.7.8 1.1 1.6 1.1 2.7a3 3 0 0 1-6 0c0-1 .4-1.8 1-2.4.2.6.5 1 1 1.3-.2-1.6.2-3.2 1-4.4Z" />
+    </svg>
+  )
+}
+
+export function DoubleChevronUpIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="m5 10 5-5 5 5M5 15.5l5-5 5 5" />
+    </svg>
+  )
+}
+
+export function DoubleChevronRightIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="m4.5 5 5 5-5 5M10.5 5l5 5-5 5" />
+    </svg>
+  )
+}
+
+export function TicketSlipIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={1.5} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h11A1.5 1.5 0 0 1 17 4.5V8a2 2 0 0 0 0 4v3.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 15.5V12a2 2 0 0 0 0-4Z" />
+      <path d="M7.5 7h5M7.5 10h5M7.5 13h3" />
     </svg>
   )
 }

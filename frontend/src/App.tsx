@@ -1,12 +1,15 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
+import { BetSlip } from './BetSlip'
 import { CalendarIcon, Chevron, FilterIcon, Flag, StarIcon } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
+import { Parlays } from './Parlays'
 import { Sidebar } from './Sidebar'
 import { LIVE } from './status'
 import { ThemeToggle } from './ThemeToggle'
 import type { Match, MatchesResponse, Team } from './types'
+import { useBetSlip } from './useBetSlip'
 import { useFollowed } from './useFollowed'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
@@ -54,7 +57,9 @@ export default function App() {
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const [showSidebar, setShowSidebar] = useState(false)
   const [sidebarKey, setSidebarKey] = useState(0)
+  const [parlaysOpen, setParlaysOpen] = useState(true)
   const followed = useFollowed()
+  const slip = useBetSlip()
 
   useEffect(() => {
     let current = true // drop answers for a date the user already left
@@ -96,6 +101,7 @@ export default function App() {
     setQuery('')
     setFilter('Todos')
     setCollapsed(new Set())
+    setParlaysOpen(true)
     setShowSidebar(false)
     setSidebarKey((key) => key + 1) // remounting the sidebar clears its filter and closes its countries
     window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
@@ -281,6 +287,17 @@ export default function App() {
             </Message>
           )}
 
+          {/* Home view only, and once the list is in: the backend then builds the slips from its cache without spending quota. */}
+          {data && allGroups.length > 0 && filter === 'Todos' && league === null && !search && (
+            <Parlays
+              date={date}
+              slip={slip}
+              onSelect={setSelectedId}
+              open={parlaysOpen}
+              onToggle={() => setParlaysOpen(!parlaysOpen)}
+            />
+          )}
+
           {following.length > 0 && (
             <MatchCard
               title={
@@ -334,6 +351,7 @@ export default function App() {
           onClose={() => setSelectedId(null)}
         />
       )}
+      <BetSlip slip={slip} />
     </div>
   )
 }

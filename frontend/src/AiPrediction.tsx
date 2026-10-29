@@ -1,14 +1,27 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { CheckIcon, CrossIcon, TrendUpIcon } from './icons'
+import { STAKES, pesos } from './money'
 import type { Prediction } from './types'
 import type { usePrediction } from './usePrediction'
 
 // Warm to cool accents of the palette: high confidence is orange, low is sky blue.
 const CONFIDENCE: Record<string, string> = { Alta: 'bg-orange', Media: 'bg-peach', Baja: 'bg-sky' }
-const STAKES = [10_000, 20_000, 50_000, 100_000]
 
 const odd = (value: number | null) => (value ? value.toFixed(2) : '—')
-const pesos = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}`
+
+// VYROX IA at work: three bouncing dots in the brand colors.
+export function Thinking({ children }: { children: ReactNode }) {
+  return (
+    <p className="flex items-center gap-3 text-muted">
+      <span aria-hidden="true" className="flex items-center gap-1 rounded-full bg-forest px-2.5 py-2">
+        {[0, 150, 300].map((delay) => (
+          <span key={delay} className="size-1.5 animate-bounce rounded-full bg-yellow" style={{ animationDelay: `${delay}ms` }} />
+        ))}
+      </span>
+      {children}
+    </p>
+  )
+}
 
 // VYROX IA's own fair odds. No bookmaker's real odds are available for these matches, so none are shown.
 export function FairOdds({ prediction }: { prediction: Extract<Prediction, { fallback: false }> }) {
@@ -144,16 +157,7 @@ function PredictionCards({ prediction }: { prediction: Prediction }) {
 export function PredictionView({ prediction, state }: Pick<ReturnType<typeof usePrediction>, 'prediction' | 'state'>) {
   return (
     <div aria-live="polite" className="text-sm">
-      {state === 'loading' && (
-        <p className="flex items-center gap-3 text-muted">
-          <span aria-hidden="true" className="flex items-center gap-1 rounded-full bg-forest px-2.5 py-2">
-            {[0, 150, 300].map((delay) => (
-              <span key={delay} className="size-1.5 animate-bounce rounded-full bg-yellow" style={{ animationDelay: `${delay}ms` }} />
-            ))}
-          </span>
-          Analizando partido con VYROX IA...
-        </p>
-      )}
+      {state === 'loading' && <Thinking>Analizando partido con VYROX IA...</Thinking>}
       {state === 'error' && <p className="text-warn">No se pudo conectar con el servidor. Vuelve a intentarlo.</p>}
       {prediction && <PredictionCards prediction={prediction} />}
     </div>
