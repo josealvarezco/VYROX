@@ -50,6 +50,7 @@ export type ParlayLeg = {
   away_team: string
   kickoff_label: string // "28/10 20:05", Colombia time
   market_selection: string
+  market_category: string // result, over_1_5, goals (2.5) or btts; "recommended" for the Match Center's play
   probability: number
   odd: number
   popularity_label: string
@@ -63,7 +64,10 @@ export type Parlay = {
   probability: number
 }
 // A bet slip pick: a parlay leg, or an odd picked in the Match Center
-export type SlipLeg = Pick<ParlayLeg, 'match_id' | 'home_team' | 'away_team' | 'kickoff_label' | 'market_selection' | 'odd'>
+export type SlipLeg = Pick<
+  ParlayLeg,
+  'match_id' | 'home_team' | 'away_team' | 'kickoff_label' | 'market_selection' | 'market_category' | 'odd'
+>
 // simulated: VYROX IA was unavailable, so the slips are stable demo data
 export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null }
 
