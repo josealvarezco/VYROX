@@ -30,7 +30,7 @@ class DayForecast(BaseModel):
     matches: list[MatchForecast]
 
 
-# (asked at, forecast by match_id), with None for a failed call.
+# (asked at, forecast by match_id), with None for a failed call; the radar reads the same forecast.
 # shortcut: one entry per date ever asked, never evicted; fine for the three dates the free plan serves
 parlays_cache: dict[date, tuple[float, dict[int, MatchForecast] | None]] = {}
 _lock = asyncio.Lock()
@@ -46,7 +46,7 @@ Para cada partido devuelve su match_id y probabilidades enteras de 0 a 100:
 Usa solo los match_id de la lista."""
 
 
-def _kickoff(match: dict) -> str:
+def kickoff(match: dict) -> str:
     return datetime.fromisoformat(match["utcDate"]).strftime("%d/%m %H:%M")  # dates carry Colombia's offset
 
 
@@ -75,7 +75,7 @@ def _leg(match: dict, selection: tuple[str, int, str]) -> dict:
         "country_flag": league["country_flag"],
         "home_team": match["homeTeam"]["shortName"],
         "away_team": match["awayTeam"]["shortName"],
-        "kickoff_label": _kickoff(match),
+        "kickoff_label": kickoff(match),
         "market_selection": market,
         "market_category": category,  # the bet slip keeps one side per match and category
         "probability": percent,
@@ -120,7 +120,7 @@ def _build(candidates: list[dict], forecasts: dict[int, MatchForecast]) -> list[
     return [segura, valor, tendencia]
 
 
-def _simulated(match_id: int) -> MatchForecast:
+def simulated_forecast(match_id: int) -> MatchForecast:
     """Demo forecast for when VYROX IA is unavailable; the response flags it so it never passes for analysis."""
     rnd = random.Random(match_id)  # the same demo parlays on every request
     home = rnd.randint(25, 70)
@@ -135,7 +135,7 @@ def _simulated(match_id: int) -> MatchForecast:
     )
 
 
-async def _forecasts(day: date, candidates: list[dict]) -> dict[int, MatchForecast] | None:
+async def day_forecasts(day: date, candidates: list[dict]) -> dict[int, MatchForecast] | None:
     """VYROX IA's cached forecast for the date, or None while it fails."""
     async with _lock:  # concurrent first visits share one VYROX IA call
         asked, forecasts = parlays_cache.get(day, (-math.inf, None))
@@ -145,7 +145,7 @@ async def _forecasts(day: date, candidates: list[dict]) -> dict[int, MatchForeca
         if age < FORECAST_TTL and (age < RETRY_TTL or covered >= min(len(candidates), LEGS)):
             return forecasts
         lines = "\n".join(
-            f"- {m['id']}: {m['homeTeam']['shortName']} vs {m['awayTeam']['shortName']}, {m['league']['league_name']}, {_kickoff(m)}"
+            f"- {m['id']}: {m['homeTeam']['shortName']} vs {m['awayTeam']['shortName']}, {m['league']['league_name']}, {kickoff(m)}"
             for m in candidates
         )
         answer = await ask_vyrox_ia(PROMPT.format(lines=lines), DayForecast, f"parlays {day}")
@@ -154,22 +154,27 @@ async def _forecasts(day: date, candidates: list[dict]) -> dict[int, MatchForeca
         return forecasts
 
 
+def upcoming(matches: list[dict]) -> list[dict]:
+    """The matches still to be played, top leagues first, as many as one VYROX IA prompt takes."""
+    # Recomputed on every request, so matches that have started drop out while the forecast stays cached.
+    # The kickoff time counts too: API-Football leaves matches without live coverage "not started" for good.
+    now = datetime.now(timezone.utc)
+    return [
+        m for group in group_by_league(matches) for m in group["matches"] if m["status"] == "TIMED" and datetime.fromisoformat(m["utcDate"]) > now
+    ][:MAX_CANDIDATES]
+
+
 async def get_parlays(day: date | None = None) -> dict:
     """The day's three parlays over matches still to be played: VYROX IA's, or flagged simulated ones without it."""
     day = day or colombia_today()
     matches, _ = await fetch_matches(day)
-    # Recomputed on every request, so matches that have started drop out while the forecast stays cached.
-    # The kickoff time counts too: API-Football leaves matches without live coverage "not started" for good.
-    now = datetime.now(timezone.utc)
-    candidates = [
-        m for group in group_by_league(matches) for m in group["matches"] if m["status"] == "TIMED" and datetime.fromisoformat(m["utcDate"]) > now
-    ][:MAX_CANDIDATES]
+    candidates = upcoming(matches)
     if len(candidates) < 2:
         return {"parlays": [], "simulated": False, "message": NO_MATCHES}
 
-    forecasts = await _forecasts(day, candidates) if os.environ.get("GEMINI_API_KEY") else None
+    forecasts = await day_forecasts(day, candidates) if os.environ.get("GEMINI_API_KEY") else None
     parlays = _build(candidates, forecasts) if forecasts else []
     simulated = not parlays  # without VYROX IA the section still works, with demo data the interface labels
     if simulated:
-        parlays = _build(candidates, {m["id"]: _simulated(m["id"]) for m in candidates})
+        parlays = _build(candidates, {m["id"]: simulated_forecast(m["id"]) for m in candidates})
     return {"parlays": parlays, "simulated": simulated, "message": None}

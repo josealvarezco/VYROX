@@ -58,14 +58,17 @@ async def api_get(path: str, params: dict) -> list[dict]:
             response = await client.get(
                 f"{API_BASE}{path}", headers={"x-apisports-key": keys[turn % len(keys)]}, params=params
             )
+        if response.status_code == 429:  # too many requests: the same as a rateLimit error in the body
+            errors = {"rateLimit": "HTTP 429"}
+        else:
             response.raise_for_status()
-        body = response.json()
-        # API-Football reports a bad key, an exhausted quota or a plan limit with HTTP 200 and an "errors" field.
-        errors = body["errors"]
-        if not errors:
-            return body["response"]
-        if not (isinstance(errors, dict) and errors.keys() & KEY_ERRORS):
-            break  # a plan or parameter error: every key would answer the same
+            body = response.json()
+            # API-Football reports a bad key, an exhausted quota or a plan limit with HTTP 200 and an "errors" field.
+            errors = body["errors"]
+            if not errors:
+                return body["response"]
+            if not (isinstance(errors, dict) and errors.keys() & KEY_ERRORS):
+                break  # a plan or parameter error: every key would answer the same
         # Stay on the next key from now on; max() keeps two requests failing at once from skipping one.
         # A spent key comes back in turn once the others run out, after its daily reset.
         _turn = max(_turn, turn + 1)

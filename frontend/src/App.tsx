@@ -1,10 +1,11 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
-import { CalendarIcon, Chevron, FilterIcon, Flag, StarIcon } from './icons'
+import { CalendarIcon, Chevron, FilterIcon, Flag, RadarIcon, StarIcon } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
 import { Parlays } from './Parlays'
+import { Radar } from './Radar'
 import { Sidebar } from './Sidebar'
 import { LIVE } from './status'
 import { ThemeToggle } from './ThemeToggle'
@@ -26,7 +27,7 @@ function shiftDay(day: string, offset: number) {
 
 // API-Football's free plan only serves yesterday, today and tomorrow (the backend rejects other dates).
 const DAYS = { [shiftDay(TODAY, -1)]: 'Ayer', [TODAY]: 'Hoy', [shiftDay(TODAY, 1)]: 'Mañana' }
-const FILTERS = ['Todos', 'En vivo', 'Por horario'] as const
+const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA'] as const
 
 const longDate = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -248,10 +249,15 @@ export default function App() {
                 onClick={() => setFilter(name)}
                 aria-pressed={filter === name}
                 className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
-                  filter === name ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink hover:bg-surface-2'
+                  filter === name
+                    ? 'border-yellow bg-yellow text-forest'
+                    : name === 'Radar IA'
+                      ? 'border-yellow bg-surface text-gold hover:bg-surface-2'
+                      : 'border-line bg-surface text-ink hover:bg-surface-2'
                 }`}
               >
                 {name === 'En vivo' && <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-orange" />}
+                {name === 'Radar IA' && <RadarIcon />}
                 {name}
                 {name === 'En vivo' && liveCount > 0 && <span className="font-num opacity-70">{liveCount}</span>}
               </button>
@@ -300,7 +306,7 @@ export default function App() {
             />
           )}
 
-          {following.length > 0 && (
+          {following.length > 0 && filter !== 'Radar IA' && (
             <MatchCard
               title={
                 <span className="inline-flex items-center gap-1.5 text-gold">
@@ -314,7 +320,9 @@ export default function App() {
             />
           )}
 
-          {filter === 'Por horario'
+          {filter === 'Radar IA'
+            ? data && allGroups.length > 0 && <Radar date={date} slip={slip} onSelect={setSelectedId} />
+            : filter === 'Por horario'
             ? shown.length > 0 && (
                 <MatchCard
                   title="Por horario"

@@ -7,6 +7,7 @@ from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetc
 from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
 from app.parlays import get_parlays
+from app.radar import get_radar
 from app.standings import get_standings
 
 app = FastAPI(title="VYROX API")
@@ -45,6 +46,15 @@ async def parlays(day: date | None = Query(None, alias="date")):
     check_available(day)
     try:
         return await get_parlays(day)
+    except (httpx.HTTPError, UpstreamError) as error:
+        raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
+
+
+@app.get("/api/radar")
+async def radar(day: date | None = Query(None, alias="date")):
+    check_available(day)
+    try:
+        return await get_radar(day)
     except (httpx.HTTPError, UpstreamError) as error:
         raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
 
