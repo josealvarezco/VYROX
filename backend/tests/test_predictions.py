@@ -30,7 +30,16 @@ PREDICTION = {
     "reasoning": "Millonarios gana 1-0 en casa y controla el partido.",
 }
 # 100 / probability, rounded to 2 decimals
-FAIR_ODDS = {"recommended": 1.43, "home": 1.82, "draw": 4.0, "away": 5.0, "over_2_5": 2.5, "btts_yes": 2.22}
+FAIR_ODDS = {
+    "recommended": 1.43,
+    "home": 1.82,
+    "draw": 4.0,
+    "away": 5.0,
+    "over_2_5": 2.5,
+    "under_2_5": 1.67,  # the other side: 100 / (100 - 40)
+    "btts_yes": 2.22,
+    "btts_no": 1.82,
+}
 EXPECTED = {"fallback": False, **PREDICTION, "fair_odds": FAIR_ODDS}
 
 
@@ -125,6 +134,7 @@ def test_fair_odds_follow_the_rescaled_probabilities_and_skip_zero(upstream):
 
     assert (odds["home"], odds["draw"], odds["away"]) == (2.17, 3.7, 3.7)  # from 46/27/27, not 50/30/30
     assert odds["btts_yes"] is None  # no fair odds for an event VYROX IA gives no chance
+    assert odds["btts_no"] == 1.0  # while the other side is a certainty
 
 
 def test_missing_market_probability_is_outside_schema(upstream):

@@ -15,6 +15,7 @@ import {
 import { countryLabel } from './leagues'
 import { LIVE, statusText } from './status'
 import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Side, Starter, Team } from './types'
+import type { useBetSlip } from './useBetSlip'
 import { usePrediction } from './usePrediction'
 
 const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Pronóstico IA'] as const
@@ -420,12 +421,14 @@ export function MatchCenter({
   isFollowed,
   onFollow,
   onClose,
+  slip,
 }: {
   match: Match
   competition: Competition
   isFollowed: (teamId: number) => boolean
   onFollow: (team: Team) => void
   onClose: () => void
+  slip: ReturnType<typeof useBetSlip>
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [tab, setTab] = useState<Tab>('Resumen')
@@ -542,7 +545,7 @@ export function MatchCenter({
                 !prediction.prediction.fallback &&
                 prediction.prediction.fair_odds && // a backend older than fair odds sends none
                 (match.status === 'TIMED' || live ? (
-                  <FairOdds prediction={prediction.prediction} />
+                  <FairOdds prediction={prediction.prediction} match={match} slip={slip} />
                 ) : (
                   // Once a match is decided its probabilities are 0 or 100, so an odd says nothing.
                   <p className="text-xs text-muted">La cuota justa VYROX se calcula solo para partidos por jugar o en vivo.</p>

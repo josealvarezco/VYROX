@@ -14,6 +14,7 @@
 
   --animate-tab-in: tab-in 150ms ease-out;
   --animate-grow: grow 500ms ease-out;
+  --animate-pop: pop 300ms ease-out;
 }
 
 /* Colors that follow the theme: light by default, dark under <html data-theme="dark">. */
@@ -140,6 +141,11 @@
 @keyframes grow {
   from {
     transform: scaleX(0);
+  }
+}
+@keyframes pop {
+  50% {
+    transform: scale(1.35);
   }
 }
 
