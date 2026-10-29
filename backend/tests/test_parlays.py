@@ -116,6 +116,7 @@ def check_slips(body):
         for leg in parlay["legs"]:
             assert leg["odd"] == round(100 / leg["probability"], 2)
             assert leg["popularity_label"] == f"{leg['probability']}% prob."
+            assert leg["market_category"] in {"result", "over_1_5", "goals", "btts"}
             assert re.fullmatch(r"\d{2}/\d{2} \d{2}:\d{2}", leg["kickoff_label"])
 
 
@@ -133,7 +134,8 @@ def test_three_parlays_from_one_forecast(api):
     ]
     assert (segura["probability"], segura["badge"], segura["total_odd"]) == (47, "47% IA", 2.15)
     assert valor["badge"] == "MIXTA IA" and len(valor["legs"]) == 5
-    assert {leg["market_selection"].split(" - ")[1] for leg in valor["legs"]} == {"Resultado del partido", "Ambos anotan", "Goles totales"}
+    assert {leg["market_category"] for leg in segura["legs"]} == {"over_1_5"}
+    assert {leg["market_category"] for leg in valor["legs"]} == {"result", "btts", "goals"}
     assert tendencia["badge"] == f"{tendencia['total_odd']:.2f}" and len(tendencia["legs"]) == 5
 
     millonarios = next(leg for leg in valor["legs"] if leg["match_id"] == 2)

@@ -50,8 +50,8 @@ def _kickoff(match: dict) -> str:
     return datetime.fromisoformat(match["utcDate"]).strftime("%d/%m %H:%M")  # dates carry Colombia's offset
 
 
-def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int]]:
-    """The likeliest side of each market, as (selection label, probability)."""
+def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, str]]:
+    """The likeliest side of each market, as (selection label, probability, market category)."""
     home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
     r = forecast.result
     result = max(
@@ -61,11 +61,12 @@ def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int]]
     over = forecast.over_2_5
     goals = ("Más de 2.5 - Goles totales", over) if over >= 50 else ("Menos de 2.5 - Goles totales", 100 - over)
     btts = ("Sí - Ambos anotan", forecast.btts) if forecast.btts >= 50 else ("No - Ambos anotan", 100 - forecast.btts)
-    return {"result": result, "over_1_5": ("Más de 1.5 - Goles totales", forecast.over_1_5), "goals": goals, "btts": btts}
+    options = {"result": result, "over_1_5": ("Más de 1.5 - Goles totales", forecast.over_1_5), "goals": goals, "btts": btts}
+    return {category: (*option, category) for category, option in options.items()}
 
 
-def _leg(match: dict, selection: tuple[str, int]) -> dict:
-    market, percent = selection
+def _leg(match: dict, selection: tuple[str, int, str]) -> dict:
+    market, percent, category = selection
     league = match["league"]
     return {
         "match_id": match["id"],
@@ -76,13 +77,14 @@ def _leg(match: dict, selection: tuple[str, int]) -> dict:
         "away_team": match["awayTeam"]["shortName"],
         "kickoff_label": _kickoff(match),
         "market_selection": market,
+        "market_category": category,  # the bet slip keeps one side per match and category
         "probability": percent,
         "odd": round(100 / percent, 2),  # VYROX fair odd, no bookmaker margin
         "popularity_label": f"{percent}% prob.",  # the leg's real VYROX IA probability, never a made-up crowd count
     }
 
 
-def _parlay(key: str, title: str, rows: list[tuple[dict, tuple[str, int]]]) -> dict:
+def _parlay(key: str, title: str, rows: list[tuple[dict, tuple[str, int, str]]]) -> dict:
     legs = [_leg(match, selection) for match, selection in rows]
     return {
         "key": key,

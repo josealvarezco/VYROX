@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { FairOdds, PredictionView } from './AiPrediction'
+import { BetSlip } from './BetSlip'
 import {
   BallIcon,
   CardIcon,
@@ -465,109 +466,116 @@ export function MatchCenter({
   const waiting = <Note>{failed ? 'No se pudieron cargar los datos del partido.' : 'Cargando datos del partido…'}</Note>
 
   return (
+    // A full-screen grid in the top layer: the match card and, on desktop, the bet slip docked to its right,
+    // both sharp above the blur. Growing the slip's column from 0 slides the card left.
     <dialog
       ref={dialog}
       onClose={onClose}
       aria-label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`}
-      className="m-auto max-h-[92vh] w-[calc(100%-2rem)] max-w-3xl flex-col overflow-hidden rounded-3xl border border-line bg-modal p-0 text-ink open:flex"
+      className={`m-0 size-full max-h-none max-w-none grid-cols-[minmax(0,48rem)] items-center justify-center overflow-hidden border-0 bg-transparent p-4 text-ink transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] open:grid ${
+        slip.legs.length ? 'lg:grid-cols-[minmax(0,48rem)_25rem]' : 'lg:grid-cols-[minmax(0,48rem)_0rem]'
+      }`}
     >
-      <header className="hero shrink-0 px-5 pt-4 pb-7">
-        <div className="flex items-center justify-between gap-3 text-sm text-cream/75">
-          <span className="flex min-w-0 items-center gap-2">
-            <img src={competition.league_logo} alt="" className="size-5 rounded bg-white/90 object-contain p-px" />
-            <span className="truncate">
-              {competition.league_name} · {countryLabel(competition.country)}
+      <div className="flex max-h-[92vh] flex-col overflow-hidden rounded-3xl border border-line bg-modal">
+        <header className="hero shrink-0 px-5 pt-4 pb-7">
+          <div className="flex items-center justify-between gap-3 text-sm text-cream/75">
+            <span className="flex min-w-0 items-center gap-2">
+              <img src={competition.league_logo} alt="" className="size-5 rounded bg-white/90 object-contain p-px" />
+              <span className="truncate">
+                {competition.league_name} · {countryLabel(competition.country)}
+              </span>
             </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => dialog.current?.close()}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-3 py-1 font-semibold text-cream/85 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream active:scale-[0.98]"
-          >
-            Cerrar
-            <CrossIcon className="size-3.5" />
-          </button>
-        </div>
-
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-center">
-          <TeamBadge team={match.homeTeam} followed={isFollowed(match.homeTeam.id)} onFollow={onFollow} />
-          <div>
-            <p className="font-num text-5xl font-bold tabular-nums">
-              {home ?? '-'} : {away ?? '-'}
-            </p>
-            <p className={`mt-1 text-sm ${live ? 'font-bold text-orange' : 'text-cream/70'}`}>
-              {statusText(match)}
-              {live && match.minute ? <span className="font-num"> · {match.minute}'</span> : ''}
-            </p>
-          </div>
-          <TeamBadge team={match.awayTeam} followed={isFollowed(match.awayTeam.id)} onFollow={onFollow} />
-        </div>
-        <p className="mt-3 text-center text-xs text-cream/65">{[kickoff, match.round].filter(Boolean).join(' · ')}</p>
-
-        <div role="tablist" aria-label="Secciones del partido" className="mt-4 flex gap-1.5 overflow-x-auto">
-          {TABS.map((name, index) => (
             <button
-              key={name}
               type="button"
-              role="tab"
-              id={`match-tab-${index}`}
-              aria-selected={tab === name}
-              aria-controls="match-tab-panel"
-              onClick={() => openTab(name)}
-              className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out active:scale-[0.98] ${
-                tab === name
-                  ? 'bg-yellow font-bold text-forest'
-                  : name === 'Pronóstico IA'
-                    ? 'text-yellow hover:bg-cream/10'
-                    : 'text-cream/75 hover:bg-cream/10 hover:text-cream'
-              }`}
+              onClick={() => dialog.current?.close()}
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-3 py-1 font-semibold text-cream/85 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream active:scale-[0.98]"
             >
-              {name}
-              {name === 'Pronóstico IA' && <SparklesIcon />}
+              Cerrar
+              <CrossIcon className="size-3.5" />
             </button>
-          ))}
-        </div>
-      </header>
+          </div>
 
-      <div
-        id="match-tab-panel"
-        role="tabpanel"
-        aria-labelledby={`match-tab-${TABS.indexOf(tab)}`}
-        className="relative -mt-4 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-modal px-5 py-5"
-      >
-        {/* Keyed by tab so each switch replays the short entrance. */}
-        <div key={tab} className="animate-tab-in">
-          {tab === 'Pronóstico IA' ? (
-            <div className="space-y-6">
-              <PredictionView prediction={prediction.prediction} state={prediction.state} />
-              {details ? <HeadToHead h2h={details.h2h} /> : waiting}
-              {prediction.prediction &&
-                !prediction.prediction.fallback &&
-                prediction.prediction.fair_odds && // a backend older than fair odds sends none
-                (match.status === 'TIMED' || live ? (
-                  <FairOdds prediction={prediction.prediction} match={match} slip={slip} />
-                ) : (
-                  // Once a match is decided its probabilities are 0 or 100, so an odd says nothing.
-                  <p className="text-xs text-muted">La cuota justa VYROX se calcula solo para partidos por jugar o en vivo.</p>
-                ))}
+          <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-center">
+            <TeamBadge team={match.homeTeam} followed={isFollowed(match.homeTeam.id)} onFollow={onFollow} />
+            <div>
+              <p className="font-num text-5xl font-bold tabular-nums">
+                {home ?? '-'} : {away ?? '-'}
+              </p>
+              <p className={`mt-1 text-sm ${live ? 'font-bold text-orange' : 'text-cream/70'}`}>
+                {statusText(match)}
+                {live && match.minute ? <span className="font-num"> · {match.minute}'</span> : ''}
+              </p>
             </div>
-          ) : !details ? (
-            waiting
-          ) : tab === 'Resumen' ? (
-            <Summary match={match} events={details.events} />
-          ) : tab === 'Estadísticas' ? (
-            <>
-              {details.simulated.includes('statistics') && <SimulatedBadge sample={details.sample} />}
-              <Statistics rows={details.statistics} />
-            </>
-          ) : (
-            <>
-              {details.simulated.includes('lineups') && <SimulatedBadge sample={details.sample} />}
-              <Lineups match={match} details={details} />
-            </>
-          )}
+            <TeamBadge team={match.awayTeam} followed={isFollowed(match.awayTeam.id)} onFollow={onFollow} />
+          </div>
+          <p className="mt-3 text-center text-xs text-cream/65">{[kickoff, match.round].filter(Boolean).join(' · ')}</p>
+
+          <div role="tablist" aria-label="Secciones del partido" className="mt-4 flex gap-1.5 overflow-x-auto">
+            {TABS.map((name, index) => (
+              <button
+                key={name}
+                type="button"
+                role="tab"
+                id={`match-tab-${index}`}
+                aria-selected={tab === name}
+                aria-controls="match-tab-panel"
+                onClick={() => openTab(name)}
+                className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out active:scale-[0.98] ${
+                  tab === name
+                    ? 'bg-yellow font-bold text-forest'
+                    : name === 'Pronóstico IA'
+                      ? 'text-yellow hover:bg-cream/10'
+                      : 'text-cream/75 hover:bg-cream/10 hover:text-cream'
+                }`}
+              >
+                {name}
+                {name === 'Pronóstico IA' && <SparklesIcon />}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        <div
+          id="match-tab-panel"
+          role="tabpanel"
+          aria-labelledby={`match-tab-${TABS.indexOf(tab)}`}
+          className="relative -mt-4 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-modal px-5 py-5"
+        >
+          {/* Keyed by tab so each switch replays the short entrance. */}
+          <div key={tab} className="animate-tab-in">
+            {tab === 'Pronóstico IA' ? (
+              <div className="space-y-6">
+                <PredictionView prediction={prediction.prediction} state={prediction.state} />
+                {details ? <HeadToHead h2h={details.h2h} /> : waiting}
+                {prediction.prediction &&
+                  !prediction.prediction.fallback &&
+                  prediction.prediction.fair_odds && // a backend older than fair odds sends none
+                  (match.status === 'TIMED' || live ? (
+                    <FairOdds prediction={prediction.prediction} match={match} slip={slip} />
+                  ) : (
+                    // Once a match is decided its probabilities are 0 or 100, so an odd says nothing.
+                    <p className="text-xs text-muted">La cuota justa VYROX se calcula solo para partidos por jugar o en vivo.</p>
+                  ))}
+              </div>
+            ) : !details ? (
+              waiting
+            ) : tab === 'Resumen' ? (
+              <Summary match={match} events={details.events} />
+            ) : tab === 'Estadísticas' ? (
+              <>
+                {details.simulated.includes('statistics') && <SimulatedBadge sample={details.sample} />}
+                <Statistics rows={details.statistics} />
+              </>
+            ) : (
+              <>
+                {details.simulated.includes('lineups') && <SimulatedBadge sample={details.sample} />}
+                <Lineups match={match} details={details} />
+              </>
+            )}
+          </div>
         </div>
       </div>
+      <BetSlip slip={slip} docked />
     </dialog>
   )
 }
