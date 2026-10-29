@@ -8,7 +8,6 @@ from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
 from app.parlays import get_parlays
 from app.radar import get_radar
-from app.standings import get_standings
 
 app = FastAPI(title="VYROX API")
 
@@ -57,19 +56,6 @@ async def radar(day: date | None = Query(None, alias="date")):
         return await get_radar(day)
     except (httpx.HTTPError, UpstreamError) as error:
         raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
-
-
-@app.get("/api/leagues/{league_id}/standings")
-async def standings(
-    league_id: int,
-    season: int | None = None,
-    home_team_id: int | None = None,
-    away_team_id: int | None = None,
-    home_team: str | None = None,
-    away_team: str | None = None,
-):
-    # Without a season, the current year: most leagues name their season after the year it starts.
-    return await get_standings(league_id, season or colombia_today().year, home_team_id, away_team_id, home_team, away_team)
 
 
 @app.post("/api/predictions")

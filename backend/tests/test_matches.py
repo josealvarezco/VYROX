@@ -119,7 +119,6 @@ def test_maps_api_football_fixtures_to_frontend_format(upstream):
     assert premier["matches"][0]["score"] == {"fullTime": {"home": None, "away": None}, "halfTime": {"home": None, "away": None}}
     league = {
         "league_id": 239,
-        "season": 2026,  # the fixture has no league.season, so the year of its date
         "league_name": "Primera A",
         "country": "Colombia",
         "league_logo": "https://media.api-sports.io/football/leagues/239.png",
