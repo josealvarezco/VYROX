@@ -124,6 +124,17 @@ export function SparklesIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// A podium: the league table's top three.
+export function StandingsIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className={`shrink-0 ${className}`} {...a11y(label)}>
+      <rect x="7.25" y="3.5" width="5.5" height="13.5" rx="1.25" />
+      <rect x="1.5" y="8" width="5" height="9" rx="1.25" opacity="0.75" />
+      <rect x="13.5" y="10.5" width="5" height="6.5" rx="1.25" opacity="0.75" />
+    </svg>
+  )
+}
+
 export function TrendUpIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>

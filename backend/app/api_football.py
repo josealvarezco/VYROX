@@ -64,6 +64,7 @@ def to_match(item: dict) -> dict:
         "status": STATUS.get(fixture["status"]["short"], "TIMED"),
         "league": {
             "league_id": league["id"],
+            "season": league.get("season") or int(fixture["date"][:4]),  # the year it starts, as /standings expects
             "league_name": league["name"],
             "country": league["country"],
             "league_logo": league["logo"],
