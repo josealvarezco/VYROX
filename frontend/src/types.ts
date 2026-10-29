@@ -68,6 +68,20 @@ export type SlipLeg = Pick<
   ParlayLeg,
   'match_id' | 'home_team' | 'away_team' | 'kickoff_label' | 'market_selection' | 'market_category' | 'odd'
 >
+export type TicketStatus = 'pending' | 'won' | 'lost'
+export type TicketLeg = SlipLeg & { status: TicketStatus }
+// A registered play ("Mis Jugadas"), kept in localStorage and settled with the final scores the page loads
+export type SavedTicket = {
+  id: string
+  createdAt: string
+  legs: TicketLeg[]
+  total_odd: number
+  stake: number
+  potential_return: number
+  status: TicketStatus
+  settledAt: string | null
+  fromBank: boolean // the stake left the user's bank, so a win pays the return back into it
+}
 // simulated: VYROX IA was unavailable, so the slips are stable demo data
 export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null }
 

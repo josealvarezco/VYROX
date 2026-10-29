@@ -60,6 +60,7 @@ export default function App() {
   const [parlaysOpen, setParlaysOpen] = useState(true)
   const followed = useFollowed()
   const slip = useBetSlip()
+  const { track } = slip
 
   useEffect(() => {
     let current = true // drop answers for a date the user already left
@@ -73,6 +74,7 @@ export default function App() {
           if (!current) return
           setData(body)
           setError(false)
+          track(body.competitions.flatMap((group) => group.matches)) // settles registered plays with these scores
         })
         .catch(() => current && setError(true))
     load()
@@ -81,7 +83,7 @@ export default function App() {
       current = false
       clearInterval(id)
     }
-  }, [date])
+  }, [date, track])
 
   const goTo = (day: string) => {
     if (!(day in DAYS) || day === date) return
