@@ -37,7 +37,7 @@ export type Prediction =
       recommended_bet_probability: number
       reasoning: string
       // 100 / VYROX IA's probability, with no bookmaker margin; null when the probability is 0
-      fair_odds: Record<'recommended' | 'home' | 'draw' | 'away' | 'over_2_5' | 'btts_yes', number | null>
+      fair_odds: Record<'recommended' | 'home' | 'draw' | 'away' | 'over_2_5' | 'under_2_5' | 'btts_yes' | 'btts_no', number | null>
     }
 
 // GET /api/parlays: odds are VYROX fair odds (100 / probability), never a bookmaker's
@@ -62,6 +62,8 @@ export type Parlay = {
   total_odd: number
   probability: number
 }
+// A bet slip pick: a parlay leg, or an odd picked in the Match Center
+export type SlipLeg = Pick<ParlayLeg, 'match_id' | 'home_team' | 'away_team' | 'kickoff_label' | 'market_selection' | 'odd'>
 // simulated: VYROX IA was unavailable, so the slips are stable demo data
 export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null }
 

@@ -1,10 +1,31 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Chevron, CrossIcon, TicketSlipIcon } from './icons'
 import { STAKES, pesos } from './money'
+import type { SlipLeg } from './types'
 import type { useBetSlip } from './useBetSlip'
 
+type Slip = ReturnType<typeof useBetSlip>
+
+// An odd that adds its pick to the slip or takes it out again; yellow while the pick is in.
+export function OddButton({ pick, slip, className, children }: { pick: SlipLeg; slip: Slip; className: string; children: ReactNode }) {
+  const picked = slip.has(pick)
+  return (
+    <button
+      type="button"
+      onClick={() => slip.toggle(pick)}
+      aria-pressed={picked}
+      aria-label={`${picked ? 'Quitar del' : 'Agregar al'} cupón: ${pick.market_selection}, cuota ${pick.odd.toFixed(2)}`}
+      className={`cursor-pointer rounded-xl border font-num font-bold transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
+        picked ? 'border-yellow bg-yellow text-forest ring-2 ring-yellow/40' : 'border-line bg-surface-2 text-ink hover:border-yellow'
+      } ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
 // Floating, non-modal panel, so odds can still be added from the cards while it is open.
-export function BetSlip({ slip }: { slip: ReturnType<typeof useBetSlip> }) {
+export function BetSlip({ slip }: { slip: Slip }) {
   const [stake, setStake] = useState(STAKES[0])
   if (!slip.legs.length) return null
   const total = Math.round(slip.legs.reduce((product, leg) => product * leg.odd, 1) * 100) / 100 // same rounding as the backend's total_odd
@@ -19,7 +40,10 @@ export function BetSlip({ slip }: { slip: ReturnType<typeof useBetSlip> }) {
       >
         <TicketSlipIcon className="size-5 text-yellow" />
         Cupón
-        <span className="rounded-full bg-yellow px-1.5 font-num text-xs text-forest">{slip.legs.length}</span>
+        {/* Remounted on every change, so the count pops to confirm a pick while the slip is minimized. */}
+        <span key={slip.legs.length} className="animate-pop rounded-full bg-yellow px-1.5 font-num text-xs text-forest">
+          {slip.legs.length}
+        </span>
         <span className="font-num text-yellow">{total.toFixed(2)}</span>
       </button>
     )
@@ -33,7 +57,9 @@ export function BetSlip({ slip }: { slip: ReturnType<typeof useBetSlip> }) {
       <header className="hero flex items-center gap-2 px-4 py-3">
         <TicketSlipIcon className="size-5 text-yellow" />
         <h2 className="font-bold">Cupón de Apuestas VYROX</h2>
-        <span className="rounded-full bg-yellow px-1.5 font-num text-xs font-bold text-forest">{slip.legs.length}</span>
+        <span key={slip.legs.length} className="animate-pop rounded-full bg-yellow px-1.5 font-num text-xs font-bold text-forest">
+          {slip.legs.length}
+        </span>
         <button
           type="button"
           onClick={() => slip.setOpen(false)}

@@ -349,6 +349,7 @@ export default function App() {
           isFollowed={followed.isFollowed}
           onFollow={followed.toggle}
           onClose={() => setSelectedId(null)}
+          slip={slip}
         />
       )}
       <BetSlip slip={slip} />

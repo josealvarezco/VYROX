@@ -1,17 +1,17 @@
 # Graph Report - VYROX  (2026-10-28)
 
 ## Corpus Check
-- 44 files · ~20,760 words
+- 44 files · ~21,374 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 447 nodes · 953 edges · 17 communities (15 shown, 2 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 18 edges (avg confidence: 0.89)
+- 451 nodes · 975 edges · 17 communities (15 shown, 2 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 19 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5764dafb`
+- Built from commit: `a209aeeb`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -76,8 +76,8 @@ Cohesion: 0.10
 Nodes (19): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+11 more)
 
 ### Community 3 - "MatchCenter.tsx"
-Cohesion: 0.07
-Nodes (56): CONFIDENCE, FairOdds(), odd(), PredictionCards(), PredictionView(), a11y(), BallIcon(), CardIcon() (+48 more)
+Cohesion: 0.08
+Nodes (48): a11y(), BallIcon(), CARD, CardIcon(), DoubleChevronRightIcon(), DoubleChevronUpIcon(), Flag(), FlameIcon() (+40 more)
 
 ### Community 4 - "compilerOptions"
 Cohesion: 0.12
@@ -112,8 +112,8 @@ Cohesion: 0.08
 Nodes (35): fixture(), install(), meeting(), team(), api(), expire(), get(), test_finished_match_is_cached_for_six_hours() (+27 more)
 
 ### Community 14 - "App.tsx"
-Cohesion: 0.08
-Nodes (56): Thinking(), App(), DAYS, FILTERS, longDate(), Message(), shiftDay(), shortWeekday() (+48 more)
+Cohesion: 0.06
+Nodes (68): CONFIDENCE, FairOdds(), PredictionCards(), PredictionView(), Thinking(), App(), DAYS, FILTERS (+60 more)
 
 ### Community 15 - "parlays.py"
 Cohesion: 0.14
@@ -134,7 +134,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `test_matches.py` be split into smaller, more focused modules?**
   _Cohesion score 0.12681159420289856 - nodes in this community are weakly interconnected._
 - **Why does `fixture()` connect `test_details.py` to `test_matches.py`, `test_parlays.py`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.08021390374331551 - nodes in this community are weakly interconnected._
 - **Why does `fetch_matches()` connect `details.py` to `test_parlays.py`, `test_matches.py`, `test_details.py`, `parlays.py`?**
@@ -142,4 +142,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.1 - nodes in this community are weakly interconnected._
 - **Should `MatchCenter.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.06994535519125683 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08470588235294117 - nodes in this community are weakly interconnected._

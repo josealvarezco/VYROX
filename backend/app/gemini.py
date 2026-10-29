@@ -82,7 +82,9 @@ class Prediction(BaseModel):
             "draw": p.draw,
             "away": p.away,
             "over_2_5": self.over_2_5_probability,
+            "under_2_5": 100 - self.over_2_5_probability,
             "btts_yes": self.btts_probability,
+            "btts_no": 100 - self.btts_probability,
         }
         return {market: round(100 / percent, 2) if percent else None for market, percent in percents.items()}
 

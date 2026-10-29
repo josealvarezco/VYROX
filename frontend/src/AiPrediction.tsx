@@ -1,13 +1,14 @@
 import { useState, type ReactNode } from 'react'
-import { CheckIcon, CrossIcon, TrendUpIcon } from './icons'
+import { OddButton } from './BetSlip'
+import { CheckIcon, CrossIcon, TicketSlipIcon, TrendUpIcon } from './icons'
 import { STAKES, pesos } from './money'
-import type { Prediction } from './types'
+import { kickoffLabel } from './status'
+import type { Match, Prediction } from './types'
+import type { useBetSlip } from './useBetSlip'
 import type { usePrediction } from './usePrediction'
 
 // Warm to cool accents of the palette: high confidence is orange, low is sky blue.
 const CONFIDENCE: Record<string, string> = { Alta: 'bg-orange', Media: 'bg-peach', Baja: 'bg-sky' }
-
-const odd = (value: number | null) => (value ? value.toFixed(2) : '—')
 
 // VYROX IA at work: three bouncing dots in the brand colors.
 export function Thinking({ children }: { children: ReactNode }) {
@@ -24,23 +25,56 @@ export function Thinking({ children }: { children: ReactNode }) {
 }
 
 // VYROX IA's own fair odds. No bookmaker's real odds are available for these matches, so none are shown.
-export function FairOdds({ prediction }: { prediction: Extract<Prediction, { fallback: false }> }) {
+export function FairOdds({
+  prediction,
+  match,
+  slip,
+}: {
+  prediction: Extract<Prediction, { fallback: false }>
+  match: Match
+  slip: ReturnType<typeof useBetSlip>
+}) {
   const [stake, setStake] = useState(STAKES[0])
   const odds = prediction.fair_odds
+  const home = match.homeTeam.shortName
+  const away = match.awayTeam.shortName
+  // The parlay legs' market labels, so a pick reads the same in the slip wherever it came from.
   const markets = [
-    ['Local', odds.home],
-    ['Empate', odds.draw],
-    ['Visitante', odds.away],
-    ['Más de 2.5', odds.over_2_5],
-    ['Ambos anotan', odds.btts_yes],
+    ['Local (1)', `${home} - Resultado del partido`, odds.home],
+    ['Empate (X)', 'Empate - Resultado del partido', odds.draw],
+    ['Visitante (2)', `${away} - Resultado del partido`, odds.away],
+    ['Más de 2.5 goles', 'Más de 2.5 - Goles totales', odds.over_2_5],
+    ['Menos de 2.5 goles', 'Menos de 2.5 - Goles totales', odds.under_2_5],
+    ['Ambos anotan: Sí', 'Sí - Ambos anotan', odds.btts_yes],
+    ['Ambos anotan: No', 'No - Ambos anotan', odds.btts_no],
   ] as const
+  const pick = (market_selection: string, odd: number) => ({
+    match_id: match.id,
+    home_team: home,
+    away_team: away,
+    kickoff_label: kickoffLabel(match),
+    market_selection,
+    odd,
+  })
 
   return (
     <section className="space-y-3 text-sm">
-      <h3 className="flex items-center gap-1.5 font-bold">
-        <TrendUpIcon className="size-4 text-gold" />
-        Cuota justa VYROX IA
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 font-bold">
+          <TrendUpIcon className="size-4 text-gold" />
+          Cuota justa VYROX IA
+        </h3>
+        {/* The floating slip sits under this modal, so its count shows here too. */}
+        {slip.legs.length > 0 && (
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+            <TicketSlipIcon className="size-4 text-gold" />
+            En el cupón
+            <span key={slip.legs.length} className="animate-pop rounded-full bg-yellow px-1.5 font-num text-forest">
+              {slip.legs.length}
+            </span>
+          </span>
+        )}
+      </div>
 
       <div className="rounded-2xl border-2 border-yellow bg-surface p-4">
         <span className="rounded-full bg-yellow px-2 py-0.5 text-[10px] font-bold tracking-wide text-forest uppercase">
@@ -53,18 +87,30 @@ export function FairOdds({ prediction }: { prediction: Extract<Prediction, { fal
               Probabilidad estimada: <span className="font-num">{prediction.recommended_bet_probability} %</span>
             </p>
           </div>
-          <p className="font-num text-3xl font-bold">{odd(odds.recommended)}</p>
+          {odds.recommended && (
+            <OddButton
+              pick={pick(`${prediction.recommended_bet} - Jugada VYROX IA`, odds.recommended)}
+              slip={slip}
+              className="flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-2xl"
+            >
+              <TicketSlipIcon className="size-5" />
+              {odds.recommended.toFixed(2)}
+            </OddButton>
+          )}
         </div>
       </div>
 
-      <dl className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        {markets.map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-line bg-surface p-2.5 text-center">
-            <dt className="text-xs text-muted">{label}</dt>
-            <dd className="font-num text-lg font-bold">{odd(value)}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="grid grid-cols-6 gap-2">
+        {markets.map(([label, market, value], index) =>
+          value ? (
+            // 1 X 2 share the first row; the two goal sides and the two both-score sides come in pairs.
+            <OddButton key={label} pick={pick(market, value)} slip={slip} className={`${index < 3 ? 'col-span-2' : 'col-span-3'} p-2.5 text-center`}>
+              <span className="block font-sans text-xs font-normal opacity-75">{label}</span>
+              <span className="text-lg">{value.toFixed(2)}</span>
+            </OddButton>
+          ) : null,
+        )}
+      </div>
 
       {odds.recommended && (
         <div className="space-y-2 rounded-2xl bg-surface-2 p-3">
@@ -92,7 +138,7 @@ export function FairOdds({ prediction }: { prediction: Extract<Prediction, { fal
       )}
 
       <p className="text-xs text-muted">
-        Cuota justa = 100 ÷ probabilidad estimada por VYROX IA, sin el margen que cobran las casas de apuestas. Es una
+        Toca una cuota para sumarla al Cupón de Apuestas VYROX. Cuota justa = 100 ÷ probabilidad estimada por VYROX IA, sin el margen que cobran las casas de apuestas. Es una
         referencia propia de VYROX, no la cuota de ninguna casa.
       </p>
     </section>

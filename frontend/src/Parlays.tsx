@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Thinking } from './AiPrediction'
+import { OddButton } from './BetSlip'
 import { Collapse } from './Collapse'
 import { Chevron, DoubleChevronRightIcon, DoubleChevronUpIcon, FlameIcon } from './icons'
 import type { Parlay, ParlayLeg, ParlaysResponse } from './types'
@@ -14,7 +15,6 @@ type Slip = ReturnType<typeof useBetSlip>
 type Props = { slip: Slip; onSelect: (matchId: number) => void }
 
 function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
-  const picked = slip.has(leg)
   return (
     <li className="flex items-center gap-3 border-b border-dashed border-line py-3 last:border-0">
       <img
@@ -31,17 +31,9 @@ function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
         <span className="block font-num text-xs text-muted">{leg.kickoff_label}</span>
       </button>
       <div className="flex shrink-0 flex-col items-center gap-1">
-        <button
-          type="button"
-          onClick={() => slip.toggle(leg)}
-          aria-pressed={picked}
-          aria-label={`${picked ? 'Quitar del' : 'Agregar al'} cupón: ${leg.market_selection}, cuota ${leg.odd.toFixed(2)}`}
-          className={`min-w-14 cursor-pointer rounded-xl border px-2 py-1.5 font-num text-sm font-bold transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
-            picked ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface-2 text-ink hover:border-yellow'
-          }`}
-        >
+        <OddButton pick={leg} slip={slip} className="min-w-14 px-2 py-1.5 text-sm">
           {leg.odd.toFixed(2)}
-        </button>
+        </OddButton>
         <span className="flex items-center gap-0.5 text-[11px] whitespace-nowrap text-muted italic">
           <FlameIcon className="size-3.5" />
           {leg.popularity_label}
