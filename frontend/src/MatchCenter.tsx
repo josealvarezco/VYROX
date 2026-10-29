@@ -8,20 +8,18 @@ import {
   JerseyIcon,
   PitchIcon,
   SparklesIcon,
-  StandingsIcon,
   StarIcon,
   StopwatchIcon,
   SubIcon,
   WhistleIcon,
 } from './icons'
 import { countryLabel } from './leagues'
-import { Standings } from './Standings'
 import { LIVE, statusText } from './status'
 import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Side, Starter, Team } from './types'
 import type { useBetSlip } from './useBetSlip'
 import { usePrediction } from './usePrediction'
 
-const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Pronóstico IA', 'Clasificación'] as const
+const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Pronóstico IA'] as const
 type Tab = (typeof TABS)[number]
 type Substitution = Extract<MatchEvent, { type: 'subst' }>
 const SIDES = ['home', 'away'] as const
@@ -532,7 +530,6 @@ export function MatchCenter({
               >
                 {name}
                 {name === 'Pronóstico IA' && <SparklesIcon />}
-                {name === 'Clasificación' && <StandingsIcon />}
               </button>
             ))}
           </div>
@@ -560,8 +557,6 @@ export function MatchCenter({
                     <p className="text-xs text-muted">La cuota justa VYROX se calcula solo para partidos por jugar o en vivo.</p>
                   ))}
               </div>
-            ) : tab === 'Clasificación' ? (
-              <Standings match={match} />
             ) : !details ? (
               waiting
             ) : tab === 'Resumen' ? (

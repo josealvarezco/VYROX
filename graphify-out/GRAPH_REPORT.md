@@ -1,17 +1,17 @@
 # Graph Report - VYROX  (2026-10-29)
 
 ## Corpus Check
-- 52 files · ~30,001 words
+- 49 files · ~26,773 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 577 nodes · 1307 edges · 19 communities (17 shown, 2 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 32 edges (avg confidence: 0.89)
+- 528 nodes · 1201 edges · 22 communities (20 shown, 2 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 29 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2dfa8434`
+- Built from commit: `303833a7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -30,40 +30,43 @@
 - test_details.py
 - tsconfig.json
 - triage-labels.md
-- BetSlip.tsx
-- test_standings.py
-- test_parlays.py
-- types.ts
 - parlays.py
+- Probabilities
+- test_parlays.py
+- MatchCenter.tsx
+- gemini.py
+- types.ts
+- api_football.py
+- main.py
 
 ## God Nodes (most connected - your core abstractions)
 1. `App()` - 23 edges
-2. `a11y()` - 22 edges
-3. `fixture()` - 20 edges
-4. `MatchCenter()` - 20 edges
+2. `a11y()` - 21 edges
+3. `fixture()` - 19 edges
+4. `MatchCenter()` - 18 edges
 5. `useBetSlip()` - 18 edges
 6. `compilerOptions` - 18 edges
 7. `fetch_matches()` - 17 edges
 8. `get_details()` - 17 edges
-9. `react` - 17 edges
+9. `react` - 16 edges
 10. `compilerOptions` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Reglas de arquitectura` --references--> `settle()`  [INFERRED]
   docs/proyecto.md → frontend/src/ticketSettlement.ts
-- `Reglas de arquitectura` --references--> `goals()`  [INFERRED]
-  docs/proyecto.md → backend/app/standings.py
+- `MatchForecast` --uses--> `Probabilities`  [INFERRED]
+  backend/app/parlays.py → backend/app/gemini.py
 - `api()` --indirect_call--> `parlays()`  [INFERRED]
   backend/tests/test_parlays.py → backend/app/main.py
 - `radar_api()` --indirect_call--> `radar()`  [INFERRED]
   backend/tests/test_radar.py → backend/app/main.py
-- `fresh_cache()` --references--> `fixture()`  [EXTRACTED]
-  backend/tests/test_matches.py → backend/tests/fake_api_football.py
+- `_markets()` --uses--> `MatchForecast`  [INFERRED]
+  backend/app/radar.py → backend/app/parlays.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (19 total, 2 thin omitted)
+## Communities (22 total, 2 thin omitted)
 
 ### Community 0 - "test_matches.py"
 Cohesion: 0.12
@@ -78,16 +81,16 @@ Cohesion: 0.10
 Nodes (20): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+12 more)
 
 ### Community 3 - "App.tsx"
-Cohesion: 0.08
-Nodes (56): App(), DAYS, FILTERS, longDate(), Message(), shiftDay(), shortWeekday(), TODAY (+48 more)
+Cohesion: 0.10
+Nodes (44): App(), DAYS, FILTERS, longDate(), Message(), shiftDay(), shortWeekday(), TODAY (+36 more)
 
 ### Community 4 - "compilerOptions"
 Cohesion: 0.12
 Nodes (16): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib, module, moduleDetection, noEmit, noFallthroughCasesInSwitch (+8 more)
 
 ### Community 5 - "VYROX: contexto del proyecto"
-Cohesion: 0.14
-Nodes (12): goals(), Etapa actual, Fuera de alcance, Hitos, Idioma, Qué es, Reglas de arquitectura, Stack (+4 more)
+Cohesion: 0.15
+Nodes (11): Etapa actual, Fuera de alcance, Hitos, Idioma, Qué es, Reglas de arquitectura, Stack, VYROX: contexto del proyecto (+3 more)
 
 ### Community 6 - "Agent skills"
 Cohesion: 0.29
@@ -106,32 +109,44 @@ Cohesion: 0.33
 Nodes (5): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema
 
 ### Community 10 - "details.py"
-Cohesion: 0.07
-Nodes (38): api_get(), api_keys(), fetch_matches(), _fresh(), _team(), to_match(), UpstreamError, _build() (+30 more)
+Cohesion: 0.18
+Nodes (16): _build(), _card(), _cells(), _events(), _h2h_summary(), _is_goal(), _lineups(), lineup() (+8 more)
 
 ### Community 11 - "test_details.py"
 Cohesion: 0.08
 Nodes (35): fixture(), install(), meeting(), team(), api(), expire(), get(), test_finished_match_is_cached_for_six_hours() (+27 more)
 
-### Community 14 - "BetSlip.tsx"
-Cohesion: 0.09
-Nodes (49): CONFIDENCE, FairOdds(), PredictionCards(), PredictionView(), Thinking(), BADGES, BetSlip(), CopInput() (+41 more)
+### Community 14 - "parlays.py"
+Cohesion: 0.19
+Nodes (10): _build(), day_forecasts(), DayForecast, get_parlays(), kickoff(), _leg(), MatchForecast, _options() (+2 more)
 
-### Community 15 - "test_standings.py"
-Cohesion: 0.18
-Nodes (10): age(), api(), check_simulated(), get(), row(), test_keeps_the_last_table_when_a_refresh_fails(), test_maps_the_current_table_of_the_match_with_the_form_in_spanish(), test_one_request_per_league_and_season_for_12_hours() (+2 more)
+### Community 15 - "Probabilities"
+Cohesion: 0.25
+Nodes (4): Probabilities, _item(), _markets(), test_no_pick_is_shown_surer_than_92_percent()
 
 ### Community 16 - "test_parlays.py"
 Cohesion: 0.11
-Nodes (24): colombia_today(), age(), api(), check_slips(), get(), match(), matches(), test_dates_outside_the_free_plan_return_400() (+16 more)
+Nodes (23): age(), api(), check_slips(), get(), match(), matches(), test_dates_outside_the_free_plan_return_400(), test_failure_serves_simulated_parlays_and_retries_after_5_minutes() (+15 more)
 
-### Community 17 - "types.ts"
-Cohesion: 0.05
-Nodes (63): BallIcon(), CardIcon(), JerseyIcon(), PitchIcon(), SparklesIcon(), StandingsIcon(), SubIcon(), WhistleIcon() (+55 more)
+### Community 17 - "MatchCenter.tsx"
+Cohesion: 0.08
+Nodes (56): CONFIDENCE, FairOdds(), PredictionCards(), PredictionView(), BADGES, BetSlip(), CopInput(), IconButton() (+48 more)
 
-### Community 19 - "parlays.py"
+### Community 19 - "gemini.py"
+Cohesion: 0.13
+Nodes (8): ask_vyrox_ia(), _context(), _generate(), MatchInfo, predict(), Prediction, Score, predictions()
+
+### Community 20 - "types.ts"
 Cohesion: 0.06
-Nodes (26): group_by_league(), _league_order(), ask_vyrox_ia(), _context(), _generate(), MatchInfo, predict(), Prediction (+18 more)
+Nodes (52): Thinking(), DoubleChevronRightIcon(), DoubleChevronUpIcon(), FlameIcon(), Leg(), ParlayCard(), ParlayGrid(), Props (+44 more)
+
+### Community 25 - "api_football.py"
+Cohesion: 0.15
+Nodes (9): colombia_today(), fetch_matches(), _fresh(), group_by_league(), _league_order(), _team(), to_match(), upcoming() (+1 more)
+
+### Community 26 - "main.py"
+Cohesion: 0.17
+Nodes (11): api_get(), api_keys(), UpstreamError, get_details(), _head_to_head(), MatchNotFound, check_available(), match_details() (+3 more)
 
 ## Knowledge Gaps
 - **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
@@ -139,17 +154,17 @@ Nodes (26): group_by_league(), _league_order(), ask_vyrox_ia(), _context(), _gen
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Reglas de arquitectura` connect `VYROX: contexto del proyecto` to `types.ts`?**
-  _High betweenness centrality (0.404) - this node is a cross-community bridge._
+- **Why does `react` connect `MatchCenter.tsx` to `package.json`, `App.tsx`, `types.ts`?**
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `useBetSlip()` (e.g. with `isLeg()` and `isTicket()`) actually correct?**
   _`useBetSlip()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `test_matches.py` be split into smaller, more focused modules?**
   _Cohesion score 0.11965811965811966 - nodes in this community are weakly interconnected._
-- **Why does `_simulated()` connect `details.py` to `VYROX: contexto del proyecto`?**
-  _High betweenness centrality (0.389) - this node is a cross-community bridge._
+- **Why does `settle()` connect `types.ts` to `VYROX: contexto del proyecto`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.0773109243697479 - nodes in this community are weakly interconnected._
-- **Why does `goals()` connect `VYROX: contexto del proyecto` to `details.py`?**
-  _High betweenness centrality (0.388) - this node is a cross-community bridge._
+- **Why does `Reglas de arquitectura` connect `VYROX: contexto del proyecto` to `types.ts`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
