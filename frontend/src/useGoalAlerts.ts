@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
 import { newGoals, type GoalAlert, type Score } from './goals'
-import { LIVE } from './status'
 import type { Match } from './types'
 
 const KEY = 'vyrox_goal_alerts'
@@ -71,14 +70,6 @@ export function useGoalAlerts() {
     dismiss,
     check,
     glowing: (matchId: number) => matchId in glow,
-    // Development only: the list again with one more home goal than last seen in a live match (or the first one).
-    simulate: (matches: Match[]) => {
-      const target = matches.find((match) => LIVE.has(match.status)) ?? matches[0]
-      if (!target) return
-      const last = seen.current[target.id] ?? { home: 0, away: 0 }
-      const scored = { status: LIVE.has(target.status) ? target.status : 'IN_PLAY', score: { ...target.score, fullTime: { ...last, home: last.home + 1 } } }
-      check(matches.map((match) => (match === target ? { ...match, ...scored } : match)))
-    },
     // Another date: its scores are a new baseline, never goals scored while it was not on screen.
     reset: () => {
       seen.current = {}

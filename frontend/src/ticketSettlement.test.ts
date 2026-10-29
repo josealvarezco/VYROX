@@ -59,9 +59,34 @@ test('one lost leg loses the ticket; legs of unfinished matches stay pending', (
   assert.deepEqual(lost.tickets[0].legs.map((l) => l.status), ['lost', 'pending'])
   assert.equal(lost.credit, 0)
 
-  const half = settle([open], [match(1, 'FINISHED', 2, 0), match(2, 'IN_PLAY', 1, 1)], 'now').tickets[0]
+  const half = settle([open], [match(1, 'FINISHED', 2, 0), match(2, 'IN_PLAY', 1, 0)], 'now').tickets[0]
   assert.equal(half.status, 'pending')
   assert.deepEqual(half.legs.map((l) => l.status), ['won', 'pending'])
+})
+
+test('a live score settles a pick as soon as its market cannot change', () => {
+  const cases = [
+    ['goals', 'Más de 2.5 - Goles totales', 2, 1, 'won'],
+    ['goals', 'Menos de 2.5 - Goles totales', 2, 1, 'lost'],
+    ['goals', 'Más de 2.5 - Goles totales', 1, 1, 'pending'],
+    ['over_1_5', 'Más de 1.5 - Goles totales', 1, 1, 'won'],
+    ['over_1_5', 'Menos de 1.5 - Goles totales', 2, 0, 'lost'],
+    ['btts', 'Sí - Ambos anotan', 1, 1, 'won'],
+    ['btts', 'No - Ambos anotan', 1, 1, 'lost'],
+    ['btts', 'No - Ambos anotan', 3, 0, 'pending'],
+    ['result', 'Millonarios - Resultado del partido', 3, 0, 'pending'], // a result waits for the final whistle
+  ] as const
+  for (const [category, selection, home, away, expected] of cases) {
+    const [settled] = settle([ticket([leg(1, category, selection)])], [match(1, 'IN_PLAY', home, away)], 'now').tickets
+    assert.equal(settled.legs[0].status, expected, `${selection} ${home}-${away}`)
+  }
+})
+
+test('a pick lost live loses the whole ticket at once, before its other matches end', () => {
+  const live = settle([ticket([leg(1, 'goals', 'Menos de 2.5 - Goles totales'), BOTH_SCORE])], [match(1, 'PAUSED', 2, 1)], 'now')
+  assert.equal(live.tickets[0].status, 'lost')
+  assert.deepEqual(live.tickets[0].legs.map((l) => l.status), ['lost', 'pending'])
+  assert.equal(live.credit, 0)
 })
 
 test('a won ticket pays its return into the bank once, and only if the stake came from it', () => {
