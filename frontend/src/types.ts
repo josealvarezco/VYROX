@@ -3,6 +3,7 @@ export type Team = { id: number; shortName: string; crest: string }
 export type Goals = { home: number | null; away: number | null }
 export type League = {
   league_id: number
+  season: number // the year the season starts, as GET /api/leagues/{id}/standings expects it
   league_name: string
   country: string // "World" for international competitions
   league_logo: string
@@ -84,6 +85,26 @@ export type SavedTicket = {
 }
 // simulated: VYROX IA was unavailable, so the slips are stable demo data
 export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null }
+
+// GET /api/leagues/{league_id}/standings: the table of the match's group, simulated when there is none to show
+export type Result = 'V' | 'E' | 'D' // victoria, empate, derrota
+export type Standing = {
+  rank: number
+  team_id: number | null // null for the made-up teams of a simulated table
+  team_name: string
+  team_logo: string | null
+  played: number
+  win: number
+  draw: number
+  lose: number
+  goals_for: number
+  goals_against: number
+  goals_diff: number
+  points: number
+  description: string | null // the zone: the competition it leads to, or "Descenso"
+  form: Result[]
+}
+export type StandingsResponse = { group: string | null; is_simulated: boolean; standings: Standing[] }
 
 // GET /api/matches/{id}/details
 export type MatchEvent = { minute: string; team: Side } & (
