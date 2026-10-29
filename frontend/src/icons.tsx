@@ -122,6 +122,14 @@ export function SparklesIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+export function TrendUpIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M2.5 14.5 8 9l3.5 3.5 6-6M13 6.5h4.5V11" />
+    </svg>
+  )
+}
+
 export function CheckIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2.25} className={`shrink-0 ${className}`} {...a11y(label)}>

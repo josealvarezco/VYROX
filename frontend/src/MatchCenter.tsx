@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { PredictionView } from './AiPrediction'
+import { FairOdds, PredictionView } from './AiPrediction'
 import {
   BallIcon,
   CardIcon,
@@ -538,6 +538,15 @@ export function MatchCenter({
             <div className="space-y-6">
               <PredictionView prediction={prediction.prediction} state={prediction.state} />
               {details ? <HeadToHead h2h={details.h2h} /> : waiting}
+              {prediction.prediction &&
+                !prediction.prediction.fallback &&
+                prediction.prediction.fair_odds && // a backend older than fair odds sends none
+                (match.status === 'TIMED' || live ? (
+                  <FairOdds prediction={prediction.prediction} />
+                ) : (
+                  // Once a match is decided its probabilities are 0 or 100, so an odd says nothing.
+                  <p className="text-xs text-muted">La cuota justa VYROX se calcula solo para partidos por jugar o en vivo.</p>
+                ))}
             </div>
           ) : !details ? (
             waiting

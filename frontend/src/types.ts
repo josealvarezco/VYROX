@@ -34,7 +34,10 @@ export type Prediction =
       over_under_2_5: string
       confidence: string
       recommended_bet: string
+      recommended_bet_probability: number
       reasoning: string
+      // 100 / VYROX IA's probability, with no bookmaker margin; null when the probability is 0
+      fair_odds: Record<'recommended' | 'home' | 'draw' | 'away' | 'over_2_5' | 'btts_yes', number | null>
     }
 
 // GET /api/matches/{id}/details

@@ -4,7 +4,7 @@ import time
 from typing import Annotated, Literal
 
 import httpx
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 from app.details import get_details
 
@@ -64,10 +64,29 @@ class Prediction(BaseModel):
     over_under_2_5: Literal["Más de 2.5 goles", "Menos de 2.5 goles"]
     confidence: Literal["Alta", "Media", "Baja"]
     recommended_bet: str
+    recommended_bet_probability: Percent
+    over_2_5_probability: Percent
+    btts_probability: Percent
     reasoning: str
 
+    # Computed, so it is left out of the schema Gemini answers and only appears in the API response.
+    @computed_field
+    @property
+    def fair_odds(self) -> dict[str, float | None]:
+        """VYROX IA's own fair odds: 100 / probability, without any bookmaker margin. Not bookmaker odds."""
+        p = self.probabilities
+        percents = {
+            "recommended": self.recommended_bet_probability,
+            "home": p.home,
+            "draw": p.draw,
+            "away": p.away,
+            "over_2_5": self.over_2_5_probability,
+            "btts_yes": self.btts_probability,
+        }
+        return {market: round(100 / percent, 2) if percent else None for market, percent in percents.items()}
 
-PROMPT = """Eres un analista deportivo experto en apuestas de fútbol. Da tu pronóstico para este partido.
+
+PROMPT = """Eres VYROX IA, el motor propietario de analítica avanzada y predicción deportiva de VYROX, experto en fútbol. Da tu pronóstico para este partido.
 
 Partido: {home_team} (local) vs {away_team} (visitante)
 Liga: {league}
@@ -78,13 +97,16 @@ Marcador: {score}
 {context}
 
 - probabilities: porcentajes enteros de victoria local (home), empate (draw) y victoria visitante (away); deben sumar exactamente 100. Básalos en los datos de arriba.
-- recommended_bet: la jugada principal en pocas palabras, por ejemplo "Local o Empate + Más de 1.5 goles".
+- recommended_bet: la jugada principal en pocas palabras, por ejemplo "Local o Empate + Más de 1.5 goles". recommended_bet_probability: probabilidad entera (0 a 100) de que se cumpla.
+- over_2_5_probability y btts_probability: probabilidades enteras (0 a 100) de que haya más de 2.5 goles y de que ambos equipos anoten, coherentes con over_under_2_5 y both_teams_to_score (50 o más cuando eliges "Más de 2.5 goles" o "Sí").
 - reasoning: análisis directo de 2 a 3 líneas en español explicando el porqué del pronóstico. Cita datos concretos del historial directo o de las estadísticas cuando existan y no inventes datos que no aparezcan aquí.
-- Si el partido ya empezó o terminó, ten en cuenta el estado y el marcador."""
+- Si el partido ya empezó o terminó, ten en cuenta el estado y el marcador.
+- Habla siempre como VYROX IA. En reasoning nunca te presentes como Gemini, Google ni ningún otro modelo o empresa."""
 NO_CONTEXT = "No hay historial directo ni estadísticas disponibles para este partido."
 
-NO_KEY = "El pronóstico con IA no está disponible: falta configurar GEMINI_API_KEY en el backend."
-FAILED = "No se pudo generar el pronóstico con Gemini en este momento. Intenta de nuevo en unos minutos."
+# Shown to users, who only know the engine as VYROX IA; the key's variable name stays in .env.example.
+NO_KEY = "VYROX IA no está disponible: falta configurar la clave del motor de IA en el backend."
+FAILED = "VYROX IA no pudo generar el pronóstico en este momento. Intenta de nuevo en unos minutos."
 
 
 async def _generate(client: httpx.AsyncClient, model: str, prompt: str) -> Prediction:
