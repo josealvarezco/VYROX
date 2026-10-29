@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { CheckIcon, Chevron, CrossIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
+import { CheckIcon, Chevron, CrossIcon, ShareIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
 import { STAKES, pesos } from './money'
+import { ShareButton } from './ShareButton'
+import { playCard } from './shareCard'
 import { statusText } from './status'
 import type { SavedTicket, SlipLeg } from './types'
 import { slipKey, totalOdd, type useBetSlip } from './useBetSlip'
@@ -45,15 +47,12 @@ export function OddButton({ pick, slip, className, children }: { pick: SlipLeg; 
   )
 }
 
+const ICON_BUTTON =
+  'grid size-7 shrink-0 cursor-pointer place-items-center rounded-full text-muted transition-all duration-200 ease-out hover:bg-surface-2 hover:text-ink'
+
 function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-full text-muted transition-all duration-200 ease-out hover:bg-surface-2 hover:text-ink"
-    >
+    <button type="button" onClick={onClick} aria-label={label} title={label} className={ICON_BUTTON}>
       {children}
     </button>
   )
@@ -151,15 +150,26 @@ export function StakeSimulator({ odd, slip, onRegister }: { odd: number; slip: S
       </dl>
       {onRegister && (
         <>
-          <button
-            type="button"
-            onClick={() => onRegister(amount)}
-            disabled={!amount || short}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-yellow py-2.5 font-bold text-forest transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(244_213_109/0.7)] active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-          >
-            <TicketSlipIcon className="size-4" />
-            Registrar Jugada
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onRegister(amount)}
+              disabled={!amount || short}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-yellow py-2.5 font-bold text-forest transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(244_213_109/0.7)] active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            >
+              <TicketSlipIcon className="size-4" />
+              Registrar Jugada
+            </button>
+            <ShareButton
+              draw={() => playCard(slip.legs, odd, amount, Math.round(amount * odd))}
+              filename="vyrox-jugada-cupon.png" // not registered yet, so no play id
+              label="Compartir cupón"
+              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3.5 font-semibold transition-all duration-200 ease-out hover:bg-surface-2"
+            >
+              <ShareIcon />
+              Compartir
+            </ShareButton>
+          </div>
           {short && <p className="text-xs text-warn">Tu bank de {pesos(slip.bank)} COP no alcanza para este monto.</p>}
         </>
       )}
@@ -194,6 +204,14 @@ function TicketCard({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
               </IconButton>
             </>
           )}
+          <ShareButton
+            draw={() => playCard(ticket.legs, ticket.total_odd, ticket.stake, ticket.potential_return, ticket.status)}
+            filename={`vyrox-jugada-${ticket.id}.png`}
+            label="Compartir jugada"
+            className={ICON_BUTTON}
+          >
+            <ShareIcon />
+          </ShareButton>
           <IconButton label="Eliminar jugada" onClick={() => slip.removeTicket(ticket.id)}>
             <TrashIcon className="size-4" />
           </IconButton>

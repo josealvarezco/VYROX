@@ -15,6 +15,7 @@
   --animate-tab-in: tab-in 150ms ease-out;
   --animate-grow: grow 500ms ease-out;
   --animate-pop: pop 300ms ease-out;
+  --animate-goal: goal-glow 1s ease-in-out infinite;
 }
 
 /* Colors that follow the theme: light by default, dark under <html data-theme="dark">. */
@@ -141,6 +142,20 @@
 @keyframes grow {
   from {
     transform: scaleX(0);
+  }
+}
+/* A row that just scored: an inset border and glow between the brand's yellow and orange (inset, so the card never clips it). */
+@keyframes goal-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 2px #f4d56d,
+      inset 0 0 18px rgb(244 213 109 / 0.35);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 2px #ee761b,
+      inset 0 0 18px rgb(238 118 27 / 0.35);
   }
 }
 @keyframes pop {
