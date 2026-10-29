@@ -1,12 +1,11 @@
 """League table for the Match Center's "Clasificación" tab: one API-Football request per league and season every 12 hours."""
 import asyncio
-import os
 import random
 import time
 
 import httpx
 
-from app.api_football import CACHE_TTL, UpstreamError, api_get
+from app.api_football import CACHE_TTL, UpstreamError, api_get, api_keys
 
 STANDINGS_TTL = 43200  # 12 hours: one table serves every match of the league
 FORM = {"W": "V", "D": "E", "L": "D"}  # win, draw and loss in Spanish: victoria, empate, derrota
@@ -127,7 +126,7 @@ async def get_standings(
     league_id: int, season: int, home_id: int | None, away_id: int | None, home: str | None, away: str | None
 ) -> dict:
     """The table of the match's group; simulated without an API key, for a cup without a table or when API-Football fails."""
-    groups = await _tables(league_id, season) if os.environ.get("API_FOOTBALL_KEY") else []
+    groups = await _tables(league_id, season) if api_keys() else []
     if not groups:
         teams = [(team_id, name) for team_id, name in ((home_id, home), (away_id, away)) if name]
         return {"group": None, "is_simulated": True, "standings": _simulated(f"{league_id}-{season}-{home}-{away}", teams)}

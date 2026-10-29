@@ -33,22 +33,43 @@ _cache: dict[date, dict] = {}
 _lock = asyncio.Lock()
 
 
+KEY_ERRORS = {"requests", "rateLimit", "token"}  # daily quota, per-minute limit, bad key: another key may still work
+_turn = 0  # how many keys were used up so far; keys[_turn % len(keys)] serves the next request
+
+
 class UpstreamError(Exception):
     """API-Football answered with an error such as a bad key or an exhausted daily quota."""
 
 
+def api_keys() -> list[str]:
+    """API_FOOTBALL_KEYS (comma separated), or the single API_FOOTBALL_KEY of older .env files."""
+    keys = os.environ.get("API_FOOTBALL_KEYS") or os.environ.get("API_FOOTBALL_KEY") or ""
+    return [key.strip() for key in keys.split(",") if key.strip()]
+
+
 async def api_get(path: str, params: dict) -> list[dict]:
-    """GET an API-Football endpoint and return its "response" list."""
-    async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.get(
-            f"{API_BASE}{path}", headers={"x-apisports-key": os.environ["API_FOOTBALL_KEY"]}, params=params
-        )
-        response.raise_for_status()
-    body = response.json()
-    # API-Football reports a bad key, an exhausted quota or a plan limit with HTTP 200 and an "errors" field.
-    if body["errors"]:
-        raise UpstreamError(body["errors"])
-    return body["response"]
+    """GET an API-Football endpoint and return its "response" list, moving on to the next key when one runs out."""
+    global _turn
+    keys = api_keys()
+    errors: object = {"token": "no API-Football key"}
+    for _ in keys:
+        turn = _turn
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                f"{API_BASE}{path}", headers={"x-apisports-key": keys[turn % len(keys)]}, params=params
+            )
+            response.raise_for_status()
+        body = response.json()
+        # API-Football reports a bad key, an exhausted quota or a plan limit with HTTP 200 and an "errors" field.
+        errors = body["errors"]
+        if not errors:
+            return body["response"]
+        if not (isinstance(errors, dict) and errors.keys() & KEY_ERRORS):
+            break  # a plan or parameter error: every key would answer the same
+        # Stay on the next key from now on; max() keeps two requests failing at once from skipping one.
+        # A spent key comes back in turn once the others run out, after its daily reset.
+        _turn = max(_turn, turn + 1)
+    raise UpstreamError(errors)
 
 
 def _team(team: dict) -> dict:
@@ -95,7 +116,7 @@ def _fresh(day: date, entry: dict) -> bool:
 
 async def fetch_matches(day: date | None = None) -> tuple[list[dict], bool]:
     """Return the day's matches (default: today in Colombia) and whether they are sample data."""
-    if not os.environ.get("API_FOOTBALL_KEY"):
+    if not api_keys():
         return json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))["matches"], True
 
     today = colombia_today()

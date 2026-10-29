@@ -269,3 +269,46 @@ def test_future_day_is_not_treated_as_final(upstream):
     fetch(tomorrow)
 
     assert len(upstream["dates"]) == 2
+
+
+@pytest.fixture
+def keys(monkeypatch):
+    """Two keys, "spent" first; state[key] is what API-Football answers that key (default: the fixtures)."""
+    state = {"used": []}
+
+    async def fake_get(self, url, headers, params):
+        key = headers["x-apisports-key"]
+        state["used"].append(key)
+        return httpx.Response(200, json=state.get(key, UPSTREAM), request=httpx.Request("GET", url))
+
+    monkeypatch.setenv("API_FOOTBALL_KEYS", "spent, fresh")
+    monkeypatch.setattr(api_football, "_turn", 0)
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    return state
+
+
+def test_a_spent_key_hands_the_same_request_to_the_next_one(keys):
+    keys["spent"] = QUOTA_ERROR
+
+    assert TestClient(app).get("/api/matches").json()["competitions"]
+    expire_cache()
+    TestClient(app).get("/api/matches")
+
+    assert keys["used"] == ["spent", "fresh", "fresh"]  # later requests start on the key that works
+
+
+PLAN_ERROR = {"errors": {"plan": "Free plans do not have access to this date, try from 2026-10-28 to 2026-10-30."}, "response": []}
+
+
+@pytest.mark.parametrize(
+    ("replies", "used"),
+    [
+        ({"spent": QUOTA_ERROR, "fresh": QUOTA_ERROR}, ["spent", "fresh"]),  # every key ran out
+        ({"spent": PLAN_ERROR}, ["spent"]),  # any key would get the same answer, so no other is tried
+    ],
+)
+def test_errors_that_no_other_key_fixes_reach_the_caller(keys, replies, used):
+    keys.update(replies)
+
+    assert TestClient(app).get("/api/matches").status_code == 502
+    assert keys["used"] == used

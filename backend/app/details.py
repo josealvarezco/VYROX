@@ -1,12 +1,11 @@
 """Match Center data for one match: events, statistics, lineups and head-to-head, cached in memory."""
 import asyncio
-import os
 import random
 import time
 
 import httpx
 
-from app.api_football import UpstreamError, api_get, fetch_matches, to_match
+from app.api_football import UpstreamError, api_get, api_keys, fetch_matches, to_match
 
 LIVE_TTL = 120  # seconds; a live match changes minute by minute
 STATIC_TTL = 21600  # 6 hours for finished or not yet started matches
@@ -232,7 +231,7 @@ def _build(match_id: int, match: dict, item: dict | None, h2h: dict | None, samp
 
 async def get_details(match_id: int) -> dict:
     """Return the Match Center data; without an API key, demo data for a sample match."""
-    if not os.environ.get("API_FOOTBALL_KEY"):
+    if not api_keys():
         sample, _ = await fetch_matches()
         match = next((m for m in sample if m["id"] == match_id), None)
         if match is None:
