@@ -7,6 +7,7 @@ import httpx
 from pydantic import BaseModel, Field, computed_field, model_validator
 
 from app.details import get_details
+from app.odds import odds_1x2, prob_to_market_odd
 
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 # Aliases for the current models (gemini-2.5-flash is still listed but answers 404). Flash-Lite is tried
@@ -73,20 +74,20 @@ class Prediction(BaseModel):
     # Computed, so it is left out of the schema Gemini answers and only appears in the API response.
     @computed_field
     @property
-    def fair_odds(self) -> dict[str, float | None]:
-        """VYROX IA's own fair odds: 100 / probability, without any bookmaker margin. Not bookmaker odds."""
+    def market_odds(self) -> dict[str, float | None]:
+        """Estimated market odds for VYROX IA's probabilities, bookmaker margin included. Not any bookmaker's odds."""
         p = self.probabilities
-        percents = {
-            "recommended": self.recommended_bet_probability,
-            "home": p.home,
-            "draw": p.draw,
-            "away": p.away,
+        two_way = {
             "over_2_5": self.over_2_5_probability,
             "under_2_5": 100 - self.over_2_5_probability,
             "btts_yes": self.btts_probability,
             "btts_no": 100 - self.btts_probability,
         }
-        return {market: round(100 / percent, 2) if percent else None for market, percent in percents.items()}
+        return {
+            "recommended": prob_to_market_odd(self.recommended_bet_probability),
+            **odds_1x2(p.home, p.draw, p.away),
+            **{market: prob_to_market_odd(percent) for market, percent in two_way.items()},
+        }
 
 
 PROMPT = """Eres VYROX IA, el motor propietario de analítica avanzada y predicción deportiva de VYROX, experto en fútbol. Da tu pronóstico para este partido.

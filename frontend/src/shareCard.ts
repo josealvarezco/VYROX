@@ -119,7 +119,7 @@ export async function playCard(legs: SlipLeg[], total: number, stake: number, po
   const label = status === 'won' ? 'Retorno' : status === 'lost' ? 'Retorno potencial · jugada perdida' : 'Retorno potencial'
   write(ctx, label, PAD + 22, y + 33, `700 14px ${SANS}`, FOREST)
   write(ctx, `${pesos(potentialReturn)} COP`, PAD + 22, y + 73, `700 32px ${NUM}`, FOREST)
-  footer(ctx, height, 'Cuotas justas VYROX IA · Simulación sin dinero real · +18 Juega con responsabilidad')
+  footer(ctx, height, 'Cuotas estimadas de mercado · Sin dinero real · +18 Juega con responsabilidad')
   if (status === 'won') {
     // A tilted stamp over the top right, drawn last so it sits on the picks.
     ctx.save()
@@ -137,7 +137,7 @@ export async function playCard(legs: SlipLeg[], total: number, stake: number, po
   return canvas
 }
 
-// A forecast: the match, the 1X2 probabilities and VYROX IA's recommended play with its fair odd and confidence.
+// A forecast: the match, the 1X2 probabilities and VYROX IA's recommended play with its estimated market odd and confidence.
 export async function forecastCard(match: Match, league: string, forecast: Extract<Prediction, { fallback: false }>) {
   const height = 675
   const { canvas, ctx } = await card(height, 'Pronóstico VYROX IA')
@@ -164,9 +164,9 @@ export async function forecastCard(match: Match, league: string, forecast: Extra
   wrap(ctx, forecast.recommended_bet, W - 2 * PAD - 44, 2).forEach((line, index) =>
     write(ctx, line, PAD + 22, y + 64 + index * 27, `800 21px ${SANS}`, FOREST, 'left', W - 2 * PAD - 44),
   )
-  write(ctx, 'Cuota justa', PAD + 22, y + 132, `600 13px ${SANS}`, FOREST)
-  const odd = forecast.fair_odds.recommended
-  write(ctx, odd ? odd.toFixed(2) : '-', PAD + 30 + ctx.measureText('Cuota justa').width, y + 134, `700 24px ${NUM}`, FOREST)
+  write(ctx, 'Cuota estimada', PAD + 22, y + 132, `600 13px ${SANS}`, FOREST)
+  const odd = forecast.market_odds.recommended
+  write(ctx, odd ? odd.toFixed(2) : '-', PAD + 30 + ctx.measureText('Cuota estimada').width, y + 134, `700 24px ${NUM}`, FOREST)
   pill(ctx, `CONFIANZA ${forecast.confidence.toUpperCase()}`, W - PAD - 22, y + 112, FOREST, YELLOW)
   footer(ctx, height, 'Análisis de VYROX IA con fines informativos; no garantiza resultados · +18')
   return canvas

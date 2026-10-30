@@ -36,11 +36,11 @@ export type Prediction =
       recommended_bet: string
       recommended_bet_probability: number
       reasoning: string
-      // 100 / VYROX IA's probability, with no bookmaker margin; null when the probability is 0
-      fair_odds: Record<'recommended' | 'home' | 'draw' | 'away' | 'over_2_5' | 'under_2_5' | 'btts_yes' | 'btts_no', number | null>
+      // Estimated market odds: VYROX IA's probability with a bookmaker's margin; null when the probability is 0
+      market_odds: Record<'recommended' | 'home' | 'draw' | 'away' | 'over_2_5' | 'under_2_5' | 'btts_yes' | 'btts_no', number | null>
     }
 
-// GET /api/parlays: odds are VYROX fair odds (100 / probability), never a bookmaker's
+// GET /api/parlays: odds are estimated market odds (VYROX IA's probability with a bookmaker's margin), never a bookmaker's
 export type ParlayLeg = {
   match_id: number
   league_name: string
@@ -90,7 +90,7 @@ export type RadarItem = Omit<ParlayLeg, 'odd' | 'popularity_label'> & {
   league_id: number
   home_logo: string
   away_logo: string
-  fair_odd: number // 100 / probability, as the parlays' odd
+  market_odd: number // the parlays' odd for the same pick
   confidence_badge: 'ALTA' | 'MEDIA'
   insight: string
 }

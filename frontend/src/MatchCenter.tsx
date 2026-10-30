@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { FairOdds, PredictionView } from './AiPrediction'
+import { MarketOdds, PredictionView } from './AiPrediction'
 import { BetSlip } from './BetSlip'
 import {
   BallIcon,
@@ -565,12 +565,12 @@ export function MatchCenter({
                 {details ? <HeadToHead h2h={details.h2h} /> : waiting}
                 {prediction.prediction &&
                   !prediction.prediction.fallback &&
-                  prediction.prediction.fair_odds && // a backend older than fair odds sends none
+                  prediction.prediction.market_odds && // a backend older than market odds sends none
                   (match.status === 'TIMED' || live ? (
-                    <FairOdds prediction={prediction.prediction} match={match} slip={slip} />
+                    <MarketOdds prediction={prediction.prediction} match={match} slip={slip} />
                   ) : (
                     // Once a match is decided its probabilities are 0 or 100, so an odd says nothing.
-                    <p className="text-xs text-muted">La cuota justa VYROX se calcula solo para partidos por jugar o en vivo.</p>
+                    <p className="text-xs text-muted">Las cuotas estimadas de mercado se calculan solo para partidos por jugar o en vivo.</p>
                   ))}
               </div>
             ) : !details ? (

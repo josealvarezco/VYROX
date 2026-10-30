@@ -29,18 +29,18 @@ PREDICTION = {
     "btts_probability": 45,
     "reasoning": "Millonarios gana 1-0 en casa y controla el partido.",
 }
-# 100 / probability, rounded to 2 decimals
-FAIR_ODDS = {
+# Estimated market odds (app.odds): a 107.5 % book for 1X2, 6.5 % margins for the two-way markets
+MARKET_ODDS = {
     "recommended": 1.43,
-    "home": 1.82,
-    "draw": 4.0,
-    "away": 5.0,
-    "over_2_5": 2.5,
-    "under_2_5": 1.67,  # the other side: 100 / (100 - 40)
-    "btts_yes": 2.22,
-    "btts_no": 1.82,
+    "home": 1.71,
+    "draw": 3.6,  # 25 % would pay 3.72: a draw stays within 3.10-3.60
+    "away": 4.7,
+    "over_2_5": 2.22,
+    "under_2_5": 1.62,  # the other side, 60 %: both sides add up to 106.5 %
+    "btts_yes": 2.04,
+    "btts_no": 1.74,
 }
-EXPECTED = {"fallback": False, **PREDICTION, "fair_odds": FAIR_ODDS}
+EXPECTED = {"fallback": False, **PREDICTION, "market_odds": MARKET_ODDS}
 
 
 def gemini_body(payload):
@@ -88,7 +88,7 @@ def test_returns_gemini_prediction(upstream):
     assert sent["headers"] == {"x-goog-api-key": "test-key"}
     assert sent["json"]["generationConfig"]["responseMimeType"] == "application/json"
     asked = sent["json"]["generationConfig"]["responseJsonSchema"]["properties"]
-    assert "btts_probability" in asked and "fair_odds" not in asked  # odds are computed here, never asked
+    assert "btts_probability" in asked and "market_odds" not in asked  # odds are computed here, never asked
     prompt = sent["json"]["contents"][0]["parts"][0]["text"]
     assert "Millonarios (local) vs Atletico Nacional (visitante)" in prompt and "Marcador: 1-0" in prompt
     assert prompt.startswith("Eres VYROX IA, el motor propietario de analítica avanzada y predicción deportiva de VYROX")
@@ -127,14 +127,14 @@ def test_probabilities_are_rescaled_to_sum_100(upstream):
     assert post().json()["probabilities"] == {"home": 46, "draw": 27, "away": 27}
 
 
-def test_fair_odds_follow_the_rescaled_probabilities_and_skip_zero(upstream):
+def test_market_odds_follow_the_rescaled_probabilities_and_skip_zero(upstream):
     upstream["reply"] = {**PREDICTION, "probabilities": {"home": 50, "draw": 30, "away": 30}, "btts_probability": 0}
 
-    odds = post().json()["fair_odds"]
+    odds = post().json()["market_odds"]
 
-    assert (odds["home"], odds["draw"], odds["away"]) == (2.17, 3.7, 3.7)  # from 46/27/27, not 50/30/30
-    assert odds["btts_yes"] is None  # no fair odds for an event VYROX IA gives no chance
-    assert odds["btts_no"] == 1.0  # while the other side is a certainty
+    assert (odds["home"], odds["draw"], odds["away"]) == (2.02, 3.45, 3.45)  # from 46/27/27, not 50/30/30
+    assert odds["btts_yes"] is None  # no odd for an event VYROX IA gives no chance
+    assert odds["btts_no"] == 1.06  # while a certainty still pays the margin's 1.06
 
 
 def test_missing_market_probability_is_outside_schema(upstream):

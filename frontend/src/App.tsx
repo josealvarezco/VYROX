@@ -166,7 +166,7 @@ export default function App() {
 
 
   return (
-    <div className="mx-auto max-w-[90rem] px-4 py-6">
+    <div className="mx-auto max-w-[1600px] px-4 py-6 xl:px-6">
       <header className="hero mb-5 flex items-center justify-between gap-3 rounded-3xl px-5 py-5 sm:px-7">
         <a
           href="/"
@@ -216,7 +216,7 @@ export default function App() {
       </header>
 
       {/* From lg the bet slip is the third column; below that it floats as a pill and a drawer. */}
-      <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-6 lg:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+      <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-6 lg:grid-cols-[220px_minmax(0,1fr)_310px] xl:grid-cols-[245px_minmax(0,1fr)_335px]">
         <aside
           className={`${showSidebar ? 'mb-5 block' : 'hidden'} md:sticky md:top-6 md:block md:max-h-[calc(100vh-3rem)] md:overflow-y-auto`}
         >
