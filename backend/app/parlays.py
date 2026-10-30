@@ -69,7 +69,7 @@ def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, 
     btts = ("Sí - Ambos anotan", forecast.btts) if forecast.btts >= 50 else ("No - Ambos anotan", 100 - forecast.btts)
     two_way = {"over_1_5": ("Más de 1.5 - Goles totales", forecast.over_1_5), "goals": goals, "btts": btts}
     options = {"result": result} | {category: (label, percent, prob_to_market_odd(percent)) for category, (label, percent) in two_way.items()}
-    return {category: (label, percent, category, odd) for category, (label, percent, odd) in options.items()}
+    return {category: (label, percent, category, pick_odd(odd) if odd else None) for category, (label, percent, odd) in options.items()}
 
 
 def _leg(match: dict, selection: tuple[str, int, str, float]) -> dict:
@@ -86,7 +86,7 @@ def _leg(match: dict, selection: tuple[str, int, str, float]) -> dict:
         "market_selection": market,
         "market_category": category,  # the bet slip keeps one side per match and category
         "probability": percent,
-        "odd": pick_odd(odd),  # estimated market odd, bookmaker margin included
+        "odd": odd,  # estimated market odd, bookmaker margin included
         "popularity_label": f"{percent}% prob.",  # the leg's real VYROX IA probability, never a made-up crowd count
     }
 

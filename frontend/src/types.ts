@@ -63,6 +63,17 @@ export type Parlay = {
   total_odd: number
   probability: number
 }
+// GET /api/parlays/builder: the slip nearest a target odd, built from the day's cached VYROX IA forecast
+export type SmartParlay = {
+  legs: ParlayLeg[]
+  total_odd: number
+  probability: number // joint chance of every leg, in %
+  legs_count: number
+  on_target: boolean // within 20 % of the target
+  simulated: boolean
+  played: boolean // a day already played: a reference that takes no plays
+  message: string | null
+}
 // A bet slip pick: a parlay leg, or an odd picked in the Match Center
 export type SlipLeg = Pick<
   ParlayLeg,

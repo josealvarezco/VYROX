@@ -3,6 +3,7 @@ import { CheckIcon, Chevron, CrossIcon, ShareIcon, StopwatchIcon, TicketSlipIcon
 import { STAKES, pesos } from './money'
 import { ShareButton } from './ShareButton'
 import { playCard } from './shareCard'
+import { TARGETS, fetchSmartParlay } from './smartParlay'
 import { statusText } from './status'
 import type { SavedTicket, SlipLeg } from './types'
 import { slipKey, totalOdd, type useBetSlip } from './useBetSlip'
@@ -307,10 +308,46 @@ function MyBets({ slip }: { slip: Slip }) {
   )
 }
 
+// One tap fills the empty slip with VYROX IA's slip for a target odd, from x2 to x10.
+function QuickFill({ date, slip }: { date: string; slip: Slip }) {
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const fill = (target: number) => {
+    setBusy(true)
+    setNote('')
+    fetchSmartParlay(date, target, null, 'all', 0)
+      .then((built) =>
+        built.legs.length && !built.played ? slip.replace(built.legs) : setNote(built.message ?? 'Ya no quedan partidos por jugar en esta fecha.'),
+      )
+      .catch(() => setNote('VYROX IA no pudo armar la combinada. Intenta de nuevo.'))
+      .finally(() => setBusy(false))
+  }
+  return (
+    <div className="mt-2 space-y-2">
+      <p className="text-xs font-semibold">O deja que VYROX IA la arme por cuota objetivo:</p>
+      <div className="flex justify-center gap-1.5">
+        {TARGETS.slice(0, 4).map(([target]) => (
+          <button
+            key={target}
+            type="button"
+            disabled={busy}
+            onClick={() => fill(target)}
+            aria-label={`Armar con VYROX IA una combinada de cuota ${target}`}
+            className={`font-num ${pill(false)} disabled:opacity-50`}
+          >
+            x{target}
+          </button>
+        ))}
+      </div>
+      {note && <p className="text-xs text-warn">{note}</p>}
+    </div>
+  )
+}
+
 // On the page, the right column on desktop, always open, empty or not. Docked in the Match Center, the modal's
 // right column on desktop while it has something to show: never under the blur. Below lg, a pill that opens a
 // non-modal drawer, so odds can still be added from the cards while it is open.
-export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean }) {
+export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: boolean; date?: string }) {
   const empty = !slip.legs.length && !slip.tickets.length
   if (docked && empty) return null
   const total = totalOdd(slip.legs)
@@ -438,6 +475,7 @@ export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean
               <p className="text-muted">
                 Toca una cuota de las Combinadas Populares, del Radar IA o del Pronóstico IA de un partido para armar tu jugada.
               </p>
+              {date && <QuickFill date={date} slip={slip} />}
             </div>
           )}
         </div>

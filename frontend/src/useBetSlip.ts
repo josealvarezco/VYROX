@@ -98,6 +98,12 @@ export function useBetSlip() {
     setLegs((current) => merge(current, picks))
     setOpen(true)
   }
+  // The smart builder's slip takes the whole slip, which opens on it.
+  const replace = (picks: SlipLeg[]) => {
+    setLegs(merge([], picks))
+    setView('slip')
+    setOpen(true)
+  }
   const remove = (pick: SlipLeg) => setLegs((current) => current.filter((leg) => slipKey(leg) !== slipKey(pick)))
   const has = (pick: SlipLeg) => legs.some((leg) => same(leg, pick))
   // A single pick only updates the slip; it opens for whole parlays, so tapping odds never covers the cards.
@@ -155,6 +161,7 @@ export function useBetSlip() {
     open,
     setOpen,
     add,
+    replace,
     remove,
     has,
     toggle,
