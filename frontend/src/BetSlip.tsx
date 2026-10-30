@@ -307,15 +307,16 @@ function MyBets({ slip }: { slip: Slip }) {
   )
 }
 
-// Floating and non-modal on the page, so odds can still be added from the cards while it is open. Docked in the
-// Match Center, it is the modal's right column on desktop and a drawer above it on phones: never under the blur.
+// On the page, the right column on desktop, always open, empty or not. Docked in the Match Center, the modal's
+// right column on desktop while it has something to show: never under the blur. Below lg, a pill that opens a
+// non-modal drawer, so odds can still be added from the cards while it is open.
 export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean }) {
-  if (!slip.legs.length && !slip.tickets.length) return null
+  const empty = !slip.legs.length && !slip.tickets.length
+  if (docked && empty) return null
   const total = totalOdd(slip.legs)
   const sameMatch = new Set(slip.legs.map((leg) => leg.match_id)).size < slip.legs.length
   const layer = docked ? 'z-[60]' : 'z-30'
-  // Docked on desktop the panel follows slip.docks; everywhere else it opens and minimizes.
-  const [panelAt, pillAt] = docked ? (slip.docks ? ['lg:flex', 'lg:hidden'] : ['lg:hidden', 'lg:flex']) : ['', '']
+  const [panelAt, pillAt] = !docked || slip.docks ? ['lg:flex', 'lg:hidden'] : ['lg:hidden', 'lg:flex']
   const tabs = [
     ['slip', `Cupón (${slip.legs.length})`],
     ['tickets', `Mis Jugadas (${slip.tickets.length})`],
@@ -334,7 +335,7 @@ export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean
             ? `Abrir cupón: ${slip.legs.length} selecciones, cuota ${total.toFixed(2)}`
             : `Abrir Mis Jugadas: ${slip.tickets.length} jugadas`
         }
-        className={`fixed right-4 bottom-4 ${layer} ${slip.open ? 'hidden' : 'flex'} ${pillAt} cursor-pointer items-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-bold text-cream shadow-xl ring-1 ring-yellow/40 transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0`}
+        className={`fixed right-4 bottom-4 ${layer} ${slip.open || empty ? 'hidden' : 'flex'} ${pillAt} cursor-pointer items-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-bold text-cream shadow-xl ring-1 ring-yellow/40 transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0`}
       >
         <TicketSlipIcon className="size-5 text-yellow" />
         {slip.legs.length ? 'Cupón' : 'Mis Jugadas'}
@@ -347,8 +348,10 @@ export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean
 
       <aside
         aria-label="Cupón de Apuestas VYROX"
-        className={`fixed inset-x-4 bottom-4 ${layer} ${slip.open ? 'flex' : 'hidden'} ${panelAt} max-h-[calc(100dvh-2rem)] animate-tab-in flex-col overflow-hidden rounded-3xl border border-line bg-modal text-sm text-ink shadow-2xl sm:left-auto sm:w-96 ${
-          docked ? 'lg:static lg:ml-4 lg:max-h-[92vh]' : ''
+        className={`fixed inset-x-4 bottom-4 ${layer} ${slip.open && !empty ? 'flex' : 'hidden'} ${panelAt} max-h-[calc(100dvh-2rem)] animate-tab-in flex-col overflow-hidden rounded-3xl border border-line bg-modal text-sm text-ink shadow-2xl sm:left-auto sm:w-96 ${
+          docked
+            ? 'lg:static lg:ml-4 lg:max-h-[92vh]'
+            : 'lg:sticky lg:inset-auto lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:w-auto lg:rounded-2xl lg:bg-surface lg:shadow-none'
         }`}
       >
         <header className="hero flex shrink-0 items-center gap-2 px-3 py-2.5">
@@ -373,9 +376,7 @@ export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean
             type="button"
             onClick={() => slip.setOpen(false)}
             aria-label="Minimizar cupón"
-            className={`ml-auto grid size-8 shrink-0 cursor-pointer place-items-center rounded-full transition-all duration-200 ease-out hover:bg-cream/10 ${
-              docked ? 'lg:invisible' : ''
-            }`}
+            className="ml-auto grid size-8 shrink-0 cursor-pointer place-items-center rounded-full transition-all duration-200 ease-out hover:bg-cream/10 lg:hidden"
           >
             <Chevron direction="down" />
           </button>
@@ -429,9 +430,15 @@ export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean
               </div>
             </>
           ) : (
-            <p className="px-6 py-8 text-center text-muted">
-              Tu cupón está vacío. Toca una cuota de las combinadas o del Pronóstico IA para agregarla.
-            </p>
+            <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+              <span className="mb-1 grid size-12 place-items-center rounded-full bg-yellow/15 text-gold">
+                <TicketSlipIcon className="size-6" />
+              </span>
+              <p className="font-bold">Tu cupón está vacío</p>
+              <p className="text-muted">
+                Toca una cuota de las Combinadas Populares, del Radar IA o del Pronóstico IA de un partido para armar tu jugada.
+              </p>
+            </div>
           )}
         </div>
       </aside>

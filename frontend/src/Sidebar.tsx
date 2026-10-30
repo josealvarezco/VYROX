@@ -4,13 +4,10 @@ import { Chevron, FilterIcon, Flag, StarIcon } from './icons'
 import { TOP_LEAGUES, WORLD, countryLabel, fold, leagueLogo } from './leagues'
 import type { Competition, Team } from './types'
 
-function Card({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-2xl border border-line bg-surface p-3">
-      <div className="mb-2 flex items-center justify-between gap-2 px-1">
-        <h2 className="text-sm font-bold">{title}</h2>
-        {action}
-      </div>
+      <h2 className="mb-2 px-1 text-sm font-bold">{title}</h2>
       {children}
     </section>
   )
@@ -116,7 +113,7 @@ export function Sidebar({
 }: {
   groups: Competition[]
   league: number | null
-  onLeague: (id: number | null) => void
+  onLeague: (id: number) => void
   followed: Team[]
   onUnfollow: (team: Team) => void
   onTeam: (team: Team) => void
@@ -154,16 +151,7 @@ export function Sidebar({
         )}
       </Card>
 
-      <Card
-        title="Mejores ligas"
-        action={
-          league !== null && (
-            <button type="button" onClick={() => onLeague(null)} className="cursor-pointer text-xs font-semibold text-gold hover:underline">
-              Ver todas
-            </button>
-          )
-        }
-      >
+      <Card title="Mejores ligas">
         <ul className="space-y-0.5">
           {TOP_LEAGUES.map(({ id, name }) => (
             <li key={id}>
