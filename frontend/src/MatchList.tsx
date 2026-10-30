@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Collapse } from './Collapse'
-import { Chevron } from './icons'
+import { Chevron, FlameIcon } from './icons'
+import { PressureBar } from './Momentum'
 import { LIVE, kickoffTime, statusText } from './status'
 import type { Match } from './types'
 
@@ -48,7 +49,11 @@ function MatchRow({ match, showLeague, onSelect, goal }: { match: Match; showLea
                 </span>
               )}
               {goal && <span className="animate-pulse rounded-full bg-yellow px-1.5 text-[11px] font-extrabold text-forest">¡GOL!</span>}
+              {match.momentum_status === 'high_voltage' && <FlameIcon className="size-3.5" label="Partido caliente" />}
             </span>
+          )}
+          {live && match.home_pressure !== undefined && (
+            <PressureBar home={match.home_pressure} away={match.away_pressure ?? 0} className="mt-0.5 h-1 w-16" />
           )}
         </span>
         <span className="flex min-w-0 items-center gap-2">

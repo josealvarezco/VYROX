@@ -288,6 +288,15 @@ export function AwardBadgeIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// A pulse line: the live pressure thermometer.
+export function ActivityPulseIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M2 10h3.5l2-5 3.5 10 2-5H18" />
+    </svg>
+  )
+}
+
 export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>

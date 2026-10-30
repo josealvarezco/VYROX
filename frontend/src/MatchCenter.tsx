@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { MarketOdds, PredictionView } from './AiPrediction'
+import { MomentumPanel } from './Momentum'
 import { BetSlip } from './BetSlip'
 import {
   BallIcon,
@@ -575,13 +576,18 @@ export function MatchCenter({
               </div>
             ) : !details ? (
               waiting
-            ) : tab === 'Resumen' ? (
-              <Summary match={match} events={details.events} />
-            ) : tab === 'Estadísticas' ? (
-              <>
-                {details.simulated.includes('statistics') && <SimulatedBadge sample={details.sample} />}
-                <Statistics rows={details.statistics} />
-              </>
+            ) : tab === 'Resumen' || tab === 'Estadísticas' ? (
+              <div className="space-y-5">
+                {details.momentum && <MomentumPanel momentum={details.momentum} home={match.homeTeam.shortName} away={match.awayTeam.shortName} />}
+                {tab === 'Resumen' ? (
+                  <Summary match={match} events={details.events} />
+                ) : (
+                  <>
+                    {details.simulated.includes('statistics') && <SimulatedBadge sample={details.sample} />}
+                    <Statistics rows={details.statistics} />
+                  </>
+                )}
+              </div>
             ) : (
               <>
                 {details.simulated.includes('lineups') && <SimulatedBadge sample={details.sample} />}
