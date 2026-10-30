@@ -3,7 +3,7 @@ import os
 from datetime import date
 
 from app.api_football import colombia_today, fetch_matches, group_by_league
-from app.odds import odds_1x2, pick_odd, prob_to_market_odd
+from app.odds import PICK, odds_1x2, pick_odd, prob_to_market_odd
 from app.parlays import MAX_CANDIDATES, MatchForecast, day_forecasts, kickoff, simulated_forecast, upcoming
 
 LOW, HIGH = 55, 92  # a trend starts at 55 %, and no pick is shown as surer than 92 %
@@ -99,3 +99,40 @@ async def get_radar(day: date | None = None) -> dict:
         for key, title in CATEGORIES
     ]
     return {"categories": categories, "simulated": simulated, "played": played, "message": None}
+
+
+def _forecast(match: dict, forecast: MatchForecast) -> dict:
+    """One match's forecast for the comparator: its 1X2 favourite and both sides of over 2.5 and of both-score."""
+    home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
+    r = forecast.result
+    prices = odds_1x2(r.home, r.draw, r.away)
+    team, percent, odd = (home, r.home, prices["home"]) if r.home >= r.away else (away, r.away, prices["away"])
+    picks = {
+        "favourite": (f"{team} - Resultado del partido", percent, "result", odd),
+        "over_2_5": ("Más de 2.5 - Goles totales", forecast.over_2_5, "goals", prob_to_market_odd(forecast.over_2_5)),
+        "under_2_5": ("Menos de 2.5 - Goles totales", 100 - forecast.over_2_5, "goals", prob_to_market_odd(100 - forecast.over_2_5)),
+        "btts_yes": ("Sí - Ambos anotan", forecast.btts, "btts", prob_to_market_odd(forecast.btts)),
+        "btts_no": ("No - Ambos anotan", 100 - forecast.btts, "btts", prob_to_market_odd(100 - forecast.btts)),
+    }
+    league = match["league"]
+    return {
+        "match_id": match["id"],
+        "league_name": league["league_name"],
+        "league_logo": league["league_logo"],
+        "home_team": home,
+        "away_team": away,
+        "home_logo": match["homeTeam"]["crest"],
+        "away_logo": match["awayTeam"]["crest"],
+        "kickoff_label": kickoff(match),
+        # The parlays' 1.22 floor, so a pick shared with them or the radar has the same odd in the bet slip.
+        "picks": {
+            key: {"market_selection": selection, "market_category": category, "probability": chance, "odd": max(price, PICK[0]) if price else None}
+            for key, (selection, chance, category, price) in picks.items()
+        },
+    }
+
+
+async def get_forecasts(day: date | None = None) -> dict:
+    """VYROX IA's forecast of each match the radar reads, priced like the parlays: what the comparator compares."""
+    rows, simulated, played = await forecast_rows(day or colombia_today())
+    return {"matches": [_forecast(m, forecast) for m, forecast in rows], "simulated": simulated, "played": played}

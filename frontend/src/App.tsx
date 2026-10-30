@@ -1,7 +1,8 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
+import { Comparator } from './Comparator'
 import { GoalToasts } from './GoalToasts'
-import { ArrowLeftIcon, BellRingIcon, CalendarIcon, Chevron, FilterIcon, Flag, FlameIcon, RadarIcon, StarIcon } from './icons'
+import { ArrowLeftIcon, BellRingIcon, CalendarIcon, Chevron, CrossIcon, FilterIcon, Flag, FlameIcon, RadarIcon, ScaleCompareIcon, StarIcon } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
@@ -13,6 +14,7 @@ import { ThemeToggle } from './ThemeToggle'
 import type { Match, MatchesResponse, Team } from './types'
 import { useBetSlip } from './useBetSlip'
 import { useFollowed } from './useFollowed'
+import { useForecasts } from './useForecasts'
 import { ALERT_MODES, useGoalAlerts, type AlertMode } from './useGoalAlerts'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
@@ -71,6 +73,21 @@ export default function App() {
   )
   const goalAlerts = useGoalAlerts(mine)
   const { check } = goalAlerts
+  const forecasts = useForecasts(date)
+  const [vs, setVs] = useState<number[]>([]) // the comparator's matches, up to two
+  const [comparing, setComparing] = useState(false)
+  const forecastIds = new Set(forecasts?.matches.map((match) => match.match_id))
+  // A second match opens the comparator; a third one replaces the older pick.
+  const compare = {
+    can: (id: number) => forecastIds.has(id),
+    picked: (id: number) => vs.includes(id),
+    toggle: (id: number) => {
+      const next = vs.includes(id) ? vs.filter((other) => other !== id) : [...vs, id].slice(-2)
+      setVs(next)
+      if (next.length === 2) setComparing(true)
+    },
+  }
+  const firstPick = vs.length === 1 ? forecasts?.matches.find((match) => match.match_id === vs[0]) : undefined
 
   useEffect(() => {
     let current = true // drop answers for a date the user already left
@@ -103,6 +120,7 @@ export default function App() {
     setData(null)
     setError(false)
     setSelectedId(null)
+    setVs([])
     goalAlerts.reset()
   }
 
@@ -306,6 +324,16 @@ export default function App() {
                 {name === 'Partidos Calientes' && hotCount > 0 && <span className="font-num opacity-70">{hotCount}</span>}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setComparing(true)}
+              disabled={forecastIds.size < 2}
+              title={forecastIds.size < 2 ? 'VYROX IA aún no pronostica partidos de esta fecha' : 'Comparar dos partidos'}
+              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-yellow bg-forest px-3.5 py-1.5 text-sm font-semibold text-yellow transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100"
+            >
+              <ScaleCompareIcon />
+              Comparar (VS)
+            </button>
             <label className="flex w-full min-w-0 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm sm:ml-auto sm:w-auto sm:max-w-64 sm:flex-1">
               <FilterIcon />
               <input
@@ -370,11 +398,12 @@ export default function App() {
               onSelect={open}
               showLeague
               scored={goalAlerts.glowing}
+              compare={compare}
             />
           )}
 
           {filter === 'Radar IA'
-            ? data && allGroups.length > 0 && <Radar date={date} slip={slip} onSelect={setSelectedId} />
+            ? data && allGroups.length > 0 && <Radar date={date} slip={slip} onSelect={setSelectedId} compare={compare} />
             : filter === 'Por horario'
             ? shown.length > 0 && (
                 <MatchCard
@@ -383,6 +412,7 @@ export default function App() {
                   onSelect={open}
                   showLeague
                   scored={goalAlerts.glowing}
+                  compare={compare}
                 />
               )
             : groups.map((group) => (
@@ -401,12 +431,13 @@ export default function App() {
                   collapsed={collapsed.has(group.league_id)}
                   onToggle={() => toggleCollapsed(group.league_id)}
                   scored={goalAlerts.glowing}
+                  compare={compare}
                 />
               ))}
         </main>
 
         {/* With a match open, the Match Center docks the slip itself, above its blur. */}
-        {!selected && <BetSlip slip={slip} date={date} />}
+        {!selected && !comparing && <BetSlip slip={slip} date={date} />}
       </div>
 
       {selected && (
@@ -417,6 +448,46 @@ export default function App() {
           isFollowed={followed.isFollowed}
           onFollow={followed.toggle}
           onClose={() => setSelectedId(null)}
+          slip={slip}
+        />
+      )}
+      {firstPick && !comparing && (
+        <div
+          role="status"
+          className="fixed bottom-20 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 items-center gap-2 rounded-full bg-forest py-2 pr-2 pl-4 text-sm text-cream shadow-xl ring-1 ring-yellow/40 lg:bottom-6"
+        >
+          <ScaleCompareIcon className="size-5 text-yellow" />
+          <p className="min-w-0 flex-1 truncate">
+            <span className="font-bold text-yellow">Comparador ¿A cuál le entro?:</span> {firstPick.home_team} vs {firstPick.away_team} · Elige un 2.º
+            partido o abre el comparador
+          </p>
+          <button
+            type="button"
+            onClick={() => setComparing(true)}
+            className="shrink-0 cursor-pointer rounded-full bg-yellow px-3 py-1 text-xs font-bold text-forest transition-all duration-200 ease-out hover:opacity-90 active:scale-[0.98]"
+          >
+            Abrir
+          </button>
+          <button
+            type="button"
+            onClick={() => setVs([])}
+            aria-label="Quitar el partido del comparador"
+            className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-full text-cream/70 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream"
+          >
+            <CrossIcon className="size-3.5" />
+          </button>
+        </div>
+      )}
+      {comparing && forecasts && (
+        <Comparator
+          matches={forecasts.matches}
+          played={forecasts.played}
+          ids={vs}
+          onChange={setVs}
+          onClose={() => {
+            setComparing(false)
+            setVs([])
+          }}
           slip={slip}
         />
       )}

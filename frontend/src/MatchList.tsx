@@ -1,23 +1,56 @@
 import type { ReactNode } from 'react'
 import { Collapse } from './Collapse'
-import { Chevron, FlameIcon } from './icons'
+import { Chevron, FlameIcon, ScaleCompareIcon } from './icons'
 import { PressureBar } from './Momentum'
 import { LIVE, kickoffTime, statusText } from './status'
 import type { Match } from './types'
 
-function MatchRow({ match, showLeague, onSelect, goal }: { match: Match; showLeague: boolean; onSelect: (match: Match) => void; goal: boolean }) {
+// Picking matches for the comparator, "¿A cuál le entro?": only those VYROX IA forecast can be compared.
+export type Compare = { can: (matchId: number) => boolean; picked: (matchId: number) => boolean; toggle: (matchId: number) => void }
+
+export function CompareButton({ matchId, label, compare }: { matchId: number; label: string; compare: Compare }) {
+  const picked = compare.picked(matchId)
+  return (
+    <button
+      type="button"
+      onClick={() => compare.toggle(matchId)}
+      aria-pressed={picked}
+      aria-label={`Comparar ${label}`}
+      title="Comparar partido"
+      className={`grid size-7 shrink-0 cursor-pointer place-items-center rounded-full border transition-all duration-200 ease-out active:scale-[0.95] ${
+        picked ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-muted hover:border-yellow hover:text-ink'
+      }`}
+    >
+      <ScaleCompareIcon className="size-4" />
+    </button>
+  )
+}
+
+function MatchRow({
+  match,
+  showLeague,
+  onSelect,
+  goal,
+  compare,
+}: {
+  match: Match
+  showLeague: boolean
+  onSelect: (match: Match) => void
+  goal: boolean
+  compare?: Compare
+}) {
   const { home, away } = match.score.fullTime
   const live = LIVE.has(match.status)
   const note = match.status === 'TIMED' ? null : live && match.minute ? `${match.minute}'` : statusText(match)
 
   return (
-    <li>
+    <li className="relative">
       <button
         type="button"
         onClick={() => onSelect(match)}
         className={`grid w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out hover:bg-hover hover:shadow-[inset_3px_0_0_0_#F4D56D] sm:px-4 ${
           showLeague ? 'grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]'
-        } ${goal ? 'animate-goal bg-yellow/10' : ''}`}
+        } ${goal ? 'animate-goal bg-yellow/10' : ''} ${compare?.can(match.id) ? 'pr-11 sm:pr-11' : ''}`}
       >
         {showLeague && (
           <img
@@ -61,6 +94,11 @@ function MatchRow({ match, showLeague, onSelect, goal }: { match: Match; showLea
           <span className="truncate">{match.awayTeam.shortName}</span>
         </span>
       </button>
+      {compare?.can(match.id) && (
+        <span className="absolute top-1/2 right-2 -translate-y-1/2">
+          <CompareButton matchId={match.id} label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`} compare={compare} />
+        </span>
+      )}
     </li>
   )
 }
@@ -73,6 +111,7 @@ export function MatchCard({
   collapsed = false,
   onToggle,
   scored,
+  compare,
 }: {
   title: ReactNode
   matches: Match[]
@@ -81,6 +120,7 @@ export function MatchCard({
   collapsed?: boolean
   onToggle?: () => void
   scored?: (matchId: number) => boolean // matches that just scored, which glow for a few seconds
+  compare?: Compare
 }) {
   const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight'
   return (
@@ -103,7 +143,7 @@ export function MatchCard({
       <Collapse open={!collapsed}>
         <ul className="divide-y divide-line border-t border-line">
           {matches.map((match) => (
-            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} goal={scored?.(match.id) ?? false} />
+            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} goal={scored?.(match.id) ?? false} compare={compare} />
           ))}
         </ul>
       </Collapse>

@@ -83,6 +83,20 @@ export type SmartParlay = {
   played: boolean // a day already played: a reference that takes no plays
   message: string | null
 }
+// GET /api/forecasts: VYROX IA's forecast per match of the date (up to 12), priced like the radar, for the comparator
+export type ForecastPick = { market_selection: string; market_category: string; probability: number; odd: number | null }
+export type ForecastMatch = {
+  match_id: number
+  league_name: string
+  league_logo: string
+  home_team: string
+  away_team: string
+  home_logo: string
+  away_logo: string
+  kickoff_label: string
+  picks: Record<'favourite' | 'over_2_5' | 'under_2_5' | 'btts_yes' | 'btts_no', ForecastPick>
+}
+export type ForecastsResponse = { matches: ForecastMatch[]; simulated: boolean; played: boolean }
 // A bet slip pick: a parlay leg, or an odd picked in the Match Center
 export type SlipLeg = Pick<
   ParlayLeg,

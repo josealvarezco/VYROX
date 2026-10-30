@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Thinking } from './AiPrediction'
 import { OddButton } from './BetSlip'
 import { RadarIcon, TicketSlipIcon } from './icons'
+import { CompareButton, type Compare } from './MatchList'
 import type { RadarCategory, RadarItem, RadarResponse } from './types'
 import type { useBetSlip } from './useBetSlip'
 
@@ -16,9 +17,9 @@ const MARKETS: [RadarCategory['key'], string][] = [
 const NOTE = 'rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-muted'
 
 type Market = RadarCategory['key']
-type Props = { slip: ReturnType<typeof useBetSlip>; onSelect: (matchId: number) => void }
+type Props = { slip: ReturnType<typeof useBetSlip>; onSelect: (matchId: number) => void; compare?: Compare }
 
-function Card({ item, played, slip, onSelect }: Props & { item: RadarItem; played: boolean }) {
+function Card({ item, played, slip, onSelect, compare }: Props & { item: RadarItem; played: boolean }) {
   const odd = (
     <>
       <TicketSlipIcon />
@@ -42,6 +43,7 @@ function Card({ item, played, slip, onSelect }: Props & { item: RadarItem; playe
         >
           CONFIANZA {item.confidence_badge} · <span className="font-num">{item.probability}%</span>
         </span>
+        {compare?.can(item.match_id) && <CompareButton matchId={item.match_id} label={`${item.home_team} vs ${item.away_team}`} compare={compare} />}
       </div>
       <button
         type="button"
@@ -75,7 +77,7 @@ function Card({ item, played, slip, onSelect }: Props & { item: RadarItem; playe
 }
 
 // Remounted per date (key), so the previous date's picks never show while the new ones load.
-function RadarGrid({ date, market, slip, onSelect }: Props & { date: string; market: Market }) {
+function RadarGrid({ date, market, slip, onSelect, compare }: Props & { date: string; market: Market }) {
   const [data, setData] = useState<RadarResponse | null>(null)
   const [error, setError] = useState(false)
 
@@ -130,7 +132,7 @@ function RadarGrid({ date, market, slip, onSelect }: Props & { date: string; mar
           {/* Two cards only from a 672px center column: narrower ones leave no room for the confidence badge. */}
           <div className="grid grid-cols-1 gap-3.5 @2xl:grid-cols-2">
             {category.items.map((item) => (
-              <Card key={item.match_id} item={item} played={data.played} slip={slip} onSelect={onSelect} />
+              <Card key={item.match_id} item={item} played={data.played} slip={slip} onSelect={onSelect} compare={compare} />
             ))}
           </div>
         </>
@@ -141,7 +143,7 @@ function RadarGrid({ date, market, slip, onSelect }: Props & { date: string; mar
   )
 }
 
-export function Radar({ date, slip, onSelect }: Props & { date: string }) {
+export function Radar({ date, slip, onSelect, compare }: Props & { date: string }) {
   const [market, setMarket] = useState<Market>('bankers_1x2')
   return (
     <section className="space-y-4">
@@ -167,7 +169,7 @@ export function Radar({ date, slip, onSelect }: Props & { date: string }) {
           </button>
         ))}
       </div>
-      <RadarGrid key={date} date={date} market={market} slip={slip} onSelect={onSelect} />
+      <RadarGrid key={date} date={date} market={market} slip={slip} onSelect={onSelect} compare={compare} />
     </section>
   )
 }
