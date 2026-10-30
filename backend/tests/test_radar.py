@@ -93,6 +93,25 @@ def test_shares_the_parlays_cached_forecast(radar_api):
     assert len(radar_api["prompts"]) == 2
 
 
+def test_forecasts_price_every_match_like_the_radar_without_a_new_call(radar_api):
+    radar = get().json()
+    forecasts = get("/api/forecasts").json()
+
+    assert len(radar_api["prompts"]) == 1  # the radar's VYROX IA call serves the comparator too
+    assert (forecasts["simulated"], forecasts["played"], len(forecasts["matches"])) == (False, False, 6)
+    arsenal = next(match for match in forecasts["matches"] if match["match_id"] == 3)
+    assert (arsenal["home_team"], arsenal["away_team"], arsenal["kickoff_label"]) == ("Arsenal", "Chelsea", "28/10 09:00")
+    assert {key: (pick["market_selection"], pick["probability"], pick["odd"]) for key, pick in arsenal["picks"].items()} == {
+        "favourite": ("Arsenal - Resultado del partido", 80, 1.45),
+        "over_2_5": ("Más de 2.5 - Goles totales", 62, 1.58),
+        "under_2_5": ("Menos de 2.5 - Goles totales", 38, 2.31),
+        "btts_yes": ("Sí - Ambos anotan", 50, 1.88),
+        "btts_no": ("No - Ambos anotan", 50, 1.88),
+    }
+    banker = radar["categories"][0]["items"][0]
+    assert (banker["market_selection"], banker["market_odd"]) == (arsenal["picks"]["favourite"]["market_selection"], 1.45)
+
+
 def test_without_vyrox_ia_the_radar_is_simulated(radar_api):
     radar_api["fail"] = True
 

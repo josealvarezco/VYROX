@@ -297,6 +297,16 @@ export function ActivityPulseIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// A balance scale: the head-to-head match comparator.
+export function ScaleCompareIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M10 3v14m-4 0h8M3.5 6h13" />
+      <path d="M3.5 6 1.5 11a2 2 0 0 0 4 0Zm13 0-2 5a2 2 0 0 0 4 0Z" />
+    </svg>
+  )
+}
+
 export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
