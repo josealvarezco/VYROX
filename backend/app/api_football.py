@@ -33,7 +33,7 @@ _cache: dict[date, dict] = {}
 _lock = asyncio.Lock()
 
 
-KEY_ERRORS = {"requests", "rateLimit", "token"}  # daily quota, per-minute limit, bad key: another key may still work
+KEY_ERRORS = {"requests", "rateLimit", "token", "access"}  # daily quota, per-minute limit, bad or suspended key: another may work
 _turn = 0  # how many keys were used up so far; keys[_turn % len(keys)] serves the next request
 
 

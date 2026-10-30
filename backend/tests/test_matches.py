@@ -292,7 +292,12 @@ def keys(monkeypatch):
 RATE_LIMIT = {"errors": {"rateLimit": "Too many requests. Your rate limit is 10 requests per minute."}, "response": []}
 
 
-@pytest.mark.parametrize("spent", [QUOTA_ERROR, RATE_LIMIT, 429], ids=["daily quota", "rate limit", "HTTP 429"])
+SUSPENDED = {"errors": {"access": "Your account is suspended, check on https://dashboard.api-football.com."}, "response": []}
+
+
+@pytest.mark.parametrize(
+    "spent", [QUOTA_ERROR, RATE_LIMIT, 429, SUSPENDED], ids=["daily quota", "rate limit", "HTTP 429", "suspended account"]
+)
 def test_a_spent_key_hands_the_same_request_to_the_next_one(keys, spent):
     keys["spent"] = spent
 
