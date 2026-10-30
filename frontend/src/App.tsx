@@ -397,7 +397,7 @@ export default function App() {
         </main>
 
         {/* With a match open, the Match Center docks the slip itself, above its blur. */}
-        {!selected && <BetSlip slip={slip} />}
+        {!selected && <BetSlip slip={slip} date={date} />}
       </div>
 
       {selected && (

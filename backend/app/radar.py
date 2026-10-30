@@ -65,22 +65,30 @@ def _item(match: dict, pick: tuple[str, int, str, str, float]) -> dict:
     }
 
 
-async def get_radar(day: date | None = None) -> dict:
-    """Up to 8 picks per market from 55 %, likeliest first: VYROX IA's, or flagged simulated ones without it."""
-    day = day or colombia_today()
+async def forecast_rows(day: date) -> tuple[list[tuple[dict, MatchForecast]], bool, bool]:
+    """The date's matches with their forecast, as (rows, simulated, played), for the radar and the smart builder:
+    the matches still to be played, or all of them once the day is played; one VYROX IA call per date."""
     matches, _ = await fetch_matches(day)
     candidates = upcoming(matches)
     played = not candidates
     if played:  # a day already played: its matches as a reference that takes no plays
         candidates = [m for group in group_by_league(matches) for m in group["matches"]][:MAX_CANDIDATES]
     if not candidates:
-        return {"categories": [], "simulated": False, "played": False, "message": NO_MATCHES}
+        return [], False, False
 
     forecasts = await day_forecasts(day, candidates) if os.environ.get("GEMINI_API_KEY") else None
     simulated = not (forecasts and any(m["id"] in forecasts for m in candidates))
-    if simulated:  # without VYROX IA the radar still works, with demo data the interface labels
+    if simulated:  # without VYROX IA both still work, with demo data the interface labels
         forecasts = {m["id"]: simulated_forecast(m["id"]) for m in candidates}
-    rows = [(m, _markets(m, forecasts[m["id"]])) for m in candidates if m["id"] in forecasts]
+    return [(m, forecasts[m["id"]]) for m in candidates if m["id"] in forecasts], simulated, played
+
+
+async def get_radar(day: date | None = None) -> dict:
+    """Up to 8 picks per market from 55 %, likeliest first: VYROX IA's, or flagged simulated ones without it."""
+    rows, simulated, played = await forecast_rows(day or colombia_today())
+    if not rows:
+        return {"categories": [], "simulated": False, "played": False, "message": NO_MATCHES}
+    rows = [(m, _markets(m, forecast)) for m, forecast in rows]
     categories = [
         {
             "key": key,

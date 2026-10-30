@@ -244,6 +244,25 @@ export function BellRingIcon({ muted = false, className = 'size-4', label }: Ico
   )
 }
 
+// A magic wand with sparkles: the smart parlay builder.
+export function WandSparklesIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="m3.5 16.5 8.5-8.5m-1.5-1.5 3 3" />
+      <path d="M14.5 2v3M13 3.5h3M17 9v2m-1-1h2M8 2.5v2m-1-1h2" />
+    </svg>
+  )
+}
+
+// Two arrows chasing each other round: another combination.
+export function RefreshIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M3.5 10a6.5 6.5 0 0 1 11.5-4M15 2.5V6h-3.5M16.5 10a6.5 6.5 0 0 1-11.5 4M5 17.5V14h3.5" />
+    </svg>
+  )
+}
+
 export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
