@@ -23,8 +23,8 @@ export function Thinking({ children }: { children: ReactNode }) {
   )
 }
 
-// VYROX IA's own fair odds. No bookmaker's real odds are available for these matches, so none are shown.
-export function FairOdds({
+// Estimated market odds for VYROX IA's probabilities. No bookmaker's real odds are available for these matches, so none are shown.
+export function MarketOdds({
   prediction,
   match,
   slip,
@@ -33,7 +33,7 @@ export function FairOdds({
   match: Match
   slip: ReturnType<typeof useBetSlip>
 }) {
-  const odds = prediction.fair_odds
+  const odds = prediction.market_odds
   const home = match.homeTeam.shortName
   const away = match.awayTeam.shortName
   // The parlay legs' market labels and categories, so a pick reads the same in the slip wherever it came from.
@@ -65,7 +65,7 @@ export function FairOdds({
     <section className="space-y-3 text-sm">
       <h3 className="flex items-center gap-1.5 font-bold">
         <TrendUpIcon className="size-4 text-gold" />
-        Cuota justa VYROX IA
+        Cuotas estimadas de mercado
       </h3>
 
       <div className="rounded-2xl border-2 border-yellow bg-surface p-4">
@@ -120,8 +120,8 @@ export function FairOdds({
       ) : null}
 
       <p className="text-xs text-muted">
-        Toca una cuota para sumarla al Cupón de Apuestas VYROX. Cuota justa = 100 ÷ probabilidad estimada por VYROX IA, sin el margen que cobran las casas de apuestas. Es una
-        referencia propia de VYROX, no la cuota de ninguna casa.
+        Toca una cuota para sumarla al Cupón de Apuestas VYROX. Son cuotas estimadas de mercado: la probabilidad de VYROX IA con el margen típico de una casa
+        de apuestas. Es una estimación propia de VYROX, no la cuota de ninguna casa.
       </p>
     </section>
   )

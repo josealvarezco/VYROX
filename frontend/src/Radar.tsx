@@ -22,7 +22,7 @@ function Card({ item, played, slip, onSelect }: Props & { item: RadarItem; playe
   const odd = (
     <>
       <TicketSlipIcon />
-      {item.fair_odd.toFixed(2)}
+      {item.market_odd.toFixed(2)}
     </>
   )
   return (
@@ -65,7 +65,7 @@ function Card({ item, played, slip, onSelect }: Props & { item: RadarItem; playe
         {played ? (
           <span className="flex items-center gap-1.5 font-num text-sm font-bold text-muted">{odd}</span>
         ) : (
-          <OddButton pick={{ ...item, odd: item.fair_odd }} slip={slip} className="flex items-center gap-1.5 px-3 py-1.5 text-sm">
+          <OddButton pick={{ ...item, odd: item.market_odd }} slip={slip} className="flex items-center gap-1.5 px-3 py-1.5 text-sm">
             {odd}
           </OddButton>
         )}

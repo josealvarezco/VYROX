@@ -7,7 +7,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app import parlays
+from app import odds, parlays
 from app.api_football import colombia_today
 from app.main import app
 
@@ -105,7 +105,7 @@ def age(seconds):
 
 
 def check_slips(body):
-    """Three slips of upcoming matches whose odds are fair odds and whose total is their product."""
+    """Three slips of upcoming matches whose odds are estimated market odds and whose total is their product."""
     assert body["message"] is None
     assert [p["title"] for p in body["parlays"]] == ["Combinada Segura IA", "Multi Valor VYROX", "Selecciones en Tendencia"]
     for parlay in body["parlays"]:
@@ -114,7 +114,9 @@ def check_slips(body):
         assert parlay["total_odd"] == round(math.prod(leg["odd"] for leg in parlay["legs"]), 2)
         assert parlay["probability"] == round(math.prod(leg["probability"] / 100 for leg in parlay["legs"]) * 100)
         for leg in parlay["legs"]:
-            assert leg["odd"] == round(100 / leg["probability"], 2)
+            assert odds.PICK[0] <= leg["odd"] <= odds.PICK[1]
+            if leg["market_category"] != "result":  # 1X2 is priced from the match's whole book
+                assert leg["odd"] == odds.pick_odd(odds.prob_to_market_odd(leg["probability"]))
             assert leg["popularity_label"] == f"{leg['probability']}% prob."
             assert leg["market_category"] in {"result", "over_1_5", "goals", "btts"}
             assert re.fullmatch(r"\d{2}/\d{2} \d{2}:\d{2}", leg["kickoff_label"])
@@ -132,8 +134,9 @@ def test_three_parlays_from_one_forecast(api):
         (6, "Más de 1.5 - Goles totales"),
         (5, "Más de 1.5 - Goles totales"),
     ]
-    assert (segura["probability"], segura["badge"], segura["total_odd"]) == (47, "47% IA", 2.15)
-    assert valor["badge"] == "MIXTA IA" and len(valor["legs"]) == 5
+    assert (segura["probability"], segura["badge"], segura["total_odd"]) == (47, "47% IA", 2.5)
+    assert [leg["odd"] for leg in segura["legs"]] == [1.22, 1.22, 1.28, 1.31]  # 88 % and 85 % stop at the 1.22 floor
+    assert (valor["badge"], valor["total_odd"], len(valor["legs"])) == ("MIXTA IA", 9.7, 5)
     assert {leg["market_category"] for leg in segura["legs"]} == {"over_1_5"}
     assert {leg["market_category"] for leg in valor["legs"]} == {"result", "btts", "goals"}
     assert tendencia["badge"] == f"{tendencia['total_odd']:.2f}" and len(tendencia["legs"]) == 5

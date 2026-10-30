@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app import parlays, radar
+from app import odds, parlays, radar
 from app.gemini import Probabilities
 from app.main import app
 from app.parlays import MatchForecast
@@ -31,13 +31,16 @@ def get(path="/api/radar"):
 
 
 def check(body):
-    """Four markets, likeliest first, from 55 to 92 %, each with its fair odd and the bet slip's category."""
+    """Four markets, likeliest first, from 55 to 92 %, each with its market odd and the bet slip's category."""
     assert [(c["key"], c["title"]) for c in body["categories"]] == radar.CATEGORIES
     for category in body["categories"]:
         chances = [item["probability"] for item in category["items"]]
         assert chances == sorted(chances, reverse=True) and all(55 <= p <= 92 for p in chances) and len(chances) <= 8
         for item in category["items"]:
-            assert item["fair_odd"] == round(100 / item["probability"], 2)
+            if item["market_category"] == "result":  # a favourite, priced from the match's whole 1X2 book
+                assert odds.FAVOURITE[0] <= item["market_odd"] <= odds.FAVOURITE[1]
+            else:
+                assert item["market_odd"] == odds.pick_odd(odds.prob_to_market_odd(item["probability"]))
             assert item["confidence_badge"] == ("ALTA" if item["probability"] >= 70 else "MEDIA")
             assert item["market_category"] == SLIP[category["key"]]
 
@@ -66,7 +69,7 @@ def test_four_markets_from_one_forecast(radar_api):
         "market_category": "result",
         "market_selection": "Arsenal - Resultado del partido",
         "probability": 80,
-        "fair_odd": 1.25,
+        "market_odd": 1.45,  # 80 / 12 / 8: a favourite never pays under 1.45
         "confidence_badge": "ALTA",
         "insight": "Arsenal parte como favorito: 80% de victoria y 8% para Chelsea.",
     }
@@ -80,10 +83,10 @@ def test_shares_the_parlays_cached_forecast(radar_api):
     get()
     assert len(radar_api["prompts"]) == 1  # one VYROX IA call per date for the parlays and the radar
 
-    # The same pick has the same fair odd in both places, so the bet slip treats it as one.
+    # The same pick has the same odd in both places, so the bet slip treats it as one.
     leg = next(leg for leg in parlay_legs if (leg["match_id"], leg["market_selection"]) == (6, "Más de 2.5 - Goles totales"))
     item = next(item for item in body["categories"][1]["items"] if item["match_id"] == 6)
-    assert item["fair_odd"] == leg["odd"] == 1.67
+    assert item["market_odd"] == leg["odd"] == 1.62
 
     age(parlays.FORECAST_TTL)
     get()
@@ -120,5 +123,5 @@ def test_no_pick_is_shown_surer_than_92_percent():
 
     markets = radar._markets(arsenal, sure)
 
-    assert [percent for _, percent, _, _ in markets.values()] == [92, 92, 92, 3]
-    assert radar._item(arsenal, markets["bankers_1x2"])["fair_odd"] == 1.09
+    assert [percent for _, percent, *_ in markets.values()] == [92, 92, 92, 3]
+    assert radar._item(arsenal, markets["bankers_1x2"])["market_odd"] == 1.45

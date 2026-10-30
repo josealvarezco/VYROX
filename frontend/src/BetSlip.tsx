@@ -87,7 +87,7 @@ export function StakeSimulator({ odd, slip, onRegister }: { odd: number; slip: S
   const [byBank, setByBank] = useState(false)
   const [stake, setStake] = useState(STAKES[0])
   const [profile, setProfile] = useState(1) // Moderado, VYROX IA's suggestion
-  const chance = 100 / odd // fair odds, so this is VYROX IA's own probability
+  const chance = 100 / odd // the probability the odd implies: VYROX IA's, a few points off for the bookmaker's margin
   const { low, high } = PROFILES[profile]
   const percent = Math.round((low + ((high - low) * chance) / 100) * 10) / 10
   const amount = Math.round(byBank ? (slip.bank * percent) / 100 : stake)
@@ -424,7 +424,7 @@ export function BetSlip({ slip, docked = false }: { slip: Slip; docked?: boolean
                   Limpiar cupón
                 </button>
                 <p className="text-[11px] text-muted">
-                  Simulación con las cuotas justas de VYROX IA (100 ÷ probabilidad), no las de ninguna casa de apuestas.
+                  Simulación con cuotas estimadas de mercado de VYROX IA, no las de ninguna casa de apuestas.
                   VYROX no recibe apuestas. +18 · Juega con responsabilidad.
                 </p>
               </div>

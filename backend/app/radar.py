@@ -3,6 +3,7 @@ import os
 from datetime import date
 
 from app.api_football import colombia_today, fetch_matches, group_by_league
+from app.odds import odds_1x2, pick_odd, prob_to_market_odd
 from app.parlays import MAX_CANDIDATES, MatchForecast, day_forecasts, kickoff, simulated_forecast, upcoming
 
 LOW, HIGH = 55, 92  # a trend starts at 55 %, and no pick is shown as surer than 92 %
@@ -16,23 +17,33 @@ CATEGORIES = [
 NO_MATCHES = "No hay partidos en esta fecha para el radar."
 
 
-def _markets(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, str, str]]:
-    """Each radar market's pick for one match: (selection, probability, slip category, insight)."""
+def _markets(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, str, str, float | None]]:
+    """Each radar market's pick for one match: (selection, probability, slip category, insight, market odd)."""
     home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
     r = forecast.result
-    (team, _), (rival, other) = sorted([(home, r.home), (away, r.away)], key=lambda side: -side[1])
+    (team, _, side), (rival, other, _) = sorted([(home, r.home, "home"), (away, r.away, "away")], key=lambda option: -option[1])
     win, over, under, btts = (min(p, HIGH) for p in (max(r.home, r.away), forecast.over_2_5, 100 - forecast.over_2_5, forecast.btts))
+    # Priced as in the parlays, 1X2 from its whole book, so the same pick has the same odd in both.
+    favourite = odds_1x2(r.home, r.draw, r.away)[side]
     # Selections and categories the bet slip already settles: "result", "goals" and "btts".
     return {
-        "bankers_1x2": (f"{team} - Resultado del partido", win, "result", f"{team} parte como favorito: {win}% de victoria y {other}% para {rival}."),
-        "over_2_5": ("Más de 2.5 - Goles totales", over, "goals", f"Partido abierto: {over}% de ver 3 goles o más y {btts}% de que marquen los dos."),
-        "btts_yes": ("Sí - Ambos anotan", btts, "btts", f"Los dos ataques pesan: {btts}% de que ambos marquen y {over}% de más de 2.5 goles."),
-        "under_2_5": ("Menos de 2.5 - Goles totales", under, "goals", f"Duelo cerrado: {under}% de 2 goles o menos, con el empate en {r.draw}%."),
+        "bankers_1x2": (
+            f"{team} - Resultado del partido", win, "result", f"{team} parte como favorito: {win}% de victoria y {other}% para {rival}.", favourite
+        ),
+        "over_2_5": (
+            "Más de 2.5 - Goles totales", over, "goals", f"Partido abierto: {over}% de ver 3 goles o más y {btts}% de que marquen los dos.", prob_to_market_odd(over)
+        ),
+        "btts_yes": (
+            "Sí - Ambos anotan", btts, "btts", f"Los dos ataques pesan: {btts}% de que ambos marquen y {over}% de más de 2.5 goles.", prob_to_market_odd(btts)
+        ),
+        "under_2_5": (
+            "Menos de 2.5 - Goles totales", under, "goals", f"Duelo cerrado: {under}% de 2 goles o menos, con el empate en {r.draw}%.", prob_to_market_odd(under)
+        ),
     }
 
 
-def _item(match: dict, pick: tuple[str, int, str, str]) -> dict:
-    selection, percent, category, insight = pick
+def _item(match: dict, pick: tuple[str, int, str, str, float]) -> dict:
+    selection, percent, category, insight, odd = pick
     league = match["league"]
     return {
         "match_id": match["id"],
@@ -48,7 +59,7 @@ def _item(match: dict, pick: tuple[str, int, str, str]) -> dict:
         "market_category": category,
         "market_selection": selection,
         "probability": percent,
-        "fair_odd": round(100 / percent, 2),  # VYROX fair odd, no bookmaker margin
+        "market_odd": pick_odd(odd),  # estimated market odd, bookmaker margin included
         "confidence_badge": "ALTA" if percent >= 70 else "MEDIA",
         "insight": insight,
     }

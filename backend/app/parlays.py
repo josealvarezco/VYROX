@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from app.api_football import colombia_today, fetch_matches, group_by_league
 from app.gemini import Percent, Probabilities, ask_vyrox_ia
+from app.odds import odds_1x2, pick_odd, prob_to_market_odd
 
 FORECAST_TTL = 21600  # 6 hours: one VYROX IA call per date and period
 RETRY_TTL = 300  # never ask VYROX IA again within 5 minutes, even after a failure
@@ -50,23 +51,29 @@ def kickoff(match: dict) -> str:
     return datetime.fromisoformat(match["utcDate"]).strftime("%d/%m %H:%M")  # dates carry Colombia's offset
 
 
-def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, str]]:
-    """The likeliest side of each market, as (selection label, probability, market category)."""
+def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, str, float | None]]:
+    """The likeliest side of each market, as (selection label, probability, market category, market odd)."""
     home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
     r = forecast.result
+    prices = odds_1x2(r.home, r.draw, r.away)
     result = max(
-        [(f"{home} - Resultado del partido", r.home), ("Empate - Resultado del partido", r.draw), (f"{away} - Resultado del partido", r.away)],
+        [
+            (f"{home} - Resultado del partido", r.home, prices["home"]),
+            ("Empate - Resultado del partido", r.draw, prices["draw"]),
+            (f"{away} - Resultado del partido", r.away, prices["away"]),
+        ],
         key=lambda option: option[1],
     )
     over = forecast.over_2_5
     goals = ("Más de 2.5 - Goles totales", over) if over >= 50 else ("Menos de 2.5 - Goles totales", 100 - over)
     btts = ("Sí - Ambos anotan", forecast.btts) if forecast.btts >= 50 else ("No - Ambos anotan", 100 - forecast.btts)
-    options = {"result": result, "over_1_5": ("Más de 1.5 - Goles totales", forecast.over_1_5), "goals": goals, "btts": btts}
-    return {category: (*option, category) for category, option in options.items()}
+    two_way = {"over_1_5": ("Más de 1.5 - Goles totales", forecast.over_1_5), "goals": goals, "btts": btts}
+    options = {"result": result} | {category: (label, percent, prob_to_market_odd(percent)) for category, (label, percent) in two_way.items()}
+    return {category: (label, percent, category, odd) for category, (label, percent, odd) in options.items()}
 
 
-def _leg(match: dict, selection: tuple[str, int, str]) -> dict:
-    market, percent, category = selection
+def _leg(match: dict, selection: tuple[str, int, str, float]) -> dict:
+    market, percent, category, odd = selection
     league = match["league"]
     return {
         "match_id": match["id"],
@@ -79,12 +86,12 @@ def _leg(match: dict, selection: tuple[str, int, str]) -> dict:
         "market_selection": market,
         "market_category": category,  # the bet slip keeps one side per match and category
         "probability": percent,
-        "odd": round(100 / percent, 2),  # VYROX fair odd, no bookmaker margin
+        "odd": pick_odd(odd),  # estimated market odd, bookmaker margin included
         "popularity_label": f"{percent}% prob.",  # the leg's real VYROX IA probability, never a made-up crowd count
     }
 
 
-def _parlay(key: str, title: str, rows: list[tuple[dict, tuple[str, int, str]]]) -> dict:
+def _parlay(key: str, title: str, rows: list[tuple[dict, tuple[str, int, str, float]]]) -> dict:
     legs = [_leg(match, selection) for match, selection in rows]
     return {
         "key": key,
@@ -105,7 +112,7 @@ def _build(candidates: list[dict], forecasts: dict[int, MatchForecast]) -> list[
     )
     safe = by_safety[:4] if len(by_safety) >= 4 and by_safety[3][1][1] >= 70 else by_safety[:3]
     mixed = [(match, options[("result", "btts", "goals")[i % 3]]) for i, (match, options) in enumerate(rows[:LEGS])]
-    # "Attractive" picks: the market closest to 55 %, a fair odd near 1.8, from the most popular leagues.
+    # "Attractive" picks: the market closest to 55 %, an odd near 1.75, from the most popular leagues.
     trending = [
         (match, min((options["result"], options["goals"], options["btts"]), key=lambda option: abs(option[1] - 55)))
         for match, options in rows[:LEGS]
@@ -115,7 +122,7 @@ def _build(candidates: list[dict], forecasts: dict[int, MatchForecast]) -> list[
     tendencia = _parlay("tendencia", "Selecciones en Tendencia", trending)
     # The badge shows the whole slip's chance: a per-leg "85%" would read as the slip's chance.
     segura["badge"] = f"{segura['probability']}% IA"
-    valor["badge"] = "MIXTA IA"  # fair odds carry no edge, so no "value" claim
+    valor["badge"] = "MIXTA IA"  # odds with a bookmaker's margin carry no edge, so no "value" claim
     tendencia["badge"] = f"{tendencia['total_odd']:.2f}"
     return [segura, valor, tendencia]
 
