@@ -56,14 +56,12 @@ export function GoalToasts({
     if (alerts.length) element.showPopover()
   }, [alerts])
 
-  // A goal in a match of the user's plays sounds once. Any play counts, so the goal that just settled one does too;
-  // muted alerts never reach this list.
+  // Each new alert sounds once: the alert mode already left out the goals the user did not ask for.
   useEffect(() => {
     const fresh = alerts.filter((alert) => !sounded.current.has(alert.key))
     fresh.forEach((alert) => sounded.current.add(alert.key))
-    const played = new Set(tickets.flatMap((ticket) => ticket.legs.map((leg) => leg.match_id)))
-    if (fresh.some((alert) => played.has(alert.matchId))) playGoal()
-  }, [alerts, tickets])
+    if (fresh.length) playGoal()
+  }, [alerts])
 
   return (
     <div

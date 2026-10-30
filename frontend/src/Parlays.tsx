@@ -125,8 +125,8 @@ function ParlayGrid({ date, slip, onSelect }: Props & { date: string }) {
           Datos simulados · VYROX IA no está disponible en este momento
         </p>
       )}
-      {/* Next to the 280px sidebar, three columns only fit from xl (about 260px each); lg gets two. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      {/* Sized by the center column: two cards from 672px, about 330px each; three never fit beside the slip. */}
+      <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
         {data.parlays.map((parlay) => (
           <ParlayCard key={parlay.key} parlay={parlay} slip={slip} onSelect={onSelect} />
         ))}
@@ -147,7 +147,7 @@ export function Parlays({ date, slip, onSelect, open, onToggle }: Props & { date
         >
           <FlameIcon className="size-5" />
           COMBINADAS POPULARES
-          <span className="hidden text-xs font-semibold tracking-normal text-muted sm:inline">VYROX IA · cuotas justas</span>
+          <span className="hidden text-xs font-semibold tracking-normal text-muted @md:inline">VYROX IA · cuotas justas</span>
           <Chevron direction={open ? 'up' : 'down'} className="ml-auto text-muted" />
         </button>
       </h2>

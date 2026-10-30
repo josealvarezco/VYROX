@@ -1,35 +1,52 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { newGoals, type GoalAlert, type Score } from './goals'
 import type { Match } from './types'
 
-const KEY = 'vyrox_goal_alerts'
+const KEY = 'vyrox_goal_alert_mode'
 const TOAST_MS = 7000
 const GLOW_MS = 8000
 const MAX_TOASTS = 3
 
-function storedOn() {
+// Which goals get a toast, a glowing row and the goal sound: the option in the menu and the short label on the bell.
+export const ALERT_MODES = {
+  all: { name: 'Todos los partidos', short: 'Todos' },
+  my_parlays: { name: 'Solo mis parlays', short: 'Mis parlays' },
+  off: { name: 'Silenciadas', short: 'Silenciadas' },
+}
+export type AlertMode = keyof typeof ALERT_MODES
+
+function storedMode(): AlertMode {
   try {
-    return localStorage.getItem(KEY) !== 'off'
+    const value = localStorage.getItem(KEY) ?? ''
+    return Object.hasOwn(ALERT_MODES, value) ? (value as AlertMode) : 'all'
   } catch {
-    return true // storage blocked: alerts on
+    return 'all' // storage blocked: every goal alerts
   }
 }
 
-// Visual goal alerts for live matches, read from the lists the page already polls: no extra request.
-export function useGoalAlerts() {
-  const [on, setOn] = useState(storedOn)
+// Goal alerts for live matches, read from the lists the page already polls: no extra request. `mine` holds the
+// matches of the user's slip and open plays, the only ones that alert in "my_parlays" mode.
+export function useGoalAlerts(mine: Set<number>) {
+  const [mode, setModeState] = useState(storedMode)
   const [alerts, setAlerts] = useState<GoalAlert[]>([])
   const [glow, setGlow] = useState<Record<number, string>>({}) // match id -> key of its latest goal
   const seen = useRef<Record<number, Score>>({})
-  const enabled = useRef(on) // read by the stable check below
+  const latest = useRef({ mode, mine }) // read by the stable check below
+  useEffect(() => {
+    latest.current = { mode, mine }
+  })
 
   const dismiss = useCallback((key: string) => setAlerts((current) => current.filter((alert) => alert.key !== key)), [])
 
   // Stable, so the page's loading effect can call it with every list without refetching.
   const check = useCallback(
     (matches: Match[]) => {
-      const goals = newGoals(seen.current, matches)
-      if (!enabled.current || !goals.length) return
+      const now = latest.current
+      // Every list moves the baseline, muted or not, so a goal scored meanwhile never alerts later.
+      const goals = newGoals(seen.current, matches).filter(
+        (goal) => now.mode === 'all' || (now.mode === 'my_parlays' && now.mine.has(goal.matchId)),
+      )
+      if (!goals.length) return
       setAlerts((current) => [...current, ...goals].slice(-MAX_TOASTS))
       setGlow((current) => ({ ...current, ...Object.fromEntries(goals.map((goal) => [goal.matchId, goal.key])) }))
       for (const goal of goals) {
@@ -49,23 +66,22 @@ export function useGoalAlerts() {
     [dismiss],
   )
 
-  const toggle = () => {
-    enabled.current = !on
-    setOn(!on)
-    if (on) {
+  const setMode = (next: AlertMode) => {
+    setModeState(next)
+    if (next === 'off') {
       setAlerts([])
       setGlow({})
     }
     try {
-      localStorage.setItem(KEY, on ? 'off' : 'on')
+      localStorage.setItem(KEY, next)
     } catch {
       // storage blocked: the choice lasts until the page reloads
     }
   }
 
   return {
-    on,
-    toggle,
+    mode,
+    setMode,
     alerts,
     dismiss,
     check,

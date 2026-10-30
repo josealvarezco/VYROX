@@ -127,8 +127,8 @@ function RadarGrid({ date, market, slip, onSelect }: Props & { date: string; mar
       {category?.items.length ? (
         <>
           <h3 className="text-sm font-bold">{category.title}</h3>
-          {/* Next to the 280px sidebar, md leaves cards of about 210px, too narrow for the confidence badge; lg gets two. */}
-          <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+          {/* Two cards only from a 672px center column: narrower ones leave no room for the confidence badge. */}
+          <div className="grid grid-cols-1 gap-3.5 @2xl:grid-cols-2">
             {category.items.map((item) => (
               <Card key={item.match_id} item={item} played={data.played} slip={slip} onSelect={onSelect} />
             ))}

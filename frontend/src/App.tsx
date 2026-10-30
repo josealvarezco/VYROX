@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
 import { GoalToasts } from './GoalToasts'
-import { BellRingIcon, CalendarIcon, Chevron, FilterIcon, Flag, RadarIcon, StarIcon } from './icons'
+import { ArrowLeftIcon, BellRingIcon, CalendarIcon, Chevron, FilterIcon, Flag, RadarIcon, StarIcon } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
@@ -13,7 +13,7 @@ import { ThemeToggle } from './ThemeToggle'
 import type { Match, MatchesResponse, Team } from './types'
 import { useBetSlip } from './useBetSlip'
 import { useFollowed } from './useFollowed'
-import { useGoalAlerts } from './useGoalAlerts'
+import { ALERT_MODES, useGoalAlerts, type AlertMode } from './useGoalAlerts'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
 const REFRESH_MS = 60_000
@@ -64,7 +64,11 @@ export default function App() {
   const followed = useFollowed()
   const slip = useBetSlip()
   const { track } = slip
-  const goalAlerts = useGoalAlerts()
+  // The matches the user has picks on, in the slip or in a play still open: the "Solo mis parlays" alerts.
+  const mine = new Set(
+    [...slip.legs, ...slip.tickets.filter((ticket) => ticket.status === 'pending').flatMap((ticket) => ticket.legs)].map((leg) => leg.match_id),
+  )
+  const goalAlerts = useGoalAlerts(mine)
   const { check } = goalAlerts
 
   useEffect(() => {
@@ -162,7 +166,7 @@ export default function App() {
 
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-[90rem] px-4 py-6">
       <header className="hero mb-5 flex items-center justify-between gap-3 rounded-3xl px-5 py-5 sm:px-7">
         <a
           href="/"
@@ -184,23 +188,35 @@ export default function App() {
           >
             Ligas y equipos
           </button>
-          <button
-            type="button"
-            onClick={goalAlerts.toggle}
-            aria-pressed={goalAlerts.on}
-            aria-label="Alertas de gol en vivo"
-            title={goalAlerts.on ? 'Silenciar las alertas de gol' : 'Activar las alertas de gol'}
-            className={`grid size-8 shrink-0 cursor-pointer place-items-center rounded-full border border-cream/20 bg-cream/10 transition-all duration-200 ease-out hover:bg-cream/15 active:scale-[0.98] ${
-              goalAlerts.on ? 'text-yellow' : 'text-cream/60'
+          {/* The pill shows the mode; an invisible native select on top brings the platform's menu, keyboard and screen reader support. */}
+          <label
+            title="Alertas de gol en vivo"
+            className={`relative flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-cream/20 bg-cream/10 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/15 has-focus-visible:ring-2 has-focus-visible:ring-yellow sm:px-3 ${
+              goalAlerts.mode === 'off' ? 'text-cream/60' : 'text-yellow'
             }`}
           >
-            <BellRingIcon muted={!goalAlerts.on} />
-          </button>
+            <BellRingIcon muted={goalAlerts.mode === 'off'} />
+            <span className="hidden sm:inline">Alertas: {ALERT_MODES[goalAlerts.mode].short}</span>
+            <Chevron className="hidden opacity-70 sm:block" />
+            <select
+              value={goalAlerts.mode}
+              onChange={(event) => goalAlerts.setMode(event.target.value as AlertMode)}
+              aria-label="Alertas de gol en vivo"
+              className="absolute inset-0 cursor-pointer bg-surface text-ink opacity-0"
+            >
+              {Object.entries(ALERT_MODES).map(([mode, { name }]) => (
+                <option key={mode} value={mode}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
           <ThemeToggle />
         </div>
       </header>
 
-      <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-6">
+      {/* From lg the bet slip is the third column; below that it floats as a pill and a drawer. */}
+      <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-6 lg:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-cols-[280px_minmax(0,1fr)_360px]">
         <aside
           className={`${showSidebar ? 'mb-5 block' : 'hidden'} md:sticky md:top-6 md:block md:max-h-[calc(100vh-3rem)] md:overflow-y-auto`}
         >
@@ -215,7 +231,8 @@ export default function App() {
           />
         </aside>
 
-        <main className="min-w-0 space-y-4">
+        {/* A container, so the parlays and the radar size their grids by this column, not by the screen. */}
+        <main className="@container min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface p-4">
             <p>
               <span className="flex items-center gap-1.5 text-lg leading-tight font-bold tracking-tight">
@@ -295,12 +312,18 @@ export default function App() {
           </div>
 
           {league !== null && (
-            <p className="flex items-center gap-2 text-sm text-muted">
-              Mostrando <span className="font-semibold text-ink">{leagueName}</span>
-              <button type="button" onClick={() => pickLeague(null)} className="cursor-pointer font-semibold text-gold hover:underline">
-                Ver todas
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => pickLeague(null)}
+                aria-label="Volver a todas las ligas"
+                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out hover:-translate-x-0.5 hover:border-yellow hover:bg-surface-2 active:scale-[0.98]"
+              >
+                <ArrowLeftIcon />
+                Volver
               </button>
-            </p>
+              <h2 className="truncate text-lg font-bold tracking-tight">{leagueName}</h2>
+            </div>
           )}
 
           {data?.sample && <Message>Mostrando datos de ejemplo: falta configurar API_FOOTBALL_KEY en el backend.</Message>}
@@ -372,6 +395,9 @@ export default function App() {
                 />
               ))}
         </main>
+
+        {/* With a match open, the Match Center docks the slip itself, above its blur. */}
+        {!selected && <BetSlip slip={slip} />}
       </div>
 
       {selected && (
@@ -385,8 +411,6 @@ export default function App() {
           slip={slip}
         />
       )}
-      {/* With a match open, the Match Center docks the slip itself, above its blur. */}
-      {!selected && <BetSlip slip={slip} />}
       <GoalToasts
         alerts={goalAlerts.alerts}
         tickets={slip.tickets}

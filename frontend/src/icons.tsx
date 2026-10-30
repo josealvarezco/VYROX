@@ -244,6 +244,14 @@ export function BellRingIcon({ muted = false, className = 'size-4', label }: Ico
   )
 }
 
+export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M16 10H4m5-5-5 5 5 5" />
+    </svg>
+  )
+}
+
 function GlobeIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={1.5} className={`shrink-0 ${className}`} {...a11y(label)}>
