@@ -3,7 +3,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from app import details
+from app import details, momentum
 from app.main import app
 from fake_api_football import FIXTURE_ID, LINEUPS, fixture, install
 
@@ -75,6 +75,23 @@ def test_live_match_refreshes_after_two_minutes_but_reuses_h2h(api):
     expire(details.LIVE_TTL + 1)
     get()
     assert api["calls"] == ["/fixtures", "/fixtures/headtohead", "/fixtures"]
+
+
+def test_a_live_match_gets_its_momentum_and_the_list_shows_it(api):
+    api["fixture"] = fixture(status="2H", elapsed=67, goals=(1, 0))
+
+    found = get().json()["momentum"]
+
+    assert set(found) == {"home_pressure", "away_pressure", "momentum_status", "goal_probability_next_15m"}
+    assert found["home_pressure"] > found["away_pressure"]  # Kashima outshoots Pohang 15 to 4 in the fixture
+    assert momentum.with_momentum([{"id": FIXTURE_ID, "status": "IN_PLAY"}])[0]["home_pressure"] == found["home_pressure"]
+
+
+def test_finished_or_simulated_statistics_get_no_momentum(api):
+    assert get().json()["momentum"] is None  # full time
+    details._details.clear()
+    api["fixture"] = fixture(status="2H", elapsed=67, statistics=[])
+    assert get().json()["momentum"] is None  # live, but without coverage: its statistics are simulated
 
 
 def test_finished_match_is_cached_for_six_hours(api):

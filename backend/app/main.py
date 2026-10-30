@@ -8,6 +8,7 @@ from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetc
 from app.builder import get_builder
 from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
+from app.momentum import with_momentum
 from app.parlays import get_parlays
 from app.radar import get_radar
 
@@ -29,7 +30,7 @@ async def matches(day: date | None = Query(None, alias="date")):
         data, sample = await fetch_matches(day)
     except (httpx.HTTPError, UpstreamError) as error:
         raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
-    return {"sample": sample, "competitions": group_by_league(data)}
+    return {"sample": sample, "competitions": group_by_league(with_momentum(data))}
 
 
 @app.get("/api/matches/{match_id}/details")

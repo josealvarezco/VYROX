@@ -6,6 +6,7 @@ import time
 import httpx
 
 from app.api_football import UpstreamError, api_get, api_keys, fetch_matches, to_match
+from app.momentum import KINDS, LIVE, measure
 
 LIVE_TTL = 120  # seconds; a live match changes minute by minute
 STATIC_TTL = 21600  # 6 hours for finished or not yet started matches
@@ -72,10 +73,22 @@ def _stat_rows(home: dict, away: dict) -> list[dict]:
     return [{"label": label, "home": _number(home.get(key)), "away": _number(away.get(key))} for key, label in STATS]
 
 
-def _statistics(item: dict) -> list[dict]:
+def _by_side(item: dict) -> dict[str, dict]:
     by_team = {s["team"]["id"]: {x["type"]: x["value"] for x in s["statistics"]} for s in item["statistics"]}
-    rows = _stat_rows(by_team.get(item["teams"]["home"]["id"], {}), by_team.get(item["teams"]["away"]["id"], {}))
+    return {side: by_team.get(item["teams"][side]["id"], {}) for side in ("home", "away")}
+
+
+def _statistics(item: dict) -> list[dict]:
+    rows = _stat_rows(*_by_side(item).values())
     return rows if any(row["home"] or row["away"] for row in rows) else []  # some leagues send teams with no values
+
+
+def _momentum(match_id: int, match: dict, item: dict) -> dict | None:
+    """Momentum IA for a live match with real statistics, never for simulated ones."""
+    counts = {side: {kind: _number(stats.get(kind)) for kind in KINDS} for side, stats in _by_side(item).items()}
+    if match["status"] not in LIVE or not any(any(side.values()) for side in counts.values()):
+        return None
+    return measure(match_id, item["fixture"]["status"]["elapsed"] or 0, counts, (item["goals"]["home"] or 0, item["goals"]["away"] or 0))
 
 
 def _cells(starters: list[dict]) -> list[tuple[int, int]]:
@@ -226,6 +239,7 @@ def _build(match_id: int, match: dict, item: dict | None, h2h: dict | None, samp
         "statistics": statistics,
         "lineups": lineups,
         "h2h": h2h,
+        "momentum": _momentum(match_id, match, item) if item else None,
     }
 
 

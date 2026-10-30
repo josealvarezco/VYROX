@@ -8,7 +8,16 @@ export type League = {
   league_logo: string
   country_flag: string | null
 }
-export type Match = {
+export type MomentumStatus = 'balanced' | 'home_domination' | 'away_domination' | 'high_voltage'
+// Momentum IA of a live match, measured from its statistics each time its Match Center loads
+export type Momentum = {
+  home_pressure: number // 0 to 100
+  away_pressure: number
+  momentum_status: MomentumStatus // high_voltage: a hot match
+  goal_probability_next_15m: number // %
+}
+// A live match measured in the last 10 minutes carries its momentum
+export type Match = Partial<Momentum> & {
   id: number
   utcDate: string
   status: string
@@ -136,4 +145,5 @@ export type MatchDetails = {
   statistics: { label: string; home: number; away: number }[]
   lineups: Record<Side, Lineup> | null
   h2h: { matches: Meeting[]; avg_goals: number | null; btts: number; over_2_5: number } | null
+  momentum: Momentum | null // live matches with real statistics only
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
 import { GoalToasts } from './GoalToasts'
-import { ArrowLeftIcon, BellRingIcon, CalendarIcon, Chevron, FilterIcon, Flag, RadarIcon, StarIcon } from './icons'
+import { ArrowLeftIcon, BellRingIcon, CalendarIcon, Chevron, FilterIcon, Flag, FlameIcon, RadarIcon, StarIcon } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard } from './MatchList'
 import { MatchCenter } from './MatchCenter'
@@ -29,7 +29,8 @@ function shiftDay(day: string, offset: number) {
 
 // API-Football's free plan only serves yesterday, today and tomorrow (the backend rejects other dates).
 const DAYS = { [shiftDay(TODAY, -1)]: 'Ayer', [TODAY]: 'Hoy', [shiftDay(TODAY, 1)]: 'Mañana' }
-const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA'] as const
+const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA', 'Partidos Calientes'] as const
+const hot = (match: Match) => match.momentum_status === 'high_voltage' // a live match Momentum IA measured as hot
 
 const longDate = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -149,6 +150,7 @@ export default function App() {
       matches: group.matches.filter(
         (match) =>
           (filter !== 'En vivo' || LIVE.has(match.status)) &&
+          (filter !== 'Partidos Calientes' || hot(match)) &&
           (!search ||
             fold(`${match.homeTeam.shortName} ${match.awayTeam.shortName} ${group.league_name} ${countryLabel(group.country)}`).includes(search)),
       ),
@@ -157,6 +159,7 @@ export default function App() {
   const shown = groups.flatMap((group) => group.matches)
   const following = shown.filter((match) => followed.isFollowed(match.homeTeam.id) || followed.isFollowed(match.awayTeam.id))
   const liveCount = allGroups.reduce((count, group) => count + group.matches.filter((match) => LIVE.has(match.status)).length, 0)
+  const hotCount = allGroups.reduce((count, group) => count + group.matches.filter(hot).length, 0)
   const leagueName =
     allGroups.find((group) => group.league_id === league)?.league_name ?? TOP_LEAGUES.find(({ id }) => id === league)?.name
   const selected = allGroups
@@ -290,13 +293,17 @@ export default function App() {
                     ? 'border-yellow bg-yellow text-forest'
                     : name === 'Radar IA'
                       ? 'border-yellow bg-surface text-gold hover:bg-surface-2'
-                      : 'border-line bg-surface text-ink hover:bg-surface-2'
+                      : name === 'Partidos Calientes'
+                        ? 'border-orange bg-surface text-warn hover:bg-surface-2'
+                        : 'border-line bg-surface text-ink hover:bg-surface-2'
                 }`}
               >
                 {name === 'En vivo' && <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-orange" />}
                 {name === 'Radar IA' && <RadarIcon />}
+                {name === 'Partidos Calientes' && <FlameIcon />}
                 {name}
                 {name === 'En vivo' && liveCount > 0 && <span className="font-num opacity-70">{liveCount}</span>}
+                {name === 'Partidos Calientes' && hotCount > 0 && <span className="font-num opacity-70">{hotCount}</span>}
               </button>
             ))}
             <label className="flex w-full min-w-0 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm sm:ml-auto sm:w-auto sm:max-w-64 sm:flex-1">
@@ -332,9 +339,11 @@ export default function App() {
           {data && allGroups.length === 0 && <Message>No hay partidos en esta fecha.</Message>}
           {data && allGroups.length > 0 && shown.length === 0 && (
             <Message>
-              {league !== null && !search && filter !== 'En vivo'
-                ? `No hay partidos de ${leagueName} en esta fecha.`
-                : 'Ningún partido coincide con los filtros.'}
+              {filter === 'Partidos Calientes'
+                ? 'Ningún partido en vivo medido por Momentum IA está caliente ahora. VYROX IA mide la presión de un partido en vivo cada vez que abres su Match Center, y la cartelera la muestra 10 minutos.'
+                : league !== null && !search && filter !== 'En vivo'
+                  ? `No hay partidos de ${leagueName} en esta fecha.`
+                  : 'Ningún partido coincide con los filtros.'}
             </Message>
           )}
 
