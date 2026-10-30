@@ -263,6 +263,31 @@ export function RefreshIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// A line chart rising through its points: the bankroll's evolution.
+export function ChartLineUpIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M3 3v14h14M6 13l3.5-3.5 2.5 2 4-5" />
+      <g fill="currentColor" stroke="none">
+        <circle cx="6" cy="13" r="1.4" />
+        <circle cx="9.5" cy="9.5" r="1.4" />
+        <circle cx="12" cy="11.5" r="1.4" />
+        <circle cx="16" cy="6.5" r="1.4" />
+      </g>
+    </svg>
+  )
+}
+
+// A rosette with two ribbons: the user's best market and records.
+export function AwardBadgeIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <circle cx="10" cy="7.5" r="4.75" />
+      <path d="m7 11.75-1.5 5.75 4.5-2 4.5 2-1.5-5.75" />
+    </svg>
+  )
+}
+
 export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>

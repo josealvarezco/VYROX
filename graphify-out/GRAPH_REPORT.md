@@ -1,17 +1,17 @@
 # Graph Report - VYROX  (2026-10-29)
 
 ## Corpus Check
-- 60 files · ~35,315 words
+- 63 files · ~37,494 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 623 nodes · 1528 edges · 22 communities (20 shown, 2 thin omitted)
+- 642 nodes · 1587 edges · 19 communities (17 shown, 2 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 40 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7cd3f6d5`
+- Built from commit: `37a02100`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -31,20 +31,17 @@
 - tsconfig.json
 - triage-labels.md
 - parlays.py
-- AiPrediction.tsx
 - test_parlays.py
-- MatchCenter.tsx
 - BetSlip.tsx
-- shareCard.ts
 - useBetSlip.ts
 - details.py
 
 ## God Nodes (most connected - your core abstractions)
-1. `a11y()` - 28 edges
+1. `a11y()` - 30 edges
 2. `App()` - 27 edges
 3. `MatchCenter()` - 21 edges
-4. `fixture()` - 19 edges
-5. `react` - 19 edges
+4. `react` - 20 edges
+5. `fixture()` - 19 edges
 6. `useBetSlip()` - 18 edges
 7. `compilerOptions` - 18 edges
 8. `fetch_matches()` - 17 edges
@@ -66,7 +63,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (22 total, 2 thin omitted)
+## Communities (19 total, 2 thin omitted)
 
 ### Community 0 - "test_matches.py"
 Cohesion: 0.12
@@ -81,8 +78,8 @@ Cohesion: 0.10
 Nodes (20): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+12 more)
 
 ### Community 3 - "App.tsx"
-Cohesion: 0.07
-Nodes (70): Thinking(), App(), DAYS, FILTERS, longDate(), Message(), shiftDay(), shortWeekday() (+62 more)
+Cohesion: 0.06
+Nodes (94): CONFIDENCE, MarketOdds(), PredictionCards(), PredictionView(), App(), DAYS, FILTERS, longDate() (+86 more)
 
 ### Community 4 - "compilerOptions"
 Cohesion: 0.12
@@ -109,44 +106,32 @@ Cohesion: 0.33
 Nodes (5): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema
 
 ### Community 10 - "types.ts"
-Cohesion: 0.10
-Nodes (21): Market, MARKETS, Props, Competition, Goals, League, Lineup, MatchDetails (+13 more)
+Cohesion: 0.07
+Nodes (43): Thinking(), OddButton(), DoubleChevronRightIcon(), DoubleChevronUpIcon(), RefreshIcon(), WandSparklesIcon(), choice(), Choices() (+35 more)
 
 ### Community 11 - "test_details.py"
-Cohesion: 0.08
+Cohesion: 0.07
 Nodes (35): fixture(), install(), meeting(), team(), api(), expire(), get(), test_finished_match_is_cached_for_six_hours() (+27 more)
 
 ### Community 14 - "parlays.py"
-Cohesion: 0.05
-Nodes (39): api_get(), api_keys(), colombia_today(), fetch_matches(), _fresh(), group_by_league(), _league_order(), _team() (+31 more)
-
-### Community 15 - "AiPrediction.tsx"
-Cohesion: 0.24
-Nodes (12): CONFIDENCE, MarketOdds(), PredictionCards(), PredictionView(), OddButton(), TicketSlipIcon(), TrendUpIcon(), Card() (+4 more)
+Cohesion: 0.06
+Nodes (37): colombia_today(), fetch_matches(), _fresh(), group_by_league(), _league_order(), _team(), to_match(), get_builder() (+29 more)
 
 ### Community 16 - "test_parlays.py"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (34): build(), test_a_day_already_played_builds_a_reference(), test_another_combination_is_another_mix_of_matches_on_target(), test_auto_splits_the_target_into_safe_legs(), test_auto_takes_fewer_legs_when_the_market_pays_more_per_leg(), test_dates_outside_the_free_plan_return_400(), test_one_pick_per_match_with_the_legs_and_market_asked(), test_reads_the_cached_forecast_without_new_calls() (+26 more)
 
-### Community 17 - "MatchCenter.tsx"
-Cohesion: 0.14
-Nodes (28): BallIcon(), CardIcon(), JerseyIcon(), PitchIcon(), ShareIcon(), SparklesIcon(), StopwatchIcon(), SubIcon() (+20 more)
-
 ### Community 18 - "BetSlip.tsx"
-Cohesion: 0.18
-Nodes (21): BADGES, BetSlip(), CARD, CopInput(), IconButton(), MyBets(), ODD, PICK (+13 more)
-
-### Community 19 - "shareCard.ts"
-Cohesion: 0.49
-Nodes (10): box(), card(), Ctx, fit(), footer(), forecastCard(), pill(), playCard() (+2 more)
+Cohesion: 0.09
+Nodes (44): Badge(), BankrollAnalytics(), Chart(), Mode, MODES, bankrollAnalytics(), BankrollPoint, day() (+36 more)
 
 ### Community 20 - "useBetSlip.ts"
 Cohesion: 0.08
-Nodes (35): GoalAlert, newGoals(), Score, goals(), MatchRow(), kickoffTime(), LIVE, STATUS_LABEL (+27 more)
+Nodes (30): GoalAlert, newGoals(), Score, goals(), DECIDED, legResult(), liveResult(), settle() (+22 more)
 
 ### Community 25 - "details.py"
 Cohesion: 0.07
-Nodes (34): UpstreamError, _build(), _card(), _cells(), _events(), get_details(), _h2h_summary(), _head_to_head() (+26 more)
+Nodes (36): api_get(), api_keys(), UpstreamError, _build(), _card(), _cells(), _events(), get_details() (+28 more)
 
 ## Knowledge Gaps
 - **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
@@ -155,11 +140,11 @@ Nodes (34): UpstreamError, _build(), _card(), _cells(), _events(), get_details()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Reglas de arquitectura` connect `parlays.py` to `useBetSlip.ts`, `VYROX: contexto del proyecto`?**
-  _High betweenness centrality (0.413) - this node is a cross-community bridge._
+  _High betweenness centrality (0.415) - this node is a cross-community bridge._
 - **Should `test_matches.py` be split into smaller, more focused modules?**
   _Cohesion score 0.11965811965811966 - nodes in this community are weakly interconnected._
 - **Why does `settle()` connect `useBetSlip.ts` to `parlays.py`?**
-  _High betweenness centrality (0.283) - this node is a cross-community bridge._
+  _High betweenness centrality (0.284) - this node is a cross-community bridge._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.0773109243697479 - nodes in this community are weakly interconnected._
 - **Why does `prob_to_market_odd()` connect `parlays.py` to `test_parlays.py`, `details.py`?**
@@ -167,4 +152,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
 - **Should `App.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.0653417645287564 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05521267723102585 - nodes in this community are weakly interconnected._

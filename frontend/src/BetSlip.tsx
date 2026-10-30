@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
+import { BankrollAnalytics } from './Bankroll'
 import { CheckIcon, Chevron, CrossIcon, ShareIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
-import { STAKES, pesos } from './money'
+import { STAKES, pesos, signed } from './money'
 import { ShareButton } from './ShareButton'
 import { playCard } from './shareCard'
 import { TARGETS, fetchSmartParlay } from './smartParlay'
@@ -31,8 +32,6 @@ const pill = (active: boolean) =>
   `cursor-pointer rounded-full border px-2.5 py-1 text-xs font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
     active ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink'
   }`
-
-const signed = (value: number) => `${value < 0 ? '-' : '+'}${pesos(Math.abs(value))}`
 
 // An odd that adds its pick to the slip or takes it out again; yellow while the pick is in.
 export function OddButton({ pick, slip, className, children }: { pick: SlipLeg; slip: Slip; className: string; children: ReactNode }) {
@@ -295,6 +294,7 @@ function MyBets({ slip }: { slip: Slip }) {
           ))}
         </dl>
       </section>
+      <BankrollAnalytics tickets={tickets} bank={slip.bank} />
       {tickets.length ? (
         tickets.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} slip={slip} />)
       ) : (
