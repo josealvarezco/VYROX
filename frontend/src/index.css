@@ -35,6 +35,9 @@
   --color-hover: var(--hover);
   --color-win: var(--win);
   --color-loss: var(--loss);
+  --color-menu: var(--menu);
+  --color-menu-line: var(--menu-line);
+  --color-menu-hover: var(--menu-hover);
 }
 
 :root {
@@ -56,6 +59,9 @@
   --hover: rgb(13 51 30 / 0.04); /* match rows */
   --win: #16a34a; /* a pick or play won */
   --loss: #dc2626; /* a pick or play lost */
+  --menu: #f7f5eb; /* dropdown menus */
+  --menu-line: rgb(13 51 30 / 0.15);
+  --menu-hover: rgb(13 51 30 / 0.1);
 }
 
 :root[data-theme='dark'] {
@@ -77,6 +83,9 @@
   --hover: rgb(247 245 235 / 0.05);
   --win: #22c55e;
   --loss: #ef4444;
+  --menu: #092314;
+  --menu-line: rgb(244 213 109 / 0.3);
+  --menu-hover: rgb(244 213 109 / 0.15);
 }
 
 @layer base {
