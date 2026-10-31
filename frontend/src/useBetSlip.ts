@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { legResult, settle } from './ticketSettlement'
-import type { Match, SavedTicket, SlipLeg } from './types'
+import type { Match, MatchOdds, SavedTicket, SlipLeg } from './types'
 
 const KEY = 'vyrox:bet-slip'
 const BANK_KEY = 'vyrox_user_bank'
@@ -11,7 +11,8 @@ const STATUSES: unknown[] = ['pending', 'won', 'lost']
 export const slipKey = (leg: SlipLeg) => `${leg.match_id}:${leg.market_category}`
 
 // The exact pick: the parlays and the Match Center can price one market differently.
-const same = (a: SlipLeg, b: SlipLeg) => slipKey(a) === slipKey(b) && a.market_selection === b.market_selection && a.odd === b.odd
+const same = (a: SlipLeg, b: SlipLeg) =>
+  slipKey(a) === slipKey(b) && a.market_selection === b.market_selection && a.odd === b.odd && a.bookmaker === b.bookmaker
 
 const SCORES = Array.from({ length: 121 }, (_, i) => [Math.floor(i / 11), i % 11] as const)
 // Picks of one match can share the slip only if some final score up to 10-10 wins them all.
@@ -33,7 +34,8 @@ const isLeg = (leg: Record<string, unknown>) =>
   typeof leg.match_id === 'number' &&
   typeof leg.odd === 'number' &&
   leg.odd > 0 &&
-  ['home_team', 'away_team', 'kickoff_label', 'market_selection', 'market_category'].every((field) => typeof leg[field] === 'string')
+  ['home_team', 'away_team', 'kickoff_label', 'market_selection', 'market_category'].every((field) => typeof leg[field] === 'string') &&
+  (leg.bookmaker === undefined || typeof leg.bookmaker === 'string')
 
 const isTicket = (ticket: Record<string, unknown>) =>
   typeof ticket.id === 'string' &&
@@ -76,6 +78,7 @@ export function useBetSlip() {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<'slip' | 'tickets'>('slip')
   const [matches, setMatches] = useState<Match[]>([])
+  const [quotes, setQuotes] = useState<Record<number, MatchOdds>>({}) // bookmaker odds opened in the Match Center, this visit only
   // One state, so settling a play and paying its return into the bank happen in the same pure update.
   const [wallet, setWallet] = useState(() => ({ bank: storedBank(), tickets: stored<SavedTicket>(TICKETS_KEY, isTicket) }))
 
@@ -104,6 +107,10 @@ export function useBetSlip() {
     setView('slip')
     setOpen(true)
   }
+  const addQuotes = useCallback((matchId: number, odds: MatchOdds) => setQuotes((current) => ({ ...current, [matchId]: odds })), [])
+  // Every pick at one bookmaker's odds, in the slip's order: a parlay is placed at a single house.
+  const applyHouse = (bookmaker: string, odds: number[]) =>
+    setLegs((current) => current.map((leg, index) => ({ ...leg, odd: odds[index] ?? leg.odd, bookmaker })))
   const remove = (pick: SlipLeg) => setLegs((current) => current.filter((leg) => slipKey(leg) !== slipKey(pick)))
   const has = (pick: SlipLeg) => legs.some((leg) => same(leg, pick))
   // A single pick only updates the slip; it opens for whole parlays, so tapping odds never covers the cards.
@@ -178,5 +185,8 @@ export function useBetSlip() {
     docks: legs.length > 0 || (view === 'tickets' && tickets.length > 0),
     matches,
     track,
+    quotes,
+    addQuotes,
+    applyHouse,
   }
 }

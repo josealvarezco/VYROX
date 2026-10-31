@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { BankrollAnalytics } from './Bankroll'
 import { CheckIcon, Chevron, CrossIcon, ShareIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
 import { STAKES, pesos, signed } from './money'
+import { bestHouse } from './bookmakers'
 import { ShareButton } from './ShareButton'
 import { playCard } from './shareCard'
 import { TARGETS, fetchSmartParlay } from './smartParlay'
@@ -83,7 +84,17 @@ function CopInput({ label, value, onChange }: { label: string; value: number; on
 }
 
 // Return of a stake typed in pesos, or of a share of the user's bank picked by risk profile.
-export function StakeSimulator({ odd, slip, onRegister }: { odd: number; slip: Slip; onRegister?: (stake: number) => void }) {
+export function StakeSimulator({
+  odd,
+  slip,
+  onRegister,
+  houses,
+}: {
+  odd: number
+  slip: Slip
+  onRegister?: (stake: number) => void
+  houses?: ReturnType<typeof bestHouse> // the bet slip's comparison of the bookmakers that quote every pick
+}) {
   const [byBank, setByBank] = useState(false)
   const [stake, setStake] = useState(STAKES[0])
   const [profile, setProfile] = useState(1) // Moderado, VYROX IA's suggestion
@@ -93,6 +104,7 @@ export function StakeSimulator({ odd, slip, onRegister }: { odd: number; slip: S
   const amount = Math.round(byBank ? (slip.bank * percent) / 100 : stake)
   const risk = chance >= 60 ? 'Bajo' : chance >= 35 ? 'Medio' : 'Alto'
   const short = slip.bank > 0 && amount > slip.bank // a configured bank has to cover the stake
+  const best = houses?.best
   const rows = [
     ...(byBank ? [['Stake sugerido', `${percent}% de tu Bank (Riesgo ${risk})`, 'font-semibold']] : []),
     ['Total a apostar', `${pesos(amount)} COP`, 'font-semibold'],
@@ -143,6 +155,34 @@ export function StakeSimulator({ odd, slip, onRegister }: { odd: number; slip: S
           </div>
           <CopInput label="Monto" value={stake} onChange={setStake} />
         </>
+      )}
+      {houses && (
+        <div aria-live="polite" className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs">
+          {best ? (
+            <>
+              <span className="min-w-0 flex-1">
+                Mejor pago entre las casas para esta jugada: <span className="font-bold">{best.name}</span> · cuota{' '}
+                <span className="font-num font-semibold">{best.total.toFixed(2)}</span> ·{' '}
+                <span className="font-num font-semibold">{pesos(amount * best.total)} COP</span>
+              </span>
+              {slip.legs.some((leg, index) => leg.bookmaker !== best.name || leg.odd !== best.odds[index]) && (
+                <button
+                  type="button"
+                  onClick={() => slip.applyHouse(best.name, best.odds)}
+                  className="cursor-pointer rounded-full bg-yellow px-2.5 py-1 font-bold text-forest transition-all duration-200 ease-out hover:opacity-90 active:scale-[0.98]"
+                >
+                  Aplicar cuotas de {best.name}
+                </button>
+              )}
+            </>
+          ) : (
+            <span className="text-muted">
+              {houses.missing
+                ? `Abre «Cuotas» en ${houses.missing === 1 ? 'el partido' : `los ${houses.missing} partidos`} de tu cupón para comparar las casas.`
+                : 'Ninguna casa cotiza todas tus selecciones.'}
+            </span>
+          )}
+        </div>
       )}
       <dl aria-live="polite" className="space-y-1.5 rounded-2xl bg-forest px-4 py-3 text-cream">
         {rows.map(([label, value, style]) => (
@@ -432,6 +472,9 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
                       <p className="truncate text-xs text-muted">
                         {leg.home_team} - {leg.away_team} · <span className="font-num">{leg.kickoff_label}</span>
                       </p>
+                      {leg.bookmaker && (
+                        <span className="mt-0.5 inline-block rounded-full bg-chip px-1.5 text-[10px] font-semibold text-cream">{leg.bookmaker}</span>
+                      )}
                     </div>
                     <span className="font-num font-bold">{leg.odd.toFixed(2)}</span>
                     <IconButton label={`Quitar ${leg.market_selection}`} onClick={() => slip.remove(leg)}>
@@ -452,7 +495,7 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
                     multiplicada es solo aproximada.
                   </p>
                 )}
-                <StakeSimulator odd={total} slip={slip} onRegister={slip.register} />
+                <StakeSimulator odd={total} slip={slip} onRegister={slip.register} houses={bestHouse(slip.legs, slip.quotes)} />
                 <button
                   type="button"
                   onClick={slip.clear}
