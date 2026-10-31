@@ -307,6 +307,24 @@ export function ScaleCompareIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// A bookmaker's odd that went up since VYROX's previous look.
+export function TrendUpArrowIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2.5} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M10 16V4M5 9l5-5 5 5" />
+    </svg>
+  )
+}
+
+// A bookmaker's odd that went down since VYROX's previous look.
+export function TrendDownArrowIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2.5} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M10 4v12m-5-5 5 5 5-5" />
+    </svg>
+  )
+}
+
 export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>

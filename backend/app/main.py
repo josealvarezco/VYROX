@@ -5,6 +5,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query
 
 from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetch_matches, group_by_league
+from app.bookmakers import get_odds
 from app.builder import get_builder
 from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
@@ -39,6 +40,14 @@ async def match_details(match_id: int):
         return await get_details(match_id)
     except MatchNotFound:
         raise HTTPException(status_code=404, detail="Partido no encontrado")
+    except (httpx.HTTPError, UpstreamError) as error:
+        raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
+
+
+@app.get("/api/matches/{match_id}/odds")
+async def match_odds(match_id: int):
+    try:
+        return await get_odds(match_id)
     except (httpx.HTTPError, UpstreamError) as error:
         raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
 

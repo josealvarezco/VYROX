@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { MarketOdds, PredictionView } from './AiPrediction'
 import { MomentumPanel } from './Momentum'
+import { OddsTable } from './OddsTable'
 import { BetSlip } from './BetSlip'
 import {
   BallIcon,
@@ -21,9 +22,10 @@ import { forecastCard } from './shareCard'
 import { LIVE, statusText } from './status'
 import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Prediction, Side, Starter, Team } from './types'
 import type { useBetSlip } from './useBetSlip'
+import { useMatchOdds } from './useMatchOdds'
 import { usePrediction } from './usePrediction'
 
-const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Pronóstico IA'] as const
+const TABS = ['Resumen', 'Estadísticas', 'Alineaciones', 'Cuotas', 'Pronóstico IA'] as const
 type Tab = (typeof TABS)[number]
 type Substitution = Extract<MatchEvent, { type: 'subst' }>
 const SIDES = ['home', 'away'] as const
@@ -440,6 +442,7 @@ export function MatchCenter({
   const [details, setDetails] = useState<MatchDetails | null>(null)
   const [failed, setFailed] = useState(false)
   const prediction = usePrediction(match, competition.league_name)
+  const bookmakerOdds = useMatchOdds(match.id, slip.addQuotes)
 
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal()
@@ -462,6 +465,7 @@ export function MatchCenter({
   const openTab = (next: Tab) => {
     setTab(next)
     if (next === 'Pronóstico IA') prediction.load() // Gemini is only asked when someone opens its tab
+    if (next === 'Cuotas') bookmakerOdds.load() // and API-Football's odds, one request per match
   }
 
   const { home, away } = match.score.fullTime
@@ -574,6 +578,8 @@ export function MatchCenter({
                     <p className="text-xs text-muted">Las cuotas estimadas de mercado se calculan solo para partidos por jugar o en vivo.</p>
                   ))}
               </div>
+            ) : tab === 'Cuotas' ? (
+              <OddsTable match={match} odds={bookmakerOdds.odds} state={bookmakerOdds.state} slip={slip} />
             ) : !details ? (
               waiting
             ) : tab === 'Resumen' || tab === 'Estadísticas' ? (
