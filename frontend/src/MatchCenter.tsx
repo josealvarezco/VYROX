@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { MarketOdds, PredictionView } from './AiPrediction'
+import { LiveMinute } from './MatchList'
 import { BetBuilder } from './BetBuilder'
 import { MomentumPanel } from './Momentum'
 import { OddsTable } from './OddsTable'
@@ -21,7 +22,7 @@ import { countryLabel } from './leagues'
 import { ShareButton } from './ShareButton'
 import { forecastCard } from './shareCard'
 import { LIVE, statusText } from './status'
-import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Prediction, Side, Starter, Team } from './types'
+import type { Competition, Lineup, Match, MatchDetails, MatchEvent, Player, Prediction, Side, Starter, Team } from './types'
 import type { useBetSlip } from './useBetSlip'
 import { useMatchOdds } from './useMatchOdds'
 import { usePrediction } from './usePrediction'
@@ -31,7 +32,6 @@ type Tab = (typeof TABS)[number]
 type Substitution = Extract<MatchEvent, { type: 'subst' }>
 const SIDES = ['home', 'away'] as const
 const SIDE_COLOR = { home: 'bg-sky', away: 'bg-orange' } as const
-const SIDE_RING = { home: 'ring-sky', away: 'ring-orange' } as const
 const INLINE_ICON = 'mr-1 inline-block size-4 align-[-3px]'
 
 function Note({ children }: { children: ReactNode }) {
@@ -184,121 +184,178 @@ function Statistics({ rows }: { rows: MatchDetails['statistics'] }) {
   )
 }
 
-function spot(side: Side, player: Starter, starters: Starter[]) {
-  const rows = Math.max(...starters.map((p) => p.row))
-  const across = ((player.col - 0.5) / starters.filter((p) => p.row === player.row).length) * 100
-  const depth = ((player.row - 0.5) / rows) * 50 // share of the pitch between the team's own goal line and halfway
-  const width = `${50 / rows - 1}%` // one line's share minus a gap, so one-line names never touch the next line
-  // Home attacks to the right and away to the left. Grid column 1 is each team's left flank (Inter's
-  // lineup has Dimarco at 3:1 and Diouf at 3:5), so it goes on top for home and at the bottom for away.
-  return side === 'home'
-    ? { left: `${depth}%`, top: `${across}%`, width }
-    : { left: `${100 - depth}%`, top: `${100 - across}%`, width }
+const POSITIONS: Record<string, string> = { G: 'Portero', D: 'Defensa', M: 'Mediocampista', F: 'Delantero' }
+// Home in brand yellow, away in cream ringed in orange, on the pitch, its legend and the player card.
+const CHIP = { home: 'bg-yellow text-forest', away: 'bg-cream text-forest ring-2 ring-orange' } as const
+
+// "L. Messi" and "Lionel Messi" both read "Messi" under the chip, short enough for the space between neighbours.
+function surname(name: string) {
+  const rest = name.slice(name.indexOf(' ') + 1) // the whole name when it has a single word
+  return /\p{L}/u.test(rest) ? rest : name // a simulated "Jugador 7" keeps its name
 }
 
-function PlayerSpot({ side, player, style }: { side: Side; player: Starter; style: CSSProperties }) {
-  const [photo, setPhoto] = useState(player.id !== null) // simulated players have no id, hence no photo
+// What a player did in the match, for the player card and screen readers.
+function playerEvents({ goals, yellow, red, subbed_in, subbed_out }: Player) {
+  return [
+    goals > 1 ? `${goals} goles` : goals ? 'Gol' : '',
+    red ? (yellow ? 'Doble amarilla' : 'Tarjeta roja') : yellow ? 'Tarjeta amarilla' : '',
+    subbed_in ? `Entró al ${subbed_in}` : '',
+    subbed_out ? `Salió al ${subbed_out}` : '',
+  ].filter(Boolean)
+}
+
+// A starter's place in both layouts, as percentages along the pitch from the home goal and across it: a wide screen
+// shows home attacking to the right, a phone shows home attacking down. Grid column 1 is each team's left flank
+// (Inter's lineup has Dimarco at 3:1 and Diouf at 3:5), so it goes on top for home and at the bottom for away.
+function spot(side: Side, player: Starter, starters: Starter[]) {
+  const rows = Math.max(...starters.map((p) => p.row))
+  const lane = starters.filter((p) => p.row === player.row).length
+  const across = ((player.col - 0.5) / lane) * 100
+  const depth = ((player.row - 0.5) / rows) * 50 // share of the pitch between the team's own goal line and halfway
+  return {
+    '--along': `${side === 'home' ? depth : 100 - depth}%`,
+    '--across': `${side === 'home' ? across : 100 - across}%`,
+    '--line': `${50 / rows - 1}%`, // a wide pitch: one line's share minus a gap, so one-line names never touch the next line
+    '--lane': `${100 / lane - 2}%`, // a phone: one lane's share of the width
+  } as CSSProperties
+}
+
+function PlayerSpot({ side, player, style, onShow, onHide }: { side: Side; player: Starter; style: CSSProperties; onShow: () => void; onHide: () => void }) {
   const { goals, yellow, red, subbed_out } = player
   const card = red ? (yellow ? 'second-yellow' : 'red') : yellow ? 'yellow' : null
+  const events = playerEvents(player)
   return (
-    <div className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center" style={style}>
-      {/* Events float on the avatar's edge, so the name below always stays on one clean line. */}
-      <div className="relative">
-        {photo ? (
-          <img
-            src={`https://media.api-sports.io/football/players/${player.id}.png`}
-            alt=""
-            onError={() => setPhoto(false)}
-            className={`size-10 rounded-full bg-cream/10 object-cover ring-2 ${SIDE_RING[side]}`}
-          />
-        ) : (
-          <span className={`grid size-10 place-items-center rounded-full font-num text-sm font-bold text-forest ${SIDE_COLOR[side]}`}>
-            {player.number}
-          </span>
-        )}
-        {card && (
-          <CardIcon
-            variant={card}
-            label={{ yellow: 'Tarjeta amarilla', red: 'Tarjeta roja', 'second-yellow': 'Doble amarilla' }[card]}
-            className="absolute -top-1 -left-1 size-4"
-          />
-        )}
+    <button
+      type="button"
+      onMouseEnter={onShow}
+      onMouseLeave={onHide}
+      onFocus={onShow}
+      onBlur={onHide}
+      onClick={onShow}
+      aria-label={`${player.name}, dorsal ${player.number}${events.length ? `: ${events.join(', ')}` : ''}`}
+      style={style}
+      // On a phone the pitch stands up, with smaller chips so its lines fit: "along" runs down from the home goal and the home team's left flank is on the right.
+      className="group absolute top-[var(--along)] left-[calc(100%_-_var(--across))] flex w-[min(var(--lane),5.5rem)] -translate-x-1/2 -translate-y-1/2 cursor-pointer flex-col items-center text-center sm:top-[var(--across)] sm:left-[var(--along)] sm:w-[var(--line)]"
+    >
+      {/* Events float on the chip's edge, so the name below always stays on one clean line. */}
+      <span className="relative">
+        <span
+          className={`grid size-7 place-items-center rounded-full font-num text-xs font-bold shadow-md sm:size-9 sm:text-sm transition-transform duration-200 ease-out group-hover:scale-110 group-focus-visible:scale-110 ${CHIP[side]}`}
+        >
+          {player.number}
+        </span>
+        {card && <CardIcon variant={card} className="absolute -top-1 -left-1 size-4" />}
         {subbed_out && (
           <span className="absolute -top-1 -right-1 flex translate-x-1/2 items-center gap-0.5 rounded-full bg-forest py-px pr-1 pl-px font-num text-[9px] leading-none font-bold text-cream ring-1 ring-cream/30">
-            <SubIcon label="Salió" className="size-3.5" />
+            <SubIcon className="size-3.5" />
             {subbed_out}
           </span>
         )}
         {goals > 0 && (
           <span className="absolute -right-1 -bottom-1">
-            <BallIcon label={goals > 1 ? `${goals} goles` : 'Gol'} />
+            <BallIcon />
             {goals > 1 && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1.5 -right-1.5 grid size-3 place-items-center rounded-full bg-yellow font-num text-[8px] font-bold text-forest"
-              >
+              <span className="absolute -top-1.5 -right-1.5 grid size-3 place-items-center rounded-full bg-yellow font-num text-[8px] font-bold text-forest">
                 {goals}
               </span>
             )}
           </span>
         )}
-      </div>
-      <span title={player.name} className="mt-1 w-full truncate text-[11px] leading-tight font-semibold text-cream">
-        <span className="font-num font-bold text-yellow">{player.number}</span> {player.name}
       </span>
+      <span className="mt-0.5 w-full truncate text-[10px] leading-tight font-semibold text-cream sm:mt-1 sm:text-[11px]">{surname(player.name)}</span>
+    </button>
+  )
+}
+
+// The player under the cursor or the finger, in the other team's half so it never covers him.
+function PlayerCard({ side, player }: { side: Side; player: Starter }) {
+  const [photo, setPhoto] = useState(player.id !== null) // simulated players have no id, hence no photo
+  const events = playerEvents(player)
+  return (
+    <div
+      aria-hidden="true" // the chip's label already says all of it
+      className={`pointer-events-none absolute z-10 flex w-60 max-w-[calc(100%-1.5rem)] animate-tab-in items-center gap-3 rounded-2xl bg-modal p-3 text-left text-ink shadow-xl ring-1 ring-line ${
+        side === 'home'
+          ? 'bottom-3 left-1/2 -translate-x-1/2 sm:top-3 sm:right-3 sm:bottom-auto sm:left-auto sm:translate-x-0'
+          : 'top-3 left-1/2 -translate-x-1/2 sm:left-3 sm:translate-x-0'
+      }`}
+    >
+      {photo ? (
+        <img
+          src={`https://media.api-sports.io/football/players/${player.id}.png`}
+          alt=""
+          onError={() => setPhoto(false)}
+          className="size-12 shrink-0 rounded-full bg-surface-2 object-cover"
+        />
+      ) : (
+        <span className={`grid size-12 shrink-0 place-items-center rounded-full font-num text-lg font-bold ${CHIP[side]}`}>{player.number}</span>
+      )}
+      <div className="min-w-0 text-xs">
+        <p className="truncate text-sm font-bold">{player.name}</p>
+        <p className="text-muted">
+          Dorsal <span className="font-num font-bold text-ink">{player.number}</span>
+          {POSITIONS[player.pos] && ` · ${POSITIONS[player.pos]}`} · Titular
+        </p>
+        <p className="mt-0.5 font-semibold text-gold">{events.length ? events.join(' · ') : 'Sin goles, tarjetas ni cambios'}</p>
+      </div>
     </div>
+  )
+}
+
+// The pitch's markings, 105 × 68 m, on grass mown in stripes.
+function Markings() {
+  return (
+    <>
+      {[10.5, 31.5, 52.5, 73.5, 94.5].map((x) => (
+        <rect key={x} x={x} width="10.5" height="68" fill="#0A2917" stroke="none" />
+      ))}
+      <rect x="1" y="1" width="103" height="66" />
+      <line x1="52.5" y1="1" x2="52.5" y2="67" />
+      <circle cx="52.5" cy="34" r="9.15" />
+      <rect x="1" y="13.84" width="16.5" height="40.32" />
+      <rect x="1" y="24.84" width="5.5" height="18.32" />
+      <rect x="87.5" y="13.84" width="16.5" height="40.32" />
+      <rect x="98.5" y="24.84" width="5.5" height="18.32" />
+      <g fill="rgb(247 245 235 / 0.25)" stroke="none">
+        <circle cx="52.5" cy="34" r="0.6" />
+        <circle cx="12" cy="34" r="0.5" />
+        <circle cx="93" cy="34" r="0.5" />
+      </g>
+    </>
   )
 }
 
 function Pitch({ lineups }: { lineups: Record<Side, Lineup> }) {
+  const [shown, setShown] = useState<[Side, number] | null>(null)
+  const lines = { fill: 'none', stroke: 'rgb(247 245 235 / 0.25)', strokeWidth: 0.3, 'aria-hidden': true } as const
   return (
-    // Phones scroll the pitch sideways: 22 players do not fit legibly in 340 px.
-    <div className="overflow-x-auto">
-      <div className="relative aspect-[105/68] w-full min-w-[640px] overflow-hidden rounded-2xl bg-forest">
-        <svg
-          viewBox="0 0 105 68"
-          className="absolute inset-0 size-full"
-          fill="none"
-          stroke="rgb(247 245 235 / 0.35)"
-          strokeWidth="0.3"
-          aria-hidden="true"
-        >
-          <rect x="1" y="1" width="103" height="66" />
-          <line x1="52.5" y1="1" x2="52.5" y2="67" />
-          <circle cx="52.5" cy="34" r="9.15" />
-          <rect x="1" y="13.84" width="16.5" height="40.32" />
-          <rect x="1" y="24.84" width="5.5" height="18.32" />
-          <rect x="87.5" y="13.84" width="16.5" height="40.32" />
-          <rect x="98.5" y="24.84" width="5.5" height="18.32" />
-          <g fill="rgb(247 245 235 / 0.35)" stroke="none">
-            <circle cx="52.5" cy="34" r="0.6" />
-            <circle cx="12" cy="34" r="0.5" />
-            <circle cx="93" cy="34" r="0.5" />
-          </g>
-        </svg>
-        {/* Inset so the players on the touchlines are never cut off at the pitch edge. */}
-        <div className="absolute inset-x-2 inset-y-6">
-          {SIDES.map((side) =>
-            lineups[side].starters.map((player, index, starters) => (
-              <PlayerSpot key={`${side}-${index}`} side={side} player={player} style={spot(side, player, starters)} />
-            )),
-          )}
-        </div>
+    // Wide screens lay the pitch down, home on the left; a phone stands it up, home on top, so all 22 players fit.
+    <div className="relative aspect-[68/105] w-full overflow-hidden rounded-2xl bg-forest sm:aspect-[105/68]">
+      <svg viewBox="0 0 105 68" className="absolute inset-0 hidden size-full sm:block" {...lines}>
+        <Markings />
+      </svg>
+      <svg viewBox="0 0 68 105" className="absolute inset-0 size-full sm:hidden" {...lines}>
+        <g transform="translate(68 0) rotate(90)">
+          <Markings />
+        </g>
+      </svg>
+      {/* Inset so the players on the touchlines are never cut off at the pitch edge. */}
+      <div className="absolute inset-x-4 inset-y-5 sm:inset-x-2 sm:inset-y-6">
+        {SIDES.map((side) =>
+          lineups[side].starters.map((player, index, starters) => (
+            <PlayerSpot
+              key={`${side}-${index}`}
+              side={side}
+              player={player}
+              style={spot(side, player, starters)}
+              onShow={() => setShown([side, index])}
+              onHide={() => setShown(null)}
+            />
+          )),
+        )}
       </div>
+      {shown && <PlayerCard key={shown.join('-')} side={shown[0]} player={lineups[shown[0]].starters[shown[1]]} />}
     </div>
-  )
-}
-
-function TeamLine({ team, lineup }: { team: Team; lineup: Lineup }) {
-  return (
-    <p className="flex flex-wrap items-center justify-center gap-x-2 text-sm">
-      <img src={team.crest} alt="" className="size-5" />
-      <span className="font-bold">{team.shortName}</span>
-      <span className="text-muted">
-        {lineup.formation}
-        {lineup.coach && ` · DT ${lineup.coach}`}
-      </span>
-    </p>
   )
 }
 
@@ -310,11 +367,55 @@ function Lineups({ match, details }: { match: Match; details: MatchDetails }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <TeamLine team={match.homeTeam} lineup={lineups.home} />
-        <TeamLine team={match.awayTeam} lineup={lineups.away} />
+      <div className="flex items-center justify-between gap-3 text-sm font-bold">
+        {SIDES.map((side) => (
+          <span key={side} className="flex min-w-0 items-center gap-2">
+            <span aria-hidden="true" className={`size-3 shrink-0 rounded-full ${CHIP[side]}`} />
+            <img src={teams[side].crest} alt="" className="size-5 shrink-0" />
+            <span className="truncate">{teams[side].shortName}</span>
+          </span>
+        ))}
       </div>
       <Pitch lineups={lineups} />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {SIDES.map((side) => (
+          <section key={side} aria-label={teams[side].shortName} className="rounded-2xl border border-line bg-surface p-3">
+            <h3 className="flex items-center gap-2 text-sm font-bold">
+              <img src={teams[side].crest} alt="" className="size-5" />
+              {teams[side].shortName}
+            </h3>
+            <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs">
+              <dt className="text-muted">Formación</dt>
+              <dd className="font-num font-bold">{lineups[side].formation}</dd>
+              {lineups[side].coach && (
+                <>
+                  <dt className="text-muted">Director técnico</dt>
+                  <dd className="truncate font-semibold">{lineups[side].coach}</dd>
+                </>
+              )}
+            </dl>
+            <p className="mt-3 mb-1 flex items-center gap-1.5 text-xs font-bold">
+              <JerseyIcon className="size-4 text-muted" />
+              Suplentes
+            </p>
+            <ul className="space-y-1 text-sm">
+              {lineups[side].substitutes.map((player, index) => (
+                <li key={index} className="flex items-center gap-2">
+                  <span className="w-6 shrink-0 text-right text-xs font-num tabular-nums text-muted">{player.number}</span>
+                  <span className="truncate">{player.name}</span>
+                  {player.subbed_in && (
+                    <span className="inline-flex shrink-0 items-center gap-1 font-num text-xs text-sub-in">
+                      <SubIcon label="Entró" className="size-3.5" />
+                      {player.subbed_in}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
 
       <section>
         <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold">
@@ -343,34 +444,6 @@ function Lineups({ match, details }: { match: Match; details: MatchDetails }) {
         ) : (
           <p className="text-sm text-muted">Sin cambios todavía.</p>
         )}
-      </section>
-
-      <section>
-        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold">
-          <JerseyIcon className="size-4 text-muted" />
-          Banca de suplentes
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {SIDES.map((side) => (
-            <div key={side}>
-              <p className="mb-1 text-xs text-muted">{teams[side].shortName}</p>
-              <ul className="space-y-1 text-sm">
-                {lineups[side].substitutes.map((player, index) => (
-                  <li key={index} className="flex items-center gap-2">
-                    <span className="w-6 shrink-0 text-right text-xs font-num tabular-nums text-muted">{player.number}</span>
-                    <span className="truncate">{player.name}</span>
-                    {player.subbed_in && (
-                      <span className="inline-flex shrink-0 items-center gap-1 font-num text-xs text-sub-in">
-                        <SubIcon label="Entró" className="size-3.5" />
-                        {player.subbed_in}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
       </section>
     </div>
   )
@@ -510,10 +583,7 @@ export function MatchCenter({
               <p className="font-num text-5xl font-bold tabular-nums">
                 {home ?? '-'} : {away ?? '-'}
               </p>
-              <p className={`mt-1 text-sm ${live ? 'font-bold text-orange' : 'text-cream/70'}`}>
-                {statusText(match)}
-                {live && match.minute ? <span className="font-num"> · {match.minute}'</span> : ''}
-              </p>
+              <p className="mt-1 text-sm text-cream/70">{live ? <LiveMinute match={match} /> : statusText(match)}</p>
             </div>
             <TeamBadge team={match.awayTeam} followed={isFollowed(match.awayTeam.id)} onFollow={onFollow} />
           </div>

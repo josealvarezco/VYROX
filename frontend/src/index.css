@@ -15,6 +15,7 @@
   --animate-tab-in: tab-in 150ms ease-out;
   --animate-grow: grow 500ms ease-out;
   --animate-pop: pop 300ms ease-out;
+  --animate-bump: bump 250ms ease-out;
   --animate-goal: goal-glow 1s ease-in-out infinite;
 }
 
@@ -167,6 +168,13 @@
 @keyframes pop {
   50% {
     transform: scale(1.35);
+  }
+}
+/* The bet slip confirming a change: a quick bounce with a brand-yellow glow. */
+@keyframes bump {
+  40% {
+    scale: 1.1;
+    filter: drop-shadow(0 0 6px rgb(244 213 109 / 0.9));
   }
 }
 

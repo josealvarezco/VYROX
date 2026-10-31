@@ -8,7 +8,7 @@ import { byMatch, matchOdd, totalOdd } from './sameGameParlay'
 import { playCard } from './shareCard'
 import { TARGETS, fetchSmartParlay } from './smartParlay'
 import { statusText } from './status'
-import type { SavedTicket, SlipLeg } from './types'
+import type { Quote, SavedTicket, SlipLeg } from './types'
 import { slipKey, type useBetSlip } from './useBetSlip'
 
 type Slip = ReturnType<typeof useBetSlip>
@@ -35,19 +35,29 @@ const pill = (active: boolean) =>
     active ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink'
   }`
 
-// An odd that adds its pick to the slip or takes it out again; yellow while the pick is in.
-export function OddButton({ pick, slip, className, children }: { pick: SlipLeg; slip: Slip; className: string; children: ReactNode }) {
+// A price that moved since VYROX's previous look, never a guess: a green corner on top when it went up, a red one
+// below when it went down.
+export function TrendCorner({ trend }: { trend?: Quote['trend'] }) {
+  if (trend === 'up') return <span role="img" aria-label="Subió" className="absolute top-1 right-1 size-2 bg-[#22C55E] [clip-path:polygon(0_0,100%_0,100%_100%)]" />
+  if (trend === 'down') return <span role="img" aria-label="Bajó" className="absolute right-1 bottom-1 size-2 bg-[#EF4444] [clip-path:polygon(100%_0,100%_100%,0_100%)]" />
+  return null
+}
+
+// An odd that adds its pick to the slip or takes it out again: it gives under the finger, and glows yellow while the pick is in.
+export function OddButton({ pick, slip, className, children, trend }: { pick: SlipLeg; slip: Slip; className: string; children: ReactNode; trend?: Quote['trend'] }) {
   const picked = slip.has(pick)
+  const moved = trend === 'up' ? ', subió' : trend === 'down' ? ', bajó' : ''
   return (
     <button
       type="button"
       onClick={() => slip.toggle(pick)}
       aria-pressed={picked}
-      aria-label={`${picked ? 'Quitar del' : 'Agregar al'} cupón: ${pick.market_selection}, cuota ${pick.odd.toFixed(2)}`}
-      className={`cursor-pointer rounded-xl border font-num font-bold transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
-        picked ? 'border-yellow bg-yellow text-forest ring-2 ring-yellow/40' : 'border-line bg-surface-2 text-ink hover:border-yellow'
+      aria-label={`${picked ? 'Quitar del' : 'Agregar al'} cupón: ${pick.market_selection}, cuota ${pick.odd.toFixed(2)}${moved}`}
+      className={`relative cursor-pointer rounded-xl border font-num font-bold transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-95 ${
+        picked ? 'border-yellow bg-yellow text-forest shadow-[0_0_14px_rgb(244_213_109/0.6)] ring-2 ring-yellow/40' : 'border-line bg-surface-2 text-ink hover:border-yellow'
       } ${className}`}
     >
+      <TrendCorner trend={trend} />
       {children}
     </button>
   )
@@ -435,15 +445,16 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
           <TicketSlipIcon className="size-5 text-yellow" />
           <div role="tablist" aria-label="Cupón de Apuestas VYROX" className="flex min-w-0 gap-1">
             {tabs.map(([view, label]) => (
+              // The slip's pill remounts on every new count, so it bounces to confirm a pick went in or out.
               <button
-                key={view}
+                key={view === 'slip' ? `slip-${slip.legs.length}` : view}
                 type="button"
                 role="tab"
                 aria-selected={slip.view === view}
                 onClick={() => slip.setView(view)}
                 className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-all duration-200 ease-out active:scale-[0.98] ${
                   slip.view === view ? 'bg-yellow text-forest' : 'text-cream/80 hover:bg-cream/10 hover:text-cream'
-                }`}
+                } ${view === 'slip' ? 'animate-bump' : ''}`}
               >
                 {label}
               </button>
@@ -511,7 +522,9 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
               <div className="space-y-3 border-t border-line bg-surface px-4 py-3">
                 <p className="flex items-center justify-between font-semibold">
                   Cuota total multiplicada
-                  <span className="font-num text-xl font-bold">{total.toFixed(2)}</span>
+                  <span key={total} className="animate-bump font-num text-xl font-bold">
+                    {total.toFixed(2)}
+                  </span>
                 </p>
                 <StakeSimulator odd={total} slip={slip} onRegister={slip.register} houses={bestHouse(slip.legs, slip.quotes)} />
                 <button
