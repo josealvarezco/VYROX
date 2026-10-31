@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { legResult, settle } from './ticketSettlement'
+import { isCompatible, totalOdd } from './sameGameParlay'
+import { settle } from './ticketSettlement'
 import type { Match, MatchOdds, SavedTicket, SlipLeg } from './types'
 
 const KEY = 'vyrox:bet-slip'
@@ -14,20 +15,13 @@ export const slipKey = (leg: SlipLeg) => `${leg.match_id}:${leg.market_category}
 const same = (a: SlipLeg, b: SlipLeg) =>
   slipKey(a) === slipKey(b) && a.market_selection === b.market_selection && a.odd === b.odd && a.bookmaker === b.bookmaker
 
-const SCORES = Array.from({ length: 121 }, (_, i) => [Math.floor(i / 11), i % 11] as const)
-// Picks of one match can share the slip only if some final score up to 10-10 wins them all.
-const compatible = (legs: SlipLeg[]) => legs.length < 2 || SCORES.some(([home, away]) => legs.every((leg) => legResult(leg, home, away)))
-
 // A pick that can never win with the rest of its match (Empate + Más de 2.5 + "No" ambos anotan) replaces them all.
 const merge = (legs: SlipLeg[], picks: SlipLeg[]) =>
   picks.reduce((current, pick) => {
     const others = current.filter((leg) => slipKey(leg) !== slipKey(pick))
     const rest = others.filter((leg) => leg.match_id === pick.match_id)
-    return [...(compatible([...rest, pick]) ? others : others.filter((leg) => leg.match_id !== pick.match_id)), pick]
+    return [...(isCompatible([...rest, pick]) ? others : others.filter((leg) => leg.match_id !== pick.match_id)), pick]
   }, legs)
-
-// Same rounding as the backend's total_odd.
-export const totalOdd = (legs: SlipLeg[]) => Math.round(legs.reduce((product, leg) => product * leg.odd, 1) * 100) / 100
 
 // The page renders every one of these fields, so a corrupted or edited value must not reach it.
 const isLeg = (leg: Record<string, unknown>) =>
@@ -35,7 +29,8 @@ const isLeg = (leg: Record<string, unknown>) =>
   typeof leg.odd === 'number' &&
   leg.odd > 0 &&
   ['home_team', 'away_team', 'kickoff_label', 'market_selection', 'market_category'].every((field) => typeof leg[field] === 'string') &&
-  (leg.bookmaker === undefined || typeof leg.bookmaker === 'string')
+  (leg.bookmaker === undefined || typeof leg.bookmaker === 'string') &&
+  (leg.model === undefined || (Array.isArray(leg.model) && leg.model.length === 2 && leg.model.every((goals) => typeof goals === 'number' && goals > 0)))
 
 const isTicket = (ticket: Record<string, unknown>) =>
   typeof ticket.id === 'string' &&
@@ -99,6 +94,12 @@ export function useBetSlip() {
 
   const add = (picks: SlipLeg[]) => {
     setLegs((current) => merge(current, picks))
+    setOpen(true)
+  }
+  // A Crear Apuesta is one bet on its match: it takes the place of whatever the slip had on that match.
+  const addBuilder = (picks: SlipLeg[]) => {
+    setLegs((current) => [...current.filter((leg) => leg.match_id !== picks[0]?.match_id), ...picks])
+    setView('slip')
     setOpen(true)
   }
   // The smart builder's slip takes the whole slip, which opens on it.
@@ -168,6 +169,7 @@ export function useBetSlip() {
     open,
     setOpen,
     add,
+    addBuilder,
     replace,
     remove,
     has,

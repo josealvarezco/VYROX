@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { MarketOdds, PredictionView } from './AiPrediction'
+import { BetBuilder } from './BetBuilder'
 import { MomentumPanel } from './Momentum'
 import { OddsTable } from './OddsTable'
 import { BetSlip } from './BetSlip'
@@ -572,7 +573,11 @@ export function MatchCenter({
                   !prediction.prediction.fallback &&
                   prediction.prediction.market_odds && // a backend older than market odds sends none
                   (match.status === 'TIMED' || live ? (
-                    <MarketOdds prediction={prediction.prediction} match={match} slip={slip} />
+                    <>
+                      <MarketOdds prediction={prediction.prediction} match={match} slip={slip} />
+                      {/* A Crear Apuesta prices the picks before kickoff: a live score would already decide some. */}
+                      {match.status === 'TIMED' && <BetBuilder prediction={prediction.prediction} match={match} slip={slip} />}
+                    </>
                   ) : (
                     // Once a match is decided its probabilities are 0 or 100, so an odd says nothing.
                     <p className="text-xs text-muted">Las cuotas estimadas de mercado se calculan solo para partidos por jugar o en vivo.</p>

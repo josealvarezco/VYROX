@@ -41,6 +41,14 @@ test('each market against a final score', () => {
     ['goals', 'Menos de 2.5 - Goles totales', 2, 1, false],
     ['over_1_5', 'Más de 1.5 - Goles totales', 1, 0, false],
     ['over_1_5', 'Menos de 1.5 - Goles totales', 1, 0, true],
+    ['over_3_5', 'Más de 3.5 - Goles totales', 2, 2, true],
+    ['over_3_5', 'Menos de 3.5 - Goles totales', 3, 1, false],
+    ['double_chance', '1X (Millonarios o Empate) - Doble oportunidad', 1, 1, true],
+    ['double_chance', '1X (Millonarios o Empate) - Doble oportunidad', 0, 1, false],
+    ['double_chance', '12 (Millonarios o Nacional) - Doble oportunidad', 1, 1, false],
+    ['double_chance', '12 (Millonarios o Nacional) - Doble oportunidad', 0, 2, true],
+    ['double_chance', 'X2 (Empate o Nacional) - Doble oportunidad', 2, 1, false],
+    ['double_chance', 'X2 (Empate o Nacional) - Doble oportunidad', 0, 0, true],
     ['btts', 'Sí - Ambos anotan', 1, 1, true],
     ['btts', 'No - Ambos anotan', 2, 0, true],
     ['recommended', 'Local o Empate - Jugada VYROX IA', 2, 0, null],
@@ -48,6 +56,18 @@ test('each market against a final score', () => {
   for (const [category, selection, home, away, expected] of cases) {
     assert.equal(legResult(leg(1, category, selection), home, away), expected, `${selection} ${home}-${away}`)
   }
+})
+
+test('live, the 3.5 line is decided once passed and a double chance waits for the final whistle', () => {
+  const open = ticket([leg(1, 'over_3_5', 'Más de 3.5 - Goles totales'), leg(1, 'double_chance', '1X (Millonarios o Empate) - Doble oportunidad')])
+
+  const live = settle([open], [match(1, 'IN_PLAY', 3, 1)], 'now')
+  assert.deepEqual(live.tickets[0].legs.map((l) => l.status), ['won', 'pending'])
+  assert.equal(live.tickets[0].status, 'pending')
+
+  const final = settle(live.tickets, [match(1, 'FINISHED', 3, 1)], 'later')
+  assert.deepEqual(final.tickets[0].legs.map((l) => l.status), ['won', 'won'])
+  assert.equal(final.tickets[0].status, 'won')
 })
 
 test('one lost leg loses the ticket; legs of unfinished matches stay pending', () => {

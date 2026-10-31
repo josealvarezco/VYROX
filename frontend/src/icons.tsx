@@ -333,6 +333,26 @@ export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// Crear Apuesta: picks of one match stacked into a single bet.
+export function LayersCombineIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="m10 2.5 7.5 4-7.5 4-7.5-4Z" />
+      <path d="m2.5 10 7.5 4 7.5-4M2.5 13.5l7.5 4 7.5-4" />
+    </svg>
+  )
+}
+
+// A pushpin: a match pinned on top of the list, filled in brand yellow while pinned.
+export function PinIcon({ filled = false, className = 'size-4', label }: IconProps & { filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M7 2.5h6l-1 4.5 3 3H5l3-3Z" fill={filled ? YELLOW : 'none'} />
+      <path d="M10 10v7.5" />
+    </svg>
+  )
+}
+
 // Contraer todo: between a top and a bottom bar, two arrows close in on the middle.
 export function CollapseAllIcon({ className = 'size-4', label }: IconProps) {
   return (
