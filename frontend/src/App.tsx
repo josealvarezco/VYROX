@@ -13,6 +13,7 @@ import {
   FilterIcon,
   Flag,
   FlameIcon,
+  PinIcon,
   RadarIcon,
   ScaleCompareIcon,
   StarIcon,
@@ -30,6 +31,7 @@ import { useBetSlip } from './useBetSlip'
 import { useFollowed } from './useFollowed'
 import { useForecasts } from './useForecasts'
 import { ALERT_MODES, useGoalAlerts, type AlertMode } from './useGoalAlerts'
+import { usePinned } from './usePinned'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
 const REFRESH_MS = 60_000
@@ -87,12 +89,12 @@ export default function App() {
   const [parlaysOpen, setParlaysOpen] = useState(true)
   const [market, setMarket] = useState<QuickMarket>('1x2')
   const followed = useFollowed()
+  const pins = usePinned()
   const slip = useBetSlip()
   const { track } = slip
-  // The matches the user has picks on, in the slip or in a play still open: the "Solo mis parlays" alerts.
-  const mine = new Set(
-    [...slip.legs, ...slip.tickets.filter((ticket) => ticket.status === 'pending').flatMap((ticket) => ticket.legs)].map((leg) => leg.match_id),
-  )
+  // The user's picks, in the slip or in a play still open: the "Solo mis parlays" alerts and the anchored matches.
+  const myLegs = [...slip.legs, ...slip.tickets.filter((ticket) => ticket.status === 'pending').flatMap((ticket) => ticket.legs)]
+  const mine = new Set(myLegs.map((leg) => leg.match_id))
   const goalAlerts = useGoalAlerts(mine)
   const { check } = goalAlerts
   const forecasts = useForecasts(date)
@@ -214,6 +216,11 @@ export default function App() {
   const open = (match: Match) => setSelectedId(match.id)
   const showParlays = data !== null && allGroups.length > 0 && filter === 'Todos' && league === null && !search
   const quickShown = filter !== 'Radar IA' && shown.some(quick.odds)
+  // Anchored on top: the pinned matches and, with Auto-anclar on, those of the user's plays. With it off the section
+  // stays while the list has matches of their plays, so its switch is still at hand.
+  const anchored = shown.filter((match) => pins.pinned(match.id) || (pins.auto && mine.has(match.id)))
+  const showAnchored = filter !== 'Radar IA' && (anchored.length > 0 || shown.some((match) => mine.has(match.id)))
+  const played = (id: number) => [...new Set(myLegs.filter((leg) => leg.match_id === id).map((leg) => leg.market_selection))].join(' · ')
 
   // The center column's sections that fold: the league cards (Radar IA and Por horario have none) and the parlays,
   // with the smart builder inside them.
@@ -432,6 +439,54 @@ export default function App() {
             </Message>
           )}
 
+          {showAnchored && (
+            <MatchCard
+              highlight
+              title={
+                <span className="inline-flex items-center gap-1.5 text-gold">
+                  <PinIcon filled />
+                  PARTIDOS ANCLADOS · SEGUIMIENTO RÁPIDO ({anchored.length})
+                </span>
+              }
+              actions={
+                <>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={pins.auto}
+                    onClick={() => pins.setAuto(!pins.auto)}
+                    className="flex cursor-pointer items-center gap-2 font-semibold"
+                  >
+                    <span aria-hidden="true" className={`relative h-4.5 w-8 rounded-full transition-colors duration-200 ${pins.auto ? 'bg-yellow' : 'bg-chip'}`}>
+                      <span
+                        className={`absolute top-0.5 size-3.5 rounded-full shadow transition-all duration-200 ${pins.auto ? 'left-4 bg-forest' : 'left-0.5 bg-cream'}`}
+                      />
+                    </span>
+                    Auto-anclar mis jugadas
+                  </button>
+                  {pins.ids.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={pins.clear}
+                      className="ml-auto cursor-pointer rounded-full border border-line px-2.5 py-1 font-semibold transition-all duration-200 ease-out hover:border-yellow hover:bg-surface-2 active:scale-[0.98]"
+                    >
+                      Desanclar todos
+                    </button>
+                  )}
+                  {!anchored.length && <span className="w-full text-muted">Activa Auto-anclar para seguir aquí los partidos de tus jugadas.</span>}
+                </>
+              }
+              matches={anchored}
+              onSelect={open}
+              showLeague
+              scored={goalAlerts.glowing}
+              compare={compare}
+              quick={quick}
+              pin={pins}
+              played={played}
+            />
+          )}
+
           {/* Home view only, and once the list is in: the backend then builds the slips from its cache without spending quota. */}
           {showParlays && (
             <Parlays
@@ -481,6 +536,7 @@ export default function App() {
               scored={goalAlerts.glowing}
               compare={compare}
               quick={quick}
+              pin={pins}
             />
           )}
 
@@ -496,6 +552,7 @@ export default function App() {
                   scored={goalAlerts.glowing}
                   compare={compare}
                   quick={quick}
+                  pin={pins}
                 />
               )
             : groups.map((group) => (
@@ -516,6 +573,7 @@ export default function App() {
                   scored={goalAlerts.glowing}
                   compare={compare}
                   quick={quick}
+                  pin={pins}
                 />
               ))}
         </main>

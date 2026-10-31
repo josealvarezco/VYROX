@@ -7,17 +7,22 @@ export function legResult(leg: SlipLeg, home: number, away: number): boolean | n
   const side = leg.market_selection.slice(0, leg.market_selection.lastIndexOf(' - '))
   const goals = home + away
   if (leg.market_category === 'result') return side === 'Empate' ? home === away : side === leg.home_team ? home > away : away > home
+  // "1X (Millonarios o Empate)", "12 (Millonarios o Nacional)" or "X2 (Empate o Nacional)": two of the three results.
+  if (leg.market_category === 'double_chance') return side.startsWith('1X') ? home >= away : side.startsWith('12') ? home !== away : away >= home
   if (leg.market_category === 'goals') return side.startsWith('Más') ? goals > 2.5 : goals < 2.5
   if (leg.market_category === 'over_1_5') return side.startsWith('Más') ? goals > 1.5 : goals < 1.5
+  if (leg.market_category === 'over_3_5') return side.startsWith('Más') ? goals > 3.5 : goals < 3.5
   if (leg.market_category === 'btts') return (side === 'Sí') === (home > 0 && away > 0)
   return null
 }
 
 // Goals only add up, so once a live score passes a line or both teams have scored, these markets cannot change:
-// "Más de 2.5" is won and "Menos de 2.5" lost, both teams scoring wins "Sí" and loses "No".
+// "Más de 2.5" is won and "Menos de 2.5" lost, both teams scoring wins "Sí" and loses "No". A double chance waits
+// for the final whistle.
 const DECIDED: Record<string, (home: number, away: number) => boolean> = {
   goals: (home, away) => home + away > 2.5,
   over_1_5: (home, away) => home + away > 1.5,
+  over_3_5: (home, away) => home + away > 3.5,
   btts: (home, away) => home > 0 && away > 0,
 }
 

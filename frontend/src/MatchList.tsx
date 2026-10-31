@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
 import { OddButton } from './BetSlip'
 import { Collapse } from './Collapse'
-import { Chevron, FlameIcon, ScaleCompareIcon } from './icons'
+import { Chevron, FlameIcon, PinIcon, ScaleCompareIcon } from './icons'
 import { PressureBar } from './Momentum'
+import { fitModel } from './sameGameParlay'
 import { LIVE, kickoffTime, statusText } from './status'
 import type { ForecastMatch, Match } from './types'
 import type { useBetSlip } from './useBetSlip'
@@ -15,6 +16,8 @@ export type Quick = {
   odds: (match: Match) => ForecastMatch | undefined
   slip: ReturnType<typeof useBetSlip>
 }
+// Pinning a match on top of the list.
+export type Pin = { pinned: (matchId: number) => boolean; toggle: (matchId: number) => void }
 
 export function CompareButton({ matchId, label, compare }: { matchId: number; label: string; compare: Compare }) {
   const picked = compare.picked(matchId)
@@ -41,6 +44,8 @@ function MatchRow({
   goal,
   compare,
   quick,
+  pin,
+  played,
 }: {
   match: Match
   showLeague: boolean
@@ -48,12 +53,18 @@ function MatchRow({
   goal: boolean
   compare?: Compare
   quick?: Quick
+  pin?: Pin
+  played?: string
 }) {
   const { home, away } = match.score.fullTime
   const live = LIVE.has(match.status)
   const note = match.status === 'TIMED' ? null : live && match.minute ? `${match.minute}'` : statusText(match)
   const forecast = quick?.odds(match)
   const comparable = compare?.can(match.id) ? compare : undefined
+  const picks = forecast?.picks
+  // The match's model goes with each quick odd, to price picks of one match as a Crear Apuesta in the slip.
+  const model = picks?.home && picks.away ? fitModel(picks.home.probability, picks.away.probability, picks.over_2_5.probability) : undefined
+  const pinned = pin?.pinned(match.id)
 
   return (
     // The odds and the compare button sit beside the row's button, not inside it: tapping them never opens the match.
@@ -111,7 +122,7 @@ function MatchRow({
           <span className="truncate">{match.awayTeam.shortName}</span>
         </span>
       </button>
-      {(forecast || comparable) && (
+      {(forecast || comparable || pin) && (
         // On a narrow column the odds drop under the teams, on a line of their own.
         <span className={`ml-auto flex items-center gap-1 pr-2.5 ${forecast ? 'pb-2.5 @xl:pb-0' : ''}`}>
           {forecast &&
@@ -124,7 +135,7 @@ function MatchRow({
               return (
                 <OddButton
                   key={key}
-                  pick={{ match_id: match.id, home_team: forecast.home_team, away_team: forecast.away_team, kickoff_label: forecast.kickoff_label, market_selection, market_category, odd }}
+                  pick={{ match_id: match.id, home_team: forecast.home_team, away_team: forecast.away_team, kickoff_label: forecast.kickoff_label, market_selection, market_category, odd, model }}
                   slip={quick.slip}
                   className="min-w-[52px] px-2.5 py-1.5 text-xs"
                 >
@@ -133,7 +144,26 @@ function MatchRow({
               )
             })}
           {comparable && <CompareButton matchId={match.id} label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`} compare={comparable} />}
+          {pin && (
+            <button
+              type="button"
+              onClick={() => pin.toggle(match.id)}
+              aria-pressed={pinned}
+              aria-label={`${pinned ? 'Desanclar' : 'Anclar arriba'} ${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`}
+              title={pinned ? 'Desanclar partido' : 'Anclar partido arriba'}
+              className={`grid size-7 shrink-0 cursor-pointer place-items-center rounded-full transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.95] ${
+                pinned ? 'text-gold' : 'text-muted/60 hover:text-ink'
+              }`}
+            >
+              <PinIcon filled={pinned} />
+            </button>
+          )}
         </span>
+      )}
+      {played && (
+        <p className="basis-full truncate px-3 pb-2 text-xs sm:px-4">
+          <span className="font-semibold text-gold">Llevas:</span> {played}
+        </p>
       )}
     </li>
   )
@@ -149,6 +179,10 @@ export function MatchCard({
   scored,
   compare,
   quick,
+  pin,
+  played,
+  highlight = false,
+  actions,
 }: {
   title: ReactNode
   matches: Match[]
@@ -159,11 +193,17 @@ export function MatchCard({
   scored?: (matchId: number) => boolean // matches that just scored, which glow for a few seconds
   compare?: Compare
   quick?: Quick
+  pin?: Pin
+  played?: (matchId: number) => string // what the user plays on each match, under its row
+  highlight?: boolean
+  actions?: ReactNode // controls under the title
 }) {
   const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight'
   // The quick odds' column names right over the rows' odds, while the card is open and any of its matches has them:
   // in the header on a wide column, and on a line of their own under it on a narrow one, where the odds drop too.
   const columns = !collapsed && quick && matches.some(quick.odds) ? quick.columns : []
+  // The rows' odds end before the compare and pin buttons, so the names leave their room too.
+  const room = pin ? 'mr-8' : ''
   const labels = (className: string) =>
     columns.length > 0 && (
       <span aria-hidden="true" className={`gap-1 font-num text-[11px] font-semibold text-muted ${className}`}>
@@ -175,7 +215,7 @@ export function MatchCard({
       </span>
     )
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+    <section className={`overflow-hidden rounded-2xl border bg-surface ${highlight ? 'border-yellow/70' : 'border-line'}`}>
       <h2>
         {onToggle ? (
           <button
@@ -186,7 +226,7 @@ export function MatchCard({
           >
             {title}
             <span className="ml-auto flex items-center gap-2.5">
-              {labels('hidden @xl:flex')}
+              {labels(`hidden @xl:flex ${room}`)}
               <Chevron direction={collapsed ? 'down' : 'up'} className="text-muted" />
             </span>
           </button>
@@ -196,18 +236,19 @@ export function MatchCard({
             {/* An empty slot in the chevron's place keeps the column names over the odds. */}
             {columns.length > 0 && (
               <span className="ml-auto hidden items-center gap-2.5 @xl:flex">
-                {labels('flex')}
+                {labels(`flex ${room}`)}
                 <span className="size-4" />
               </span>
             )}
           </span>
         )}
       </h2>
-      {labels('-mt-2 flex justify-end pr-10.5 pb-1.5 @xl:hidden')}
+      {actions && <div className="flex flex-wrap items-center gap-2 px-4 pb-3 text-xs">{actions}</div>}
+      {labels(`-mt-2 flex justify-end pb-1.5 @xl:hidden ${pin ? 'pr-18.5' : 'pr-10.5'}`)}
       <Collapse open={!collapsed}>
         <ul className="divide-y divide-line border-t border-line">
           {matches.map((match) => (
-            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} goal={scored?.(match.id) ?? false} compare={compare} quick={quick} />
+            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} goal={scored?.(match.id) ?? false} compare={compare} quick={quick} pin={pin} played={played?.(match.id)} />
           ))}
         </ul>
       </Collapse>

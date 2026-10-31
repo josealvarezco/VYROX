@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { OddButton, StakeSimulator } from './BetSlip'
 import { CheckIcon, CrossIcon, TicketSlipIcon, TrendUpIcon } from './icons'
+import { fitModel, totalOdd } from './sameGameParlay'
 import { kickoffLabel } from './status'
 import type { Match, Prediction } from './types'
-import { totalOdd, type useBetSlip } from './useBetSlip'
+import type { useBetSlip } from './useBetSlip'
 import type { usePrediction } from './usePrediction'
 
 // Warm to cool accents of the palette: high confidence is orange, low is sky blue.
@@ -46,6 +47,8 @@ export function MarketOdds({
     ['Ambos anotan: Sí', 'btts', 'Sí - Ambos anotan', odds.btts_yes],
     ['Ambos anotan: No', 'btts', 'No - Ambos anotan', odds.btts_no],
   ] as const
+  // The match's model goes with each pick, so picks of this match in the slip are priced as one Crear Apuesta.
+  const model = fitModel(prediction.probabilities.home, prediction.probabilities.away, prediction.over_2_5_probability)
   const pick = (market_category: string, market_selection: string, odd: number) => ({
     match_id: match.id,
     home_team: home,
@@ -54,6 +57,7 @@ export function MarketOdds({
     market_selection,
     market_category,
     odd,
+    model,
   })
   // The simulator multiplies what this match has in the slip, or the recommended play while nothing is picked.
   const mine = slip.legs.filter((leg) => leg.match_id === match.id)

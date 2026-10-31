@@ -44,6 +44,8 @@ export type Prediction =
       confidence: string
       recommended_bet: string
       recommended_bet_probability: number
+      over_2_5_probability: number
+      btts_probability: number
       reasoning: string
       // Estimated market odds: VYROX IA's probability with a bookmaker's margin; null when the probability is 0
       market_odds: Record<'recommended' | 'home' | 'draw' | 'away' | 'over_2_5' | 'under_2_5' | 'btts_yes' | 'btts_no', number | null>
@@ -102,11 +104,12 @@ export type Quote = { odd: number; trend: 'up' | 'down' | 'stable' }
 export type OddsMarket = '1x2' | 'goals_2_5' | 'goals_1_5' | 'btts'
 export type BookmakerOdds = { name: string; markets: Partial<Record<OddsMarket, Record<string, Quote>>> }
 export type MatchOdds = { bookmakers: BookmakerOdds[]; updated: string | null }
-// A bet slip pick: a parlay leg, or an odd picked in the Match Center, with the bookmaker it was taken from, if any
+// A bet slip pick: a parlay leg, or an odd picked in the Match Center, with the bookmaker it was taken from, if any,
+// and the model of its match (each side's expected goals) that prices a Crear Apuesta, when VYROX IA forecast it
 export type SlipLeg = Pick<
   ParlayLeg,
   'match_id' | 'home_team' | 'away_team' | 'kickoff_label' | 'market_selection' | 'market_category' | 'odd'
-> & { bookmaker?: string }
+> & { bookmaker?: string; model?: [number, number] }
 export type TicketStatus = 'pending' | 'won' | 'lost'
 export type TicketLeg = SlipLeg & { status: TicketStatus }
 // A registered play ("Mis Jugadas"), kept in localStorage and settled with the final scores the page loads

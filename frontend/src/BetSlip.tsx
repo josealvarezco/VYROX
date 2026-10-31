@@ -1,14 +1,15 @@
 import { useState, type ReactNode } from 'react'
 import { BankrollAnalytics } from './Bankroll'
-import { CheckIcon, Chevron, CrossIcon, ShareIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
+import { CheckIcon, Chevron, CrossIcon, LayersCombineIcon, ShareIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
 import { STAKES, pesos, signed } from './money'
 import { bestHouse } from './bookmakers'
 import { ShareButton } from './ShareButton'
+import { byMatch, matchOdd, totalOdd } from './sameGameParlay'
 import { playCard } from './shareCard'
 import { TARGETS, fetchSmartParlay } from './smartParlay'
 import { statusText } from './status'
 import type { SavedTicket, SlipLeg } from './types'
-import { slipKey, totalOdd, type useBetSlip } from './useBetSlip'
+import { slipKey, type useBetSlip } from './useBetSlip'
 
 type Slip = ReturnType<typeof useBetSlip>
 
@@ -391,7 +392,6 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
   const empty = !slip.legs.length && !slip.tickets.length
   if (docked && empty) return null
   const total = totalOdd(slip.legs)
-  const sameMatch = new Set(slip.legs.map((leg) => leg.match_id)).size < slip.legs.length
   const layer = docked ? 'z-[60]' : 'z-30'
   const [panelAt, pillAt] = !docked || slip.docks ? ['lg:flex', 'lg:hidden'] : ['lg:hidden', 'lg:flex']
   const tabs = [
@@ -465,23 +465,47 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
           ) : slip.legs.length ? (
             <>
               <ul className="divide-y divide-dashed divide-line px-4">
-                {slip.legs.map((leg) => (
-                  <li key={slipKey(leg)} className="flex items-center gap-3 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="leading-snug font-bold">{leg.market_selection}</p>
-                      <p className="truncate text-xs text-muted">
-                        {leg.home_team} - {leg.away_team} · <span className="font-num">{leg.kickoff_label}</span>
-                      </p>
-                      {leg.bookmaker && (
-                        <span className="mt-0.5 inline-block rounded-full bg-chip px-1.5 text-[10px] font-semibold text-cream">{leg.bookmaker}</span>
-                      )}
+                {byMatch(slip.legs).map((legs) => {
+                  const rows = legs.map((leg) => (
+                    <div key={slipKey(leg)} className="flex items-center gap-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="leading-snug font-bold">{leg.market_selection}</p>
+                        <p className="truncate text-xs text-muted">
+                          {leg.home_team} - {leg.away_team} · <span className="font-num">{leg.kickoff_label}</span>
+                        </p>
+                        {leg.bookmaker && (
+                          <span className="mt-0.5 inline-block rounded-full bg-chip px-1.5 text-[10px] font-semibold text-cream">{leg.bookmaker}</span>
+                        )}
+                      </div>
+                      <span className="font-num font-bold">{leg.odd.toFixed(2)}</span>
+                      <IconButton label={`Quitar ${leg.market_selection}`} onClick={() => slip.remove(leg)}>
+                        <CrossIcon className="size-3.5" />
+                      </IconButton>
                     </div>
-                    <span className="font-num font-bold">{leg.odd.toFixed(2)}</span>
-                    <IconButton label={`Quitar ${leg.market_selection}`} onClick={() => slip.remove(leg)}>
-                      <CrossIcon className="size-3.5" />
-                    </IconButton>
-                  </li>
-                ))}
+                  ))
+                  if (legs.length === 1) return <li key={legs[0].match_id}>{rows}</li>
+                  // Picks of one match are one Crear Apuesta, priced together when VYROX IA's model of the match came with them.
+                  const plain = legs.reduce((product, leg) => product * leg.odd, 1)
+                  return (
+                    <li key={legs[0].match_id} className="py-2.5">
+                      <div className="rounded-xl border border-yellow/70 bg-yellow/10 px-3 py-2">
+                        <p className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-yellow px-2 py-0.5 text-[10px] font-bold tracking-wide text-forest">
+                            <LayersCombineIcon className="size-3" />
+                            CREAR APUESTA (MISMO PARTIDO)
+                          </span>
+                          <span className="ml-auto font-num text-base font-bold">{matchOdd(legs).toFixed(2)}</span>
+                        </p>
+                        <div className="divide-y divide-dashed divide-line">{rows}</div>
+                        <p className="text-[11px] text-muted">
+                          {legs.some((leg) => leg.model)
+                            ? `Cuota ajustada por correlación con el modelo de VYROX IA: multiplicadas darían ${plain.toFixed(2)}.`
+                            : 'Sin el pronóstico de VYROX IA de este partido, la cuota es el producto de sus selecciones y es solo aproximada.'}
+                        </p>
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
 
               <div className="space-y-3 border-t border-line bg-surface px-4 py-3">
@@ -489,12 +513,6 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
                   Cuota total multiplicada
                   <span className="font-num text-xl font-bold">{total.toFixed(2)}</span>
                 </p>
-                {sameMatch && (
-                  <p className="text-xs text-warn">
-                    Hay varias selecciones de un mismo partido. Esos mercados se influyen entre sí, así que la cuota
-                    multiplicada es solo aproximada.
-                  </p>
-                )}
                 <StakeSimulator odd={total} slip={slip} onRegister={slip.register} houses={bestHouse(slip.legs, slip.quotes)} />
                 <button
                   type="button"

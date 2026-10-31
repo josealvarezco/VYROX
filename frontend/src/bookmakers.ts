@@ -1,4 +1,5 @@
 // Imports with their extension, so Node runs this file's test without a bundler.
+import { totalOdd } from './sameGameParlay.ts'
 import type { BookmakerOdds, MatchOdds, OddsMarket, SlipLeg } from './types.ts'
 
 // A bookmaker's side as a bet slip pick: the labels and categories of VYROX's own picks, so the slip settles it.
@@ -32,8 +33,8 @@ export function bestHouse(legs: SlipLeg[], quotes: Record<number, MatchOdds>) {
   const names = [...new Set(legs.flatMap((leg) => quotes[leg.match_id]?.bookmakers.map((bookmaker) => bookmaker.name) ?? []))]
   const offers = names.flatMap((name) => {
     const odds = legs.map((leg) => quote(quotes[leg.match_id]?.bookmakers.find((bookmaker) => bookmaker.name === name), leg))
-    // Same rounding as the slip's total odd.
-    return odds.every(Boolean) ? [{ name, odds, total: Math.round(odds.reduce((product, odd) => product * odd, 1) * 100) / 100 }] : []
+    // Priced as the slip prices it, a Crear Apuesta included.
+    return odds.every(Boolean) ? [{ name, odds, total: totalOdd(legs.map((leg, index) => ({ ...leg, odd: odds[index] }))) }] : []
   })
   return { missing, best: missing || !legs.length ? null : (offers.sort((a, b) => b.total - a.total)[0] ?? null) }
 }
