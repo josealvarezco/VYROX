@@ -103,6 +103,9 @@ def test_forecasts_price_every_match_like_the_radar_without_a_new_call(radar_api
     assert (arsenal["home_team"], arsenal["away_team"], arsenal["kickoff_label"]) == ("Arsenal", "Chelsea", "28/10 09:00")
     assert {key: (pick["market_selection"], pick["probability"], pick["odd"]) for key, pick in arsenal["picks"].items()} == {
         "favourite": ("Arsenal - Resultado del partido", 80, 1.45),
+        "home": ("Arsenal - Resultado del partido", 80, 1.45),
+        "draw": ("Empate - Resultado del partido", 12, 3.6),
+        "away": ("Chelsea - Resultado del partido", 8, 9.3),
         "over_2_5": ("Más de 2.5 - Goles totales", 62, 1.58),
         "under_2_5": ("Menos de 2.5 - Goles totales", 38, 2.31),
         "btts_yes": ("Sí - Ambos anotan", 50, 1.88),

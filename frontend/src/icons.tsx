@@ -333,6 +333,24 @@ export function ArrowLeftIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// Contraer todo: between a top and a bottom bar, two arrows close in on the middle.
+export function CollapseAllIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M4 2h12M4 18h12M10 5v3.5M7.5 6 10 8.5 12.5 6M10 15v-3.5M7.5 14l2.5-2.5 2.5 2.5" />
+    </svg>
+  )
+}
+
+// Expandir todo: the same bars, with the arrows parting from the middle toward them.
+export function ExpandAllIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M4 2h12M4 18h12M10 8.5V5M7.5 7.5 10 5l2.5 2.5M10 11.5V15m-2.5-2.5L10 15l2.5-2.5" />
+    </svg>
+  )
+}
+
 function GlobeIcon({ className = 'size-4', label }: IconProps) {
   return (
     <svg viewBox="0 0 20 20" {...stroked} strokeWidth={1.5} className={`shrink-0 ${className}`} {...a11y(label)}>

@@ -1,12 +1,20 @@
 import type { ReactNode } from 'react'
+import { OddButton } from './BetSlip'
 import { Collapse } from './Collapse'
 import { Chevron, FlameIcon, ScaleCompareIcon } from './icons'
 import { PressureBar } from './Momentum'
 import { LIVE, kickoffTime, statusText } from './status'
-import type { Match } from './types'
+import type { ForecastMatch, Match } from './types'
+import type { useBetSlip } from './useBetSlip'
 
 // Picking matches for the comparator, "¿A cuál le entro?": only those VYROX IA forecast can be compared.
 export type Compare = { can: (matchId: number) => boolean; picked: (matchId: number) => boolean; toggle: (matchId: number) => void }
+// Quick odds on the rows: the active market's columns, and the forecast of each match that still takes plays.
+export type Quick = {
+  columns: [keyof ForecastMatch['picks'], string][]
+  odds: (match: Match) => ForecastMatch | undefined
+  slip: ReturnType<typeof useBetSlip>
+}
 
 export function CompareButton({ matchId, label, compare }: { matchId: number; label: string; compare: Compare }) {
   const picked = compare.picked(matchId)
@@ -32,25 +40,34 @@ function MatchRow({
   onSelect,
   goal,
   compare,
+  quick,
 }: {
   match: Match
   showLeague: boolean
   onSelect: (match: Match) => void
   goal: boolean
   compare?: Compare
+  quick?: Quick
 }) {
   const { home, away } = match.score.fullTime
   const live = LIVE.has(match.status)
   const note = match.status === 'TIMED' ? null : live && match.minute ? `${match.minute}'` : statusText(match)
+  const forecast = quick?.odds(match)
+  const comparable = compare?.can(match.id) ? compare : undefined
 
   return (
-    <li className="relative">
+    // The odds and the compare button sit beside the row's button, not inside it: tapping them never opens the match.
+    <li
+      className={`flex flex-wrap items-center transition-all duration-200 ease-out hover:bg-hover hover:shadow-[inset_3px_0_0_0_#F4D56D] ${
+        goal ? 'animate-goal bg-yellow/10' : ''
+      }`}
+    >
       <button
         type="button"
         onClick={() => onSelect(match)}
-        className={`grid w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out hover:bg-hover hover:shadow-[inset_3px_0_0_0_#F4D56D] sm:px-4 ${
+        className={`grid min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium sm:px-4 ${
           showLeague ? 'grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]'
-        } ${goal ? 'animate-goal bg-yellow/10' : ''} ${compare?.can(match.id) ? 'pr-11 sm:pr-11' : ''}`}
+        } ${forecast ? 'basis-full @xl:basis-0' : 'basis-0'}`}
       >
         {showLeague && (
           <img
@@ -94,9 +111,28 @@ function MatchRow({
           <span className="truncate">{match.awayTeam.shortName}</span>
         </span>
       </button>
-      {compare?.can(match.id) && (
-        <span className="absolute top-1/2 right-2 -translate-y-1/2">
-          <CompareButton matchId={match.id} label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`} compare={compare} />
+      {(forecast || comparable) && (
+        // On a narrow column the odds drop under the teams, on a line of their own.
+        <span className={`ml-auto flex items-center gap-1 pr-2.5 ${forecast ? 'pb-2.5 @xl:pb-0' : ''}`}>
+          {forecast &&
+            quick &&
+            quick.columns.map(([key]) => {
+              const pick = forecast.picks[key]
+              // A side with no chance has no odd, and a backend older than the page has no such pick: an empty slot keeps the columns in line.
+              if (!pick?.odd) return <span key={key} className="w-[52px]" />
+              const { market_selection, market_category, odd } = pick
+              return (
+                <OddButton
+                  key={key}
+                  pick={{ match_id: match.id, home_team: forecast.home_team, away_team: forecast.away_team, kickoff_label: forecast.kickoff_label, market_selection, market_category, odd }}
+                  slip={quick.slip}
+                  className="min-w-[52px] px-2.5 py-1.5 text-xs"
+                >
+                  {odd.toFixed(2)}
+                </OddButton>
+              )
+            })}
+          {comparable && <CompareButton matchId={match.id} label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`} compare={comparable} />}
         </span>
       )}
     </li>
@@ -112,6 +148,7 @@ export function MatchCard({
   onToggle,
   scored,
   compare,
+  quick,
 }: {
   title: ReactNode
   matches: Match[]
@@ -121,8 +158,22 @@ export function MatchCard({
   onToggle?: () => void
   scored?: (matchId: number) => boolean // matches that just scored, which glow for a few seconds
   compare?: Compare
+  quick?: Quick
 }) {
   const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight'
+  // The quick odds' column names right over the rows' odds, while the card is open and any of its matches has them:
+  // in the header on a wide column, and on a line of their own under it on a narrow one, where the odds drop too.
+  const columns = !collapsed && quick && matches.some(quick.odds) ? quick.columns : []
+  const labels = (className: string) =>
+    columns.length > 0 && (
+      <span aria-hidden="true" className={`gap-1 font-num text-[11px] font-semibold text-muted ${className}`}>
+        {columns.map(([key, label]) => (
+          <span key={key} className="w-[52px] text-center">
+            {label}
+          </span>
+        ))}
+      </span>
+    )
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-surface">
       <h2>
@@ -134,16 +185,29 @@ export function MatchCard({
             className={`${header} cursor-pointer transition-all duration-200 ease-out hover:bg-surface-2/60`}
           >
             {title}
-            <Chevron direction={collapsed ? 'down' : 'up'} className="ml-auto text-muted" />
+            <span className="ml-auto flex items-center gap-2.5">
+              {labels('hidden @xl:flex')}
+              <Chevron direction={collapsed ? 'down' : 'up'} className="text-muted" />
+            </span>
           </button>
         ) : (
-          <span className={header}>{title}</span>
+          <span className={header}>
+            {title}
+            {/* An empty slot in the chevron's place keeps the column names over the odds. */}
+            {columns.length > 0 && (
+              <span className="ml-auto hidden items-center gap-2.5 @xl:flex">
+                {labels('flex')}
+                <span className="size-4" />
+              </span>
+            )}
+          </span>
         )}
       </h2>
+      {labels('-mt-2 flex justify-end pr-10.5 pb-1.5 @xl:hidden')}
       <Collapse open={!collapsed}>
         <ul className="divide-y divide-line border-t border-line">
           {matches.map((match) => (
-            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} goal={scored?.(match.id) ?? false} compare={compare} />
+            <MatchRow key={match.id} match={match} showLeague={showLeague} onSelect={onSelect} goal={scored?.(match.id) ?? false} compare={compare} quick={quick} />
           ))}
         </ul>
       </Collapse>

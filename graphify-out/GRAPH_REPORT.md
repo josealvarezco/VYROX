@@ -1,17 +1,17 @@
 # Graph Report - VYROX  (2026-10-30)
 
 ## Corpus Check
-- 76 files · ~45,806 words
+- 76 files · ~47,051 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 751 nodes · 1917 edges · 30 communities (28 shown, 2 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 48 edges (avg confidence: 0.9)
+- 756 nodes · 1937 edges · 36 communities (34 shown, 2 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 48 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d21d6b0c`
+- Built from commit: `eb3f9540`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -36,24 +36,30 @@
 - gemini.py
 - useBetSlip.ts
 - parlays.py
-- AiPrediction.tsx
-- types.ts
-- Match
 - MatchList.tsx
+- OddsTable.tsx
+- icons.tsx
+- Momentum.tsx
 - test_bookmakers.py
 - details.py
 - forecast_rows
-- OddsTable.tsx
+- types.ts
 - builder.py
 - _markets
+- Parlays.tsx
+- matchComparator.ts
+- shareCard.ts
+- AiPrediction.tsx
+- Comparator.tsx
+- ThemeToggle.tsx
 
 ## God Nodes (most connected - your core abstractions)
-1. `a11y()` - 34 edges
-2. `App()` - 33 edges
+1. `App()` - 36 edges
+2. `a11y()` - 36 edges
 3. `react` - 24 edges
 4. `MatchCenter()` - 24 edges
 5. `fixture()` - 23 edges
-6. `useBetSlip()` - 20 edges
+6. `useBetSlip()` - 21 edges
 7. `UpstreamError` - 18 edges
 8. `compilerOptions` - 18 edges
 9. `fetch_matches()` - 17 edges
@@ -74,7 +80,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (30 total, 2 thin omitted)
+## Communities (36 total, 2 thin omitted)
 
 ### Community 0 - "test_matches.py"
 Cohesion: 0.11
@@ -89,8 +95,8 @@ Cohesion: 0.10
 Nodes (20): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+12 more)
 
 ### Community 3 - "App.tsx"
-Cohesion: 0.06
-Nodes (87): App(), DAYS, FILTERS, hot(), longDate(), Message(), shiftDay(), shortWeekday() (+79 more)
+Cohesion: 0.12
+Nodes (35): App(), DAYS, FILTERS, hot(), longDate(), Message(), QUICK_MARKETS, QuickMarket (+27 more)
 
 ### Community 4 - "compilerOptions"
 Cohesion: 0.12
@@ -117,11 +123,11 @@ Cohesion: 0.33
 Nodes (5): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema
 
 ### Community 10 - "MatchCenter.tsx"
-Cohesion: 0.16
-Nodes (19): HeadToHead(), Lineups(), MatchCenter(), Note(), Pitch(), SIDE_COLOR, SIDE_RING, SIDES (+11 more)
+Cohesion: 0.14
+Nodes (24): PredictionView(), CardIcon(), SubIcon(), EventText(), HeadToHead(), Lineups(), MatchCenter(), Note() (+16 more)
 
 ### Community 11 - "test_details.py"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (37): fixture(), install(), meeting(), team(), api(), expire(), get(), test_a_live_match_gets_its_momentum_and_the_list_shows_it() (+29 more)
 
 ### Community 14 - "radar.py"
@@ -129,8 +135,8 @@ Cohesion: 0.15
 Nodes (11): odds_1x2(), pick_odd(), prob_to_market_odd(), _within(), _forecast(), test_1x2_keeps_the_draw_and_the_favourite_in_range(), test_1x2_shares_a_107_5_percent_book(), test_a_pick_pays_between_1_22_and_2_35() (+3 more)
 
 ### Community 15 - "BetSlip.tsx"
-Cohesion: 0.08
-Nodes (45): Badge(), BankrollAnalytics(), Chart(), Mode, MODES, bankrollAnalytics(), BankrollPoint, day() (+37 more)
+Cohesion: 0.17
+Nodes (20): Badge(), BankrollAnalytics(), Chart(), Mode, MODES, BADGES, CARD, CopInput() (+12 more)
 
 ### Community 16 - "test_parlays.py"
 Cohesion: 0.08
@@ -142,27 +148,27 @@ Nodes (9): ask_vyrox_ia(), _context(), _generate(), MatchInfo, predict(), Predic
 
 ### Community 18 - "useBetSlip.ts"
 Cohesion: 0.07
-Nodes (31): ComparedSide, compareMatches(), likelier(), phrase(), safety(), side(), teams(), ARSENAL (+23 more)
+Nodes (36): bankrollAnalytics(), BankrollPoint, day(), FAMILIES, FAMILY, net(), Settled, GoalAlert (+28 more)
 
 ### Community 19 - "parlays.py"
 Cohesion: 0.19
 Nodes (10): _build(), day_forecasts(), DayForecast, get_parlays(), kickoff(), _leg(), MatchForecast, _options() (+2 more)
 
-### Community 20 - "AiPrediction.tsx"
+### Community 20 - "MatchList.tsx"
+Cohesion: 0.15
+Nodes (19): Thinking(), Chevron(), Compare, CompareButton(), MatchCard(), MatchRow(), Quick, Card() (+11 more)
+
+### Community 21 - "OddsTable.tsx"
+Cohesion: 0.15
+Nodes (16): bestHouse(), quote(), selection(), slot(), TrendDownArrowIcon(), TrendUpArrowIcon(), COLUMNS, LINES (+8 more)
+
+### Community 22 - "icons.tsx"
 Cohesion: 0.14
-Nodes (23): CONFIDENCE, MarketOdds(), PredictionCards(), PredictionView(), Thinking(), OddButton(), StakeSimulator(), CheckIcon() (+15 more)
+Nodes (27): PredictionCards(), IconButton(), TicketCard(), GoalToasts(), NOTES, playGoal(), a11y(), BallIcon() (+19 more)
 
-### Community 21 - "types.ts"
-Cohesion: 0.12
-Nodes (18): bestHouse(), quote(), slot(), BookmakerOdds, Competition, ForecastsResponse, Goals, League (+10 more)
-
-### Community 22 - "Match"
-Cohesion: 0.22
-Nodes (11): GoalAlert, newGoals(), Score, goals(), NOTES, playGoal(), Match, ALERT_MODES (+3 more)
-
-### Community 23 - "MatchList.tsx"
-Cohesion: 0.29
-Nodes (10): ActivityPulseIcon(), CompareButton(), MatchRow(), MomentumPanel(), PressureBar(), kickoffTime(), LIVE, STATUS_LABEL (+2 more)
+### Community 23 - "Momentum.tsx"
+Cohesion: 0.60
+Nodes (4): ActivityPulseIcon(), MomentumPanel(), PressureBar(), Momentum
 
 ### Community 24 - "test_bookmakers.py"
 Cohesion: 0.32
@@ -176,9 +182,9 @@ Nodes (48): api_get(), api_keys(), UpstreamError, _bookmakers(), get_odds(), _qu
 Cohesion: 0.14
 Nodes (11): colombia_today(), fetch_matches(), _fresh(), group_by_league(), _league_order(), _team(), to_match(), upcoming() (+3 more)
 
-### Community 27 - "OddsTable.tsx"
-Cohesion: 0.27
-Nodes (10): selection(), TrendDownArrowIcon(), TrendUpArrowIcon(), COLUMNS, LINES, OddsTable(), pill(), TABS (+2 more)
+### Community 27 - "types.ts"
+Cohesion: 0.10
+Nodes (19): ForecastsResponse, Goals, League, Lineup, MatchDetails, MatchesResponse, MatchEvent, Meeting (+11 more)
 
 ### Community 28 - "builder.py"
 Cohesion: 0.27
@@ -188,18 +194,42 @@ Nodes (3): get_builder(), _mixes(), _picks()
 Cohesion: 0.50
 Nodes (3): _item(), _markets(), test_no_pick_is_shown_surer_than_92_percent()
 
+### Community 30 - "Parlays.tsx"
+Cohesion: 0.15
+Nodes (19): pill(), QuickFill(), DoubleChevronUpIcon(), RefreshIcon(), WandSparklesIcon(), choice(), Choices(), Leg() (+11 more)
+
+### Community 31 - "matchComparator.ts"
+Cohesion: 0.20
+Nodes (11): ComparedSide, compareMatches(), likelier(), phrase(), safety(), side(), teams(), ARSENAL (+3 more)
+
+### Community 32 - "shareCard.ts"
+Cohesion: 0.49
+Nodes (10): box(), card(), Ctx, fit(), footer(), forecastCard(), pill(), playCard() (+2 more)
+
+### Community 33 - "AiPrediction.tsx"
+Cohesion: 0.44
+Nodes (8): CONFIDENCE, MarketOdds(), BetSlip(), StakeSimulator(), TicketSlipIcon(), TrendUpIcon(), kickoffLabel(), totalOdd()
+
+### Community 34 - "Comparator.tsx"
+Cohesion: 0.36
+Nodes (8): OddButton(), Column(), Comparator(), METRICS, Slip, DoubleChevronRightIcon(), ScaleCompareIcon(), SparklesIcon()
+
+### Community 35 - "ThemeToggle.tsx"
+Cohesion: 0.83
+Nodes (3): MoonIcon(), SunIcon(), ThemeToggle()
+
 ## Knowledge Gaps
 - **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Reglas de arquitectura` connect `radar.py` to `VYROX: contexto del proyecto`, `useBetSlip.ts`, `types.ts`, `Match`, `forecast_rows`?**
+- **Why does `Reglas de arquitectura` connect `radar.py` to `VYROX: contexto del proyecto`, `useBetSlip.ts`, `OddsTable.tsx`, `forecast_rows`, `matchComparator.ts`?**
   _High betweenness centrality (0.427) - this node is a cross-community bridge._
 - **Should `test_matches.py` be split into smaller, more focused modules?**
   _Cohesion score 0.11375661375661375 - nodes in this community are weakly interconnected._
-- **Why does `bestHouse()` connect `types.ts` to `App.tsx`, `radar.py`, `BetSlip.tsx`?**
-  _High betweenness centrality (0.170) - this node is a cross-community bridge._
+- **Why does `bestHouse()` connect `OddsTable.tsx` to `AiPrediction.tsx`, `radar.py`, `BetSlip.tsx`?**
+  _High betweenness centrality (0.168) - this node is a cross-community bridge._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.07207207207207207 - nodes in this community are weakly interconnected._
 - **Why does `prob_to_market_odd()` connect `radar.py` to `test_parlays.py`, `gemini.py`, `parlays.py`, `forecast_rows`, `builder.py`, `_markets`?**
@@ -207,4 +237,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
 - **Should `App.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.05670103092783505 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11806543385490754 - nodes in this community are weakly interconnected._

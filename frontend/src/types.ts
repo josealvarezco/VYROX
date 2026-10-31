@@ -94,7 +94,7 @@ export type ForecastMatch = {
   home_logo: string
   away_logo: string
   kickoff_label: string
-  picks: Record<'favourite' | 'over_2_5' | 'under_2_5' | 'btts_yes' | 'btts_no', ForecastPick>
+  picks: Record<'favourite' | 'home' | 'draw' | 'away' | 'over_2_5' | 'under_2_5' | 'btts_yes' | 'btts_no', ForecastPick>
 }
 export type ForecastsResponse = { matches: ForecastMatch[]; simulated: boolean; played: boolean }
 // GET /api/matches/{id}/odds: real bookmaker odds from API-Football; a trend is a move VYROX saw since its last look

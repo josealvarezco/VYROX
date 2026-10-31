@@ -102,13 +102,17 @@ async def get_radar(day: date | None = None) -> dict:
 
 
 def _forecast(match: dict, forecast: MatchForecast) -> dict:
-    """One match's forecast for the comparator: its 1X2 favourite and both sides of over 2.5 and of both-score."""
+    """One match's forecast for the comparator and the list's quick odds: the three 1X2 sides and the favourite,
+    and both sides of over 2.5 and of both-score."""
     home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
     r = forecast.result
     prices = odds_1x2(r.home, r.draw, r.away)
     team, percent, odd = (home, r.home, prices["home"]) if r.home >= r.away else (away, r.away, prices["away"])
     picks = {
         "favourite": (f"{team} - Resultado del partido", percent, "result", odd),
+        "home": (f"{home} - Resultado del partido", r.home, "result", prices["home"]),
+        "draw": ("Empate - Resultado del partido", r.draw, "result", prices["draw"]),
+        "away": (f"{away} - Resultado del partido", r.away, "result", prices["away"]),
         "over_2_5": ("Más de 2.5 - Goles totales", forecast.over_2_5, "goals", prob_to_market_odd(forecast.over_2_5)),
         "under_2_5": ("Menos de 2.5 - Goles totales", 100 - forecast.over_2_5, "goals", prob_to_market_odd(100 - forecast.over_2_5)),
         "btts_yes": ("Sí - Ambos anotan", forecast.btts, "btts", prob_to_market_odd(forecast.btts)),
@@ -133,6 +137,6 @@ def _forecast(match: dict, forecast: MatchForecast) -> dict:
 
 
 async def get_forecasts(day: date | None = None) -> dict:
-    """VYROX IA's forecast of each match the radar reads, priced like the parlays: what the comparator compares."""
+    """VYROX IA's forecast of each match the radar reads, priced like the parlays: what the comparator compares and the list's quick odds show."""
     rows, simulated, played = await forecast_rows(day or colombia_today())
     return {"matches": [_forecast(m, forecast) for m, forecast in rows], "simulated": simulated, "played": played}
