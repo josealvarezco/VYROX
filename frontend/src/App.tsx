@@ -32,6 +32,7 @@ import { useFollowed } from './useFollowed'
 import { useForecasts } from './useForecasts'
 import { ALERT_MODES, useGoalAlerts, type AlertMode } from './useGoalAlerts'
 import { usePinned } from './usePinned'
+import { playRefereeWhistle } from './whistle'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
 const REFRESH_MS = 60_000
@@ -270,7 +271,12 @@ export default function App() {
             <Chevron className="hidden opacity-70 sm:block" />
             <select
               value={goalAlerts.mode}
-              onChange={(event) => goalAlerts.setMode(event.target.value as AlertMode)}
+              onChange={(event) => {
+                const mode = event.target.value as AlertMode
+                goalAlerts.setMode(mode)
+                // A sample of the alert, which also unlocks sound: browsers only play it after a user's gesture.
+                if (mode !== 'off') playRefereeWhistle()
+              }}
               aria-label="Alertas de gol en vivo"
               className="absolute inset-0 cursor-pointer bg-surface text-ink opacity-0"
             >
