@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { Thinking } from './AiPrediction'
-import { OddButton } from './BetSlip'
+import { OddButton, TrendCorner } from './BetSlip'
 import { selection } from './bookmakers'
-import { TrendDownArrowIcon, TrendUpArrowIcon } from './icons'
 import { kickoffLabel } from './status'
-import type { Match, MatchOdds, OddsMarket, Quote } from './types'
+import type { Match, MatchOdds, OddsMarket } from './types'
 import type { useBetSlip } from './useBetSlip'
 
 const TABS = [
@@ -41,12 +40,6 @@ const pill = (active: boolean) =>
   `cursor-pointer rounded-full border px-3 py-1 text-xs font-bold transition-all duration-200 ease-out active:scale-[0.98] ${
     active ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink hover:bg-surface-2'
   }`
-
-function Trend({ trend }: { trend: Quote['trend'] }) {
-  if (trend === 'up') return <TrendUpArrowIcon className="size-3.5 text-win" label="Subió" />
-  if (trend === 'down') return <TrendDownArrowIcon className="size-3.5 text-loss" label="Bajó" />
-  return null
-}
 
 // CUOTAS · CASAS DE APUESTAS: the real odds of the bookmakers that quote the match, the best one of each column
 // framed in yellow. A tapped odd goes to the bet slip with its bookmaker.
@@ -128,24 +121,22 @@ export function OddsTable({
                   if (!quote) return <td key={side} />
                   const [market_selection, market_category] = selection(market, side, home, away)
                   const frame = quote.odd === best[side] ? 'ring-2 ring-yellow' : ''
-                  const content = (
-                    <>
-                      <Trend trend={quote.trend} />
-                      {quote.odd.toFixed(2)}
-                    </>
-                  )
                   return (
                     <td key={side} className="px-0.5">
                       {open ? (
                         <OddButton
                           pick={{ match_id: match.id, home_team: home, away_team: away, kickoff_label: kickoffLabel(match), market_selection, market_category, odd: quote.odd, bookmaker: name }}
                           slip={slip}
+                          trend={quote.trend}
                           className={`flex w-full items-center justify-center gap-1 px-2 py-2 text-sm ${frame}`}
                         >
-                          {content}
+                          {quote.odd.toFixed(2)}
                         </OddButton>
                       ) : (
-                        <span className={`flex items-center justify-center gap-1 rounded-xl border border-line bg-surface-2 px-2 py-2 font-num font-bold ${frame}`}>{content}</span>
+                        <span className={`relative flex items-center justify-center gap-1 rounded-xl border border-line bg-surface-2 px-2 py-2 font-num font-bold ${frame}`}>
+                          <TrendCorner trend={quote.trend} />
+                          {quote.odd.toFixed(2)}
+                        </span>
                       )}
                     </td>
                   )
@@ -160,8 +151,8 @@ export function OddsTable({
 
       <p className="text-xs text-muted">
         {!open && 'El partido ya empezó: son las cuotas previas al inicio, solo como referencia. '}
-        Cuotas reales de las casas que publica API-Football, que las actualiza cada 3 horas{updated ? ` (última: ${updated})` : ''}. Las
-        flechas marcan las cuotas que subieron o bajaron desde la consulta anterior de VYROX. Wplay, BetPlay, Rushbet y Stake no
+        Cuotas reales de las casas que publica API-Football, que las actualiza cada 3 horas{updated ? ` (última: ${updated})` : ''}. Una
+        esquina verde o roja marca las cuotas que subieron o bajaron desde la consulta anterior de VYROX. Wplay, BetPlay, Rushbet y Stake no
         publican sus cuotas en esta fuente. +18 · Juega con responsabilidad.
       </p>
     </section>

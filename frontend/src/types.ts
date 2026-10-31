@@ -86,7 +86,8 @@ export type SmartParlay = {
   message: string | null
 }
 // GET /api/forecasts: VYROX IA's forecast per match of the date (up to 12), priced like the radar, for the comparator
-export type ForecastPick = { market_selection: string; market_category: string; probability: number; odd: number | null }
+// trend: how the page saw VYROX IA move this pick's price during the visit, never a guess
+export type ForecastPick = { market_selection: string; market_category: string; probability: number; odd: number | null; trend?: 'up' | 'down' }
 export type ForecastMatch = {
   match_id: number
   league_name: string

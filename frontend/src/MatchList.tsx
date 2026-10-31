@@ -37,6 +37,30 @@ export function CompareButton({ matchId, label, compare }: { matchId: number; la
   )
 }
 
+// A live match's minute: a ring that fills over the 90 minutes around a beating dot, and the stretch it is in (1T,
+// ET for the break, 2T, TE in extra time); orange, "CIERRE", from the 85th minute.
+export function LiveMinute({ match }: { match: Match }) {
+  const minute = match.minute ?? 0
+  const paused = match.status === 'PAUSED'
+  const closing = !paused && minute >= 85
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full py-px pr-1.5 pl-0.5 font-num text-[11px] leading-4 font-bold whitespace-nowrap text-forest ${
+        closing ? 'bg-orange' : 'bg-yellow'
+      }`}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" className="size-3.5 -rotate-90">
+        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
+        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="2.5" pathLength={90} strokeDasharray={`${Math.min(minute, 90)} 90`} />
+        <circle cx="8" cy="8" r="1.8" fill="currentColor" className="origin-center animate-ping" />
+        <circle cx="8" cy="8" r="1.8" fill="currentColor" />
+      </svg>
+      {paused ? 'ET' : `${minute > 90 ? 'TE' : minute > 45 ? '2T' : '1T'}${match.minute ? ` ${minute}'` : ''}`}
+      {closing && <span className="text-[9px] tracking-wide">· CIERRE</span>}
+    </span>
+  )
+}
+
 function MatchRow({
   match,
   showLeague,
@@ -58,7 +82,7 @@ function MatchRow({
 }) {
   const { home, away } = match.score.fullTime
   const live = LIVE.has(match.status)
-  const note = match.status === 'TIMED' ? null : live && match.minute ? `${match.minute}'` : statusText(match)
+  const note = match.status === 'TIMED' || live ? null : statusText(match)
   const forecast = quick?.odds(match)
   const comparable = compare?.can(match.id) ? compare : undefined
   const picks = forecast?.picks
@@ -102,13 +126,9 @@ function MatchRow({
               {home} - {away}
             </span>
           )}
-          {(note || goal) && (
+          {(note || goal || live) && (
             <span className="flex items-center gap-1">
-              {note && (
-                <span className={`text-[11px] ${live ? 'rounded-full bg-orange px-1.5 font-num font-bold text-forest' : 'text-muted'}`}>
-                  {note}
-                </span>
-              )}
+              {live ? <LiveMinute match={match} /> : note && <span className="text-[11px] text-muted">{note}</span>}
               {goal && <span className="animate-pulse rounded-full bg-yellow px-1.5 text-[11px] font-extrabold text-forest">¡GOL!</span>}
               {match.momentum_status === 'high_voltage' && <FlameIcon className="size-3.5" label="Partido caliente" />}
             </span>
@@ -137,6 +157,7 @@ function MatchRow({
                   key={key}
                   pick={{ match_id: match.id, home_team: forecast.home_team, away_team: forecast.away_team, kickoff_label: forecast.kickoff_label, market_selection, market_category, odd, model }}
                   slip={quick.slip}
+                  trend={pick.trend}
                   className="min-w-[52px] px-2.5 py-1.5 text-xs"
                 >
                   {odd.toFixed(2)}
