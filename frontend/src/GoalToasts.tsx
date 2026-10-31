@@ -2,34 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { GoalAlert } from './goals'
 import { BallIcon, CrossIcon, StarIcon, TicketSlipIcon } from './icons'
 import type { SavedTicket } from './types'
-
-const NOTES = [523.25, 659.25, 783.99, 1046.5] // C5 E5 G5 C6: a rising major arpeggio
-let audio: AudioContext | null = null // one context for the whole page; browsers cap how many can be open
-
-// A short goal fanfare synthesized with the Web Audio API, so there is no sound file to download. Browsers only let
-// a page play sound after the user has interacted with it once; until then the alert stays silent.
-function playGoal() {
-  try {
-    const context = (audio ??= new AudioContext())
-    void context.resume() // a context created before any click starts suspended
-    NOTES.forEach((frequency, index) => {
-      const at = context.currentTime + index * 0.11
-      const end = at + (index === NOTES.length - 1 ? 0.7 : 0.18)
-      const tone = context.createOscillator()
-      const volume = context.createGain()
-      tone.type = 'triangle'
-      tone.frequency.value = frequency
-      volume.gain.setValueAtTime(0.0001, at)
-      volume.gain.exponentialRampToValueAtTime(0.3, at + 0.02)
-      volume.gain.exponentialRampToValueAtTime(0.0001, end)
-      tone.connect(volume).connect(context.destination)
-      tone.start(at)
-      tone.stop(end + 0.05)
-    })
-  } catch {
-    // no Web Audio in this browser: the alert still shows
-  }
-}
+import { playRefereeWhistle } from './whistle'
 
 // Goal alerts in the top right corner, the newest last. A popover lives in the top layer: shown again on every
 // change, it stays above an open Match Center, a modal dialog that no z-index can cover.
@@ -60,7 +33,7 @@ export function GoalToasts({
   useEffect(() => {
     const fresh = alerts.filter((alert) => !sounded.current.has(alert.key))
     fresh.forEach((alert) => sounded.current.add(alert.key))
-    if (fresh.length) playGoal()
+    if (fresh.length) playRefereeWhistle()
   }, [alerts])
 
   return (
