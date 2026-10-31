@@ -139,7 +139,7 @@ function ParlayGrid({ date, slip, onSelect }: Props & { date: string }) {
   )
 }
 
-function Simulated() {
+export function Simulated() {
   return (
     <p className="inline-flex rounded-full border border-orange/50 bg-orange/10 px-2.5 py-0.5 text-xs font-semibold text-warn">
       Datos simulados · VYROX IA no está disponible en este momento

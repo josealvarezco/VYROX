@@ -2,11 +2,25 @@ import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
 import { Comparator } from './Comparator'
 import { GoalToasts } from './GoalToasts'
-import { ArrowLeftIcon, BellRingIcon, CalendarIcon, Chevron, CrossIcon, FilterIcon, Flag, FlameIcon, RadarIcon, ScaleCompareIcon, StarIcon } from './icons'
+import {
+  ArrowLeftIcon,
+  BellRingIcon,
+  CalendarIcon,
+  Chevron,
+  CollapseAllIcon,
+  CrossIcon,
+  ExpandAllIcon,
+  FilterIcon,
+  Flag,
+  FlameIcon,
+  RadarIcon,
+  ScaleCompareIcon,
+  StarIcon,
+} from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
-import { MatchCard } from './MatchList'
+import { MatchCard, type Quick } from './MatchList'
 import { MatchCenter } from './MatchCenter'
-import { Parlays } from './Parlays'
+import { Parlays, Simulated } from './Parlays'
 import { Radar } from './Radar'
 import { Sidebar } from './Sidebar'
 import { LIVE } from './status'
@@ -33,6 +47,13 @@ function shiftDay(day: string, offset: number) {
 const DAYS = { [shiftDay(TODAY, -1)]: 'Ayer', [TODAY]: 'Hoy', [shiftDay(TODAY, 1)]: 'Mañana' }
 const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA', 'Partidos Calientes'] as const
 const hot = (match: Match) => match.momentum_status === 'high_voltage' // a live match Momentum IA measured as hot
+// The list's quick odds, one market at a time: each column is a pick of the date's VYROX IA forecast.
+const QUICK_MARKETS: Record<'1x2' | 'goals' | 'btts', { name: string; columns: Quick['columns'] }> = {
+  '1x2': { name: '1X2', columns: [['home', '1'], ['draw', 'X'], ['away', '2']] },
+  goals: { name: 'Goles 2.5', columns: [['over_2_5', '+2.5'], ['under_2_5', '-2.5']] },
+  btts: { name: 'Ambos Anotan', columns: [['btts_yes', 'Sí'], ['btts_no', 'No']] },
+}
+type QuickMarket = keyof typeof QUICK_MARKETS
 
 const longDate = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -64,6 +85,7 @@ export default function App() {
   const [showSidebar, setShowSidebar] = useState(false)
   const [sidebarKey, setSidebarKey] = useState(0)
   const [parlaysOpen, setParlaysOpen] = useState(true)
+  const [market, setMarket] = useState<QuickMarket>('1x2')
   const followed = useFollowed()
   const slip = useBetSlip()
   const { track } = slip
@@ -76,10 +98,10 @@ export default function App() {
   const forecasts = useForecasts(date)
   const [vs, setVs] = useState<number[]>([]) // the comparator's matches, up to two
   const [comparing, setComparing] = useState(false)
-  const forecastIds = new Set(forecasts?.matches.map((match) => match.match_id))
+  const forecastById = new Map(forecasts?.matches.map((match) => [match.match_id, match] as const))
   // A second match opens the comparator; a third one replaces the older pick.
   const compare = {
-    can: (id: number) => forecastIds.has(id),
+    can: (id: number) => forecastById.has(id),
     picked: (id: number) => vs.includes(id),
     toggle: (id: number) => {
       const next = vs.includes(id) ? vs.filter((other) => other !== id) : [...vs, id].slice(-2)
@@ -88,6 +110,12 @@ export default function App() {
     },
   }
   const firstPick = vs.length === 1 ? forecasts?.matches.find((match) => match.match_id === vs[0]) : undefined
+  // Quick odds on the list: the forecast's matches still taking plays, with the odds the radar and the parlays give them.
+  const quick = {
+    columns: QUICK_MARKETS[market].columns,
+    odds: (match: Match) => (match.status === 'TIMED' && !forecasts?.played ? forecastById.get(match.id) : undefined),
+    slip,
+  }
 
   useEffect(() => {
     let current = true // drop answers for a date the user already left
@@ -184,7 +212,21 @@ export default function App() {
     .flatMap((competition) => competition.matches.map((match) => ({ match, competition })))
     .find(({ match }) => match.id === selectedId)
   const open = (match: Match) => setSelectedId(match.id)
+  const showParlays = data !== null && allGroups.length > 0 && filter === 'Todos' && league === null && !search
+  const quickShown = filter !== 'Radar IA' && shown.some(quick.odds)
 
+  // The center column's sections that fold: the league cards (Radar IA and Por horario have none) and the parlays,
+  // with the smart builder inside them.
+  const folds = [
+    ...(filter === 'Radar IA' || filter === 'Por horario' ? [] : groups.map((group) => collapsed.has(group.league_id))),
+    ...(showParlays ? [!parlaysOpen] : []),
+  ]
+  const areAllCollapsed = folds.length > 0 && folds.every(Boolean)
+  const foldLabel = areAllCollapsed ? 'Expandir todas las pestañas' : 'Cerrar todas las pestañas'
+  const handleToggleCollapseAll = () => {
+    setCollapsed(areAllCollapsed ? new Set() : new Set(allGroups.map((group) => group.league_id)))
+    setParlaysOpen(areAllCollapsed)
+  }
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 xl:px-6">
@@ -327,23 +369,38 @@ export default function App() {
             <button
               type="button"
               onClick={() => setComparing(true)}
-              disabled={forecastIds.size < 2}
-              title={forecastIds.size < 2 ? 'VYROX IA aún no pronostica partidos de esta fecha' : 'Comparar dos partidos'}
+              disabled={forecastById.size < 2}
+              title={forecastById.size < 2 ? 'VYROX IA aún no pronostica partidos de esta fecha' : 'Comparar dos partidos'}
               className="flex cursor-pointer items-center gap-1.5 rounded-full border border-yellow bg-forest px-3.5 py-1.5 text-sm font-semibold text-yellow transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100"
             >
               <ScaleCompareIcon />
               Comparar (VS)
             </button>
-            <label className="flex w-full min-w-0 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm sm:ml-auto sm:w-auto sm:max-w-64 sm:flex-1">
-              <FilterIcon />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Filtro"
-                aria-label="Buscar equipo o liga"
-                className="w-full min-w-0 bg-transparent outline-none placeholder:text-muted"
-              />
-            </label>
+            {/* Its minimum width makes it wrap to a line of its own instead of squeezing in after the pills. */}
+            <div className="flex w-full min-w-0 items-center gap-2 sm:ml-auto sm:w-auto sm:min-w-56 sm:max-w-75 sm:flex-1">
+              <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm">
+                <FilterIcon />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Filtro"
+                  aria-label="Buscar equipo o liga"
+                  className="w-full min-w-0 bg-transparent outline-none placeholder:text-muted"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleToggleCollapseAll}
+                disabled={!folds.length}
+                aria-label={foldLabel}
+                title={foldLabel}
+                className={`grid size-8.5 shrink-0 cursor-pointer place-items-center rounded-xl border transition-all duration-200 ease-out hover:scale-[1.04] active:scale-[0.96] disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100 ${
+                  areAllCollapsed ? 'border-yellow bg-yellow/15 text-gold' : 'border-line bg-surface text-muted hover:border-yellow hover:text-ink'
+                }`}
+              >
+                {areAllCollapsed ? <ExpandAllIcon className="size-5" /> : <CollapseAllIcon className="size-5" />}
+              </button>
+            </div>
           </div>
 
           {league !== null && (
@@ -376,7 +433,7 @@ export default function App() {
           )}
 
           {/* Home view only, and once the list is in: the backend then builds the slips from its cache without spending quota. */}
-          {data && allGroups.length > 0 && filter === 'Todos' && league === null && !search && (
+          {showParlays && (
             <Parlays
               date={date}
               slip={slip}
@@ -384,6 +441,30 @@ export default function App() {
               open={parlaysOpen}
               onToggle={() => setParlaysOpen(!parlaysOpen)}
             />
+          )}
+
+          {quickShown && (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="mr-auto text-sm font-bold tracking-tight">
+                Cuotas rápidas <span className="text-xs font-semibold text-muted">VYROX IA · cuotas estimadas de mercado</span>
+              </p>
+              {forecasts?.simulated && <Simulated />}
+              <div role="group" aria-label="Mercado de las cuotas rápidas" className="flex gap-0.5 rounded-full border border-line bg-surface p-0.5">
+                {Object.entries(QUICK_MARKETS).map(([value, { name }]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setMarket(value as QuickMarket)}
+                    aria-pressed={market === value}
+                    className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-all duration-200 ease-out ${
+                      market === value ? 'bg-yellow text-forest' : 'text-muted hover:text-ink'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {following.length > 0 && filter !== 'Radar IA' && (
@@ -399,6 +480,7 @@ export default function App() {
               showLeague
               scored={goalAlerts.glowing}
               compare={compare}
+              quick={quick}
             />
           )}
 
@@ -413,6 +495,7 @@ export default function App() {
                   showLeague
                   scored={goalAlerts.glowing}
                   compare={compare}
+                  quick={quick}
                 />
               )
             : groups.map((group) => (
@@ -432,6 +515,7 @@ export default function App() {
                   onToggle={() => toggleCollapsed(group.league_id)}
                   scored={goalAlerts.glowing}
                   compare={compare}
+                  quick={quick}
                 />
               ))}
         </main>

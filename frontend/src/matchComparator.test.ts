@@ -20,6 +20,9 @@ const forecast = (match_id: number, home_team: string, away_team: string, picks:
 // The radar's forecast of the parlays' fixture: Arsenal 80 / 12 / 8, Liverpool a 45 % favourite.
 const ARSENAL = forecast(3, 'Arsenal', 'Chelsea', {
   favourite: pick('Arsenal - Resultado del partido', 'result', 80, 1.45),
+  home: pick('Arsenal - Resultado del partido', 'result', 80, 1.45),
+  draw: pick('Empate - Resultado del partido', 'result', 12, 3.6),
+  away: pick('Chelsea - Resultado del partido', 'result', 8, 9.3),
   over_2_5: pick('Más de 2.5 - Goles totales', 'goals', 62, 1.58),
   under_2_5: pick('Menos de 2.5 - Goles totales', 'goals', 38, 2.31),
   btts_yes: pick('Sí - Ambos anotan', 'btts', 50, 1.88),
@@ -27,6 +30,9 @@ const ARSENAL = forecast(3, 'Arsenal', 'Chelsea', {
 })
 const LIVERPOOL = forecast(6, 'Liverpool', 'City', {
   favourite: pick('Liverpool - Resultado del partido', 'result', 45, 2.07),
+  home: pick('Liverpool - Resultado del partido', 'result', 45, 2.07),
+  draw: pick('Empate - Resultado del partido', 'result', 27, 3.45),
+  away: pick('City - Resultado del partido', 'result', 28, 3.32),
   over_2_5: pick('Más de 2.5 - Goles totales', 'goals', 60, 1.62),
   under_2_5: pick('Menos de 2.5 - Goles totales', 'goals', 40, 2.22),
   btts_yes: pick('Sí - Ambos anotan', 'btts', 63, 1.56),
