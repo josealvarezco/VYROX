@@ -17,6 +17,7 @@ import {
   RadarIcon,
   ScaleCompareIcon,
   StarIcon,
+  TicketSlipIcon,
 } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard, type Quick } from './MatchList'
@@ -32,6 +33,7 @@ import { useFollowed } from './useFollowed'
 import { useForecasts } from './useForecasts'
 import { ALERT_MODES, useGoalAlerts, type AlertMode } from './useGoalAlerts'
 import { usePinned } from './usePinned'
+import { VyroxDropdown } from './VyroxDropdown'
 import { playRefereeWhistle } from './whistle'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
@@ -49,6 +51,7 @@ function shiftDay(day: string, offset: number) {
 // API-Football's free plan only serves yesterday, today and tomorrow (the backend rejects other dates).
 const DAYS = { [shiftDay(TODAY, -1)]: 'Ayer', [TODAY]: 'Hoy', [shiftDay(TODAY, 1)]: 'Mañana' }
 const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA', 'Partidos Calientes'] as const
+const ALERT_ICONS = { all: <BellRingIcon />, my_parlays: <TicketSlipIcon />, off: <BellRingIcon muted /> }
 const hot = (match: Match) => match.momentum_status === 'high_voltage' // a live match Momentum IA measured as hot
 // The list's quick odds, one market at a time: each column is a pick of the date's VYROX IA forecast.
 const QUICK_MARKETS: Record<'1x2' | 'goals' | 'btts', { name: string; columns: Quick['columns'] }> = {
@@ -259,34 +262,24 @@ export default function App() {
           >
             Ligas y equipos
           </button>
-          {/* The pill shows the mode; an invisible native select on top brings the platform's menu, keyboard and screen reader support. */}
-          <label
-            title="Alertas de gol en vivo"
-            className={`relative flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-cream/20 bg-cream/10 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/15 has-focus-visible:ring-2 has-focus-visible:ring-yellow sm:px-3 ${
+          <VyroxDropdown
+            label="Alertas de gol en vivo"
+            value={goalAlerts.mode}
+            options={Object.entries(ALERT_MODES).map(([mode, { name }]) => ({ value: mode as AlertMode, label: name, icon: ALERT_ICONS[mode as AlertMode] }))}
+            onChange={(mode) => {
+              goalAlerts.setMode(mode)
+              // A sample of the alert, which also unlocks sound: browsers only play it after a user's gesture.
+              if (mode !== 'off') playRefereeWhistle()
+            }}
+            align="right"
+            chevron="hidden sm:block"
+            className={`h-8 shrink-0 rounded-full border border-cream/20 bg-cream/10 px-2 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/15 focus-visible:ring-2 focus-visible:ring-yellow focus-visible:outline-none sm:px-3 ${
               goalAlerts.mode === 'off' ? 'text-cream/60' : 'text-yellow'
             }`}
           >
             <BellRingIcon muted={goalAlerts.mode === 'off'} />
             <span className="hidden sm:inline">Alertas: {ALERT_MODES[goalAlerts.mode].short}</span>
-            <Chevron className="hidden opacity-70 sm:block" />
-            <select
-              value={goalAlerts.mode}
-              onChange={(event) => {
-                const mode = event.target.value as AlertMode
-                goalAlerts.setMode(mode)
-                // A sample of the alert, which also unlocks sound: browsers only play it after a user's gesture.
-                if (mode !== 'off') playRefereeWhistle()
-              }}
-              aria-label="Alertas de gol en vivo"
-              className="absolute inset-0 cursor-pointer bg-surface text-ink opacity-0"
-            >
-              {Object.entries(ALERT_MODES).map(([mode, { name }]) => (
-                <option key={mode} value={mode}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
+          </VyroxDropdown>
           <ThemeToggle />
         </div>
       </header>

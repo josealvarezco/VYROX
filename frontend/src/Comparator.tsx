@@ -4,6 +4,7 @@ import { CrossIcon, DoubleChevronRightIcon, ScaleCompareIcon, SparklesIcon } fro
 import { compareMatches, type ComparedSide } from './matchComparator'
 import type { ForecastMatch } from './types'
 import type { useBetSlip } from './useBetSlip'
+import { VyroxDropdown } from './VyroxDropdown'
 
 type Slip = ReturnType<typeof useBetSlip>
 
@@ -16,7 +17,18 @@ const METRICS: [string, (side: ComparedSide) => [number, number | null]][] = [
   ['Índice de Seguridad VYROX', (side) => [side.safetyScore, null]],
 ]
 
-const SELECT = 'w-full min-w-0 cursor-pointer truncate rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-semibold text-ink'
+const PILL =
+  'w-full min-w-0 rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-semibold text-ink transition-all duration-200 ease-out hover:border-yellow focus-visible:ring-2 focus-visible:ring-yellow focus-visible:outline-none'
+
+function Crests({ match }: { match: ForecastMatch }) {
+  return (
+    <span className="flex shrink-0 -space-x-1.5">
+      {[match.home_logo, match.away_logo].map((logo) => (
+        <img key={logo} src={logo} alt="" className="size-5 rounded-full bg-white/90 object-contain p-px ring-1 ring-line" />
+      ))}
+    </span>
+  )
+}
 
 function Column({ match, side, winner, played, slip }: { match: ForecastMatch; side: ComparedSide; winner: boolean; played: boolean; slip: Slip }) {
   const { bestPick } = side
@@ -127,21 +139,44 @@ export function Comparator({
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-            {[0, 1].map((index) => (
-              <label key={index} className={index ? 'order-3' : ''}>
-                <span className="sr-only">Partido {index ? 'B' : 'A'}</span>
-                <select value={ids[index] ?? ''} onChange={(event) => choose(index, Number(event.target.value))} className={SELECT}>
-                  <option value="" disabled>
-                    Partido {index ? 'B' : 'A'}
-                  </option>
-                  {matches.map((match) => (
-                    <option key={match.match_id} value={match.match_id} disabled={match.match_id === ids[1 - index]}>
-                      {match.home_team} vs {match.away_team} · {match.kickoff_label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
+            {[0, 1].map((index) => {
+              const chosen = [a, b][index]
+              return (
+                <div key={index} className={`min-w-0 ${index ? 'order-3' : ''}`}>
+                  <VyroxDropdown
+                    label={`Partido ${index ? 'B' : 'A'}`}
+                    value={ids[index] ?? null}
+                    options={matches.map((match) => ({
+                      value: match.match_id,
+                      label: `${match.home_team} vs ${match.away_team}`,
+                      icon: <Crests match={match} />,
+                      detail: (
+                        <>
+                          {match.league_name} · <span className="font-num">{match.kickoff_label}</span>
+                        </>
+                      ),
+                      keywords: match.league_name,
+                      disabled: match.match_id === ids[1 - index], // the other side's match
+                    }))}
+                    onChange={(id) => choose(index, id)}
+                    align={index ? 'right' : 'left'}
+                    searchable
+                    className={PILL}
+                  >
+                    {chosen ? (
+                      <>
+                        <Crests match={chosen} />
+                        <span className="truncate">
+                          {chosen.home_team} vs {chosen.away_team}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted">Partido {index ? 'B' : 'A'}</span>
+                    )}
+                  </VyroxDropdown>
+                </div>
+              )
+            })}
             <span className="order-2 font-num text-sm font-bold text-muted">VS</span>
           </div>
 
