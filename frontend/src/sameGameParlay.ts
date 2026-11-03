@@ -59,8 +59,9 @@ export function fitModel(home: number, away: number, over25: number): Model {
   return [total * share, total * (1 - share)]
 }
 
+export const TWO_WAY_BOOK = 1.065
 // The backend's prob_to_market_odd (backend/app/odds.py): a 6.5 % two-way margin, the chance pulled 17 % toward 50 %.
-export const marketOdd = (percent: number) => Math.round(100 / (1.065 / 2 + 0.83 * (percent / 100 - 0.5))) / 100
+export const marketOdd = (percent: number) => Math.round(100 / (TWO_WAY_BOOK / 2 + 0.83 * (percent / 100 - 0.5))) / 100
 
 // A Crear Apuesta's odd: what its picks pay at their own odds, for the chance of winning them all at once instead of
 // one by one. Inside one bet no pick pays above its fair chance, so a pick the others already bring (Más de 1.5 next

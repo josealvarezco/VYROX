@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Vista Compacta Pro, set on the page's <main>. :is() outweighs the comfortable classes beside it, breakpoints included. */
+@custom-variant compact (&:is([data-density='compact'] *));
+
 /* VYROX brandbook: Inter Tight for interface text, Space Grotesk for numbers, and the official palette. */
 @theme {
   --font-sans: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;

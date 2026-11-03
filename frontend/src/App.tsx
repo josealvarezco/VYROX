@@ -9,6 +9,8 @@ import {
   Chevron,
   CollapseAllIcon,
   CrossIcon,
+  DensityComfortableIcon,
+  DensityCompactIcon,
   ExpandAllIcon,
   FilterIcon,
   Flag,
@@ -66,6 +68,22 @@ const longDate = (day: string) =>
 const shortWeekday = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString('es-CO', { weekday: 'short' }).replace('.', '')
 
+const DENSITY_KEY = 'vyrox_view_density'
+
+function storedCompact() {
+  try {
+    return localStorage.getItem(DENSITY_KEY) === 'compact'
+  } catch {
+    return false // storage blocked: the comfortable view
+  }
+}
+
+// The square buttons beside the search, yellow while their mode is on.
+const toolButton = (on: boolean) =>
+  `grid size-8.5 shrink-0 cursor-pointer place-items-center rounded-xl border transition-all duration-200 ease-out hover:scale-[1.04] active:scale-[0.96] disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100 ${
+    on ? 'border-yellow bg-yellow/15 text-gold' : 'border-line bg-surface text-muted hover:border-yellow hover:text-ink'
+  }`
+
 function Message({ children, alert = false }: { children: ReactNode; alert?: boolean }) {
   return (
     <p
@@ -92,6 +110,7 @@ export default function App() {
   const [sidebarKey, setSidebarKey] = useState(0)
   const [parlaysOpen, setParlaysOpen] = useState(true)
   const [market, setMarket] = useState<QuickMarket>('1x2')
+  const [compact, setCompact] = useState(storedCompact)
   const followed = useFollowed()
   const pins = usePinned()
   const slip = useBetSlip()
@@ -234,6 +253,15 @@ export default function App() {
   ]
   const areAllCollapsed = folds.length > 0 && folds.every(Boolean)
   const foldLabel = areAllCollapsed ? 'Expandir todas las pestañas' : 'Cerrar todas las pestañas'
+  const densityLabel = compact ? 'Vista Cómoda' : 'Vista Compacta Pro'
+  const toggleDensity = () => {
+    setCompact(!compact)
+    try {
+      localStorage.setItem(DENSITY_KEY, compact ? 'comfortable' : 'compact')
+    } catch {
+      // storage blocked: the view still changes until the page reloads
+    }
+  }
   const handleToggleCollapseAll = () => {
     setCollapsed(areAllCollapsed ? new Set() : new Set(allGroups.map((group) => group.league_id)))
     setParlaysOpen(areAllCollapsed)
@@ -301,8 +329,8 @@ export default function App() {
         </aside>
 
         {/* A container, so the parlays and the radar size their grids by this column, not by the screen. */}
-        <main className="@container min-w-0 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface p-4">
+        <main data-density={compact ? 'compact' : 'comfortable'} className={`@container min-w-0 ${compact ? 'space-y-2' : 'space-y-4'}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface p-4 compact:p-2.5">
             <p>
               <span className="flex items-center gap-1.5 text-lg leading-tight font-bold tracking-tight">
                 <CalendarIcon className="size-5 text-muted" />
@@ -327,12 +355,12 @@ export default function App() {
                   onClick={() => goTo(day)}
                   aria-pressed={day === date}
                   aria-label={`${label}, ${longDate(day)}`}
-                  className={`flex w-14 cursor-pointer flex-col items-center rounded-2xl py-2 transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
+                  className={`flex w-14 cursor-pointer flex-col items-center rounded-2xl py-2 compact:py-1 transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
                     day === date ? 'bg-yellow text-forest' : 'bg-chip text-cream hover:opacity-85'
                   }`}
                 >
-                  <span className="font-num text-2xl leading-none font-bold">{day.slice(8)}</span>
-                  <span className="mt-1 text-[11px] font-bold uppercase">{shortWeekday(day)}</span>
+                  <span className="font-num text-2xl leading-none font-bold compact:text-base">{day.slice(8)}</span>
+                  <span className="mt-1 text-[11px] font-bold uppercase compact:mt-0 compact:text-[10px]">{shortWeekday(day)}</span>
                 </button>
               ))}
               <button
@@ -383,7 +411,7 @@ export default function App() {
               Comparar (VS)
             </button>
             {/* Its minimum width makes it wrap to a line of its own instead of squeezing in after the pills. */}
-            <div className="flex w-full min-w-0 items-center gap-2 sm:ml-auto sm:w-auto sm:min-w-56 sm:max-w-75 sm:flex-1">
+            <div className="flex w-full min-w-0 items-center gap-2 sm:ml-auto sm:w-auto sm:min-w-66 sm:max-w-85 sm:flex-1">
               <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm">
                 <FilterIcon />
                 <input
@@ -400,11 +428,12 @@ export default function App() {
                 disabled={!folds.length}
                 aria-label={foldLabel}
                 title={foldLabel}
-                className={`grid size-8.5 shrink-0 cursor-pointer place-items-center rounded-xl border transition-all duration-200 ease-out hover:scale-[1.04] active:scale-[0.96] disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100 ${
-                  areAllCollapsed ? 'border-yellow bg-yellow/15 text-gold' : 'border-line bg-surface text-muted hover:border-yellow hover:text-ink'
-                }`}
+                className={toolButton(areAllCollapsed)}
               >
                 {areAllCollapsed ? <ExpandAllIcon className="size-5" /> : <CollapseAllIcon className="size-5" />}
+              </button>
+              <button type="button" onClick={toggleDensity} aria-label={densityLabel} title={densityLabel} className={toolButton(compact)}>
+                {compact ? <DensityCompactIcon className="size-5" /> : <DensityComfortableIcon className="size-5" />}
               </button>
             </div>
           </div>
@@ -494,6 +523,7 @@ export default function App() {
               onSelect={setSelectedId}
               open={parlaysOpen}
               onToggle={() => setParlaysOpen(!parlaysOpen)}
+              compact={compact}
             />
           )}
 
