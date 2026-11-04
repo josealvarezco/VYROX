@@ -335,6 +335,35 @@ export function PinIcon({ filled = false, className = 'size-4', label }: IconPro
   )
 }
 
+// Cobertura Segura: a shield with a check, a play protected against its last match.
+export function ShieldCheckLockIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M10 2.5 4 5v4.5c0 3.7 2.5 6.6 6 8 3.5-1.4 6-4.3 6-8V5Z" />
+      <path d="m7.25 10 2 2 3.5-4" />
+    </svg>
+  )
+}
+
+// Vista Compacta Pro: four lines close together.
+export function DensityCompactIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} strokeWidth={2} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M3.5 4.5h13M3.5 8.2h13M3.5 11.8h13M3.5 15.5h13" />
+    </svg>
+  )
+}
+
+// Vista Cómoda: two roomy blocks.
+export function DensityComfortableIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <rect x="3.5" y="3.5" width="13" height="5.5" rx="1.5" />
+      <rect x="3.5" y="11" width="13" height="5.5" rx="1.5" />
+    </svg>
+  )
+}
+
 // Contraer todo: between a top and a bottom bar, two arrows close in on the middle.
 export function CollapseAllIcon({ className = 'size-4', label }: IconProps) {
   return (

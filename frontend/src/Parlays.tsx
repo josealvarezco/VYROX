@@ -24,25 +24,25 @@ type Props = { slip: Slip; onSelect: (matchId: number) => void }
 
 function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
   return (
-    <li className="flex items-center gap-3 border-b border-dashed border-line py-3 last:border-0">
+    <li className="flex items-center gap-3 border-b border-dashed border-line py-3 last:border-0 compact:gap-2 compact:py-1.5">
       <img
         src={leg.league_logo}
         alt={leg.league_name}
         title={leg.league_name}
-        className="size-5 shrink-0 rounded bg-white/90 object-contain p-px"
+        className="size-5 shrink-0 rounded bg-white/90 object-contain p-px compact:size-4"
       />
       <button type="button" onClick={() => onSelect(leg.match_id)} className="group min-w-0 flex-1 cursor-pointer text-left">
-        <span className="block text-sm leading-snug font-bold group-hover:underline">{leg.market_selection}</span>
-        <span className="block text-xs text-muted">
+        <span className="block text-sm leading-snug font-bold group-hover:underline compact:text-xs">{leg.market_selection}</span>
+        <span className="block text-xs text-muted compact:text-[11px]">
           {leg.home_team} - {leg.away_team}
         </span>
-        <span className="block font-num text-xs text-muted">{leg.kickoff_label}</span>
+        <span className="block font-num text-xs text-muted compact:hidden">{leg.kickoff_label}</span>
       </button>
       <div className="flex shrink-0 flex-col items-center gap-1">
-        <OddButton pick={leg} slip={slip} className="min-w-14 px-2 py-1.5 text-sm">
+        <OddButton pick={leg} slip={slip} className="min-w-14 px-2 py-1.5 text-sm compact:min-w-[46px] compact:py-1 compact:text-[11px]">
           {leg.odd.toFixed(2)}
         </OddButton>
-        <span className="flex items-center gap-0.5 text-[11px] whitespace-nowrap text-muted italic">
+        <span className="flex items-center gap-0.5 text-[11px] whitespace-nowrap text-muted italic compact:hidden">
           <FlameIcon className="size-3.5" />
           {leg.popularity_label}
         </span>
@@ -54,28 +54,29 @@ function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
 function ParlayCard({ parlay, slip, onSelect }: Props & { parlay: Parlay }) {
   return (
     // overflow-clip, not hidden: the ribbon overhangs the corner, and a hidden overflow can still be scrolled sideways by focus or find.
-    <article className="relative flex flex-col overflow-clip rounded-2xl border border-line bg-surface p-3.5">
+    <article className="relative flex flex-col overflow-clip rounded-2xl border border-line bg-surface p-3.5 compact:p-2.5">
       <span
         className={`absolute top-[19px] -right-9 w-32 rotate-45 py-0.5 text-center font-num text-[11px] font-bold text-forest shadow-sm ${RIBBON[parlay.key]}`}
       >
         {parlay.badge}
       </span>
-      <h3 className="flex items-center gap-1.5 pr-12 font-bold">
+      <h3 className="flex items-center gap-1.5 pr-12 font-bold compact:text-sm">
         {parlay.title}
         <DoubleChevronUpIcon className="size-4 text-orange" />
       </h3>
-      <ul className="mt-1 flex-1">
+      {/* Compact cards keep one height, however many legs a slip has: the legs scroll inside. */}
+      <ul className="mt-1 flex-1 compact:max-h-36 compact:overflow-y-auto">
         {parlay.legs.map((leg) => (
           <Leg key={leg.match_id} leg={leg} slip={slip} onSelect={onSelect} />
         ))}
       </ul>
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-xs text-muted compact:mt-1">
         Probabilidad de acierto: <span className="font-num font-semibold text-ink">{parlay.probability}%</span>
       </p>
       <button
         type="button"
         onClick={() => slip.add(parlay.legs)}
-        className="mt-2 flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-chip px-3 py-2.5 text-left text-[11px] font-bold whitespace-nowrap text-cream 2xl:text-xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(13_51_30/0.5)] active:translate-y-0"
+        className="mt-2 flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-chip px-3 py-2.5 text-left text-[11px] font-bold whitespace-nowrap text-cream 2xl:text-xs compact:mt-1 compact:py-1.5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(13_51_30/0.5)] active:translate-y-0"
       >
         <span className="flex items-center gap-1">
           AGREGAR AL CUPÓN
@@ -162,7 +163,9 @@ function Choices({ label, children }: { label: string; children: ReactNode }) {
 }
 
 // Constructor Inteligente VYROX IA: the slip nearest a target odd, built from the forecast the parlays already read.
-function SmartBuilder({ date, slip, onSelect }: Props & { date: string }) {
+function SmartBuilder({ date, slip, onSelect, compact }: Props & { date: string; compact: boolean }) {
+  const [unfolded, setUnfolded] = useState<boolean | null>(null) // until the user chooses, closed in the compact view to save the first screen
+  const shown = unfolded ?? !compact
   const [target, setTarget] = useState(5)
   const [free, setFree] = useState('')
   const [legs, setLegs] = useState<number | null>(null)
@@ -193,17 +196,26 @@ function SmartBuilder({ date, slip, onSelect }: Props & { date: string }) {
 
   return (
     <section aria-label="Constructor Inteligente VYROX IA" className="mt-3 overflow-hidden rounded-2xl border border-line bg-surface">
-      <header className="hero flex items-center gap-3 px-4 py-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-yellow text-forest">
-          <WandSparklesIcon className="size-5" />
-        </span>
-        <div>
-          <h3 className="font-bold">Constructor Inteligente VYROX IA</h3>
-          <p className="text-xs text-cream/70">Arma tu parlay por cuota objetivo</p>
-        </div>
-      </header>
+      <h3>
+        <button
+          type="button"
+          onClick={() => setUnfolded(!shown)}
+          aria-expanded={shown}
+          className="hero flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left compact:px-3 compact:py-1.5"
+        >
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-yellow text-forest compact:size-7">
+            <WandSparklesIcon className="size-5 compact:size-4" />
+          </span>
+          <span>
+            <span className="block font-bold compact:text-sm">Constructor Inteligente VYROX IA</span>
+            <span className="block text-xs text-cream/70">Arma tu parlay por cuota objetivo</span>
+          </span>
+          <Chevron direction={shown ? 'up' : 'down'} className="ml-auto" />
+        </button>
+      </h3>
 
-      <div className="space-y-3 p-4 text-sm">
+      <Collapse open={shown}>
+      <div className="space-y-3 p-4 text-sm compact:space-y-2 compact:p-2.5">
         <Choices label="Cuota objetivo">
           {TARGETS.map(([value, name]) => (
             <button
@@ -319,11 +331,12 @@ function SmartBuilder({ date, slip, onSelect }: Props & { date: string }) {
           )}
         </div>
       </div>
+      </Collapse>
     </section>
   )
 }
 
-export function Parlays({ date, slip, onSelect, open, onToggle }: Props & { date: string; open: boolean; onToggle: () => void }) {
+export function Parlays({ date, slip, onSelect, open, onToggle, compact }: Props & { date: string; open: boolean; onToggle: () => void; compact: boolean }) {
   return (
     <section>
       <h2>
@@ -331,7 +344,7 @@ export function Parlays({ date, slip, onSelect, open, onToggle }: Props & { date
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-left text-sm font-extrabold tracking-wide transition-all duration-200 ease-out hover:bg-surface-2/60"
+          className="flex w-full cursor-pointer items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-left text-sm font-extrabold tracking-wide transition-all duration-200 ease-out hover:bg-surface-2/60 compact:px-3 compact:py-1.5"
         >
           <FlameIcon className="size-5" />
           COMBINADAS POPULARES
@@ -341,7 +354,7 @@ export function Parlays({ date, slip, onSelect, open, onToggle }: Props & { date
       </h2>
       <Collapse open={open}>
         <ParlayGrid key={date} date={date} slip={slip} onSelect={onSelect} />
-        <SmartBuilder key={`builder-${date}`} date={date} slip={slip} onSelect={onSelect} />
+        <SmartBuilder key={`builder-${date}`} date={date} slip={slip} onSelect={onSelect} compact={compact} />
       </Collapse>
     </section>
   )

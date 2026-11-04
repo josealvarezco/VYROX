@@ -106,11 +106,12 @@ export type OddsMarket = '1x2' | 'goals_2_5' | 'goals_1_5' | 'btts'
 export type BookmakerOdds = { name: string; markets: Partial<Record<OddsMarket, Record<string, Quote>>> }
 export type MatchOdds = { bookmakers: BookmakerOdds[]; updated: string | null }
 // A bet slip pick: a parlay leg, or an odd picked in the Match Center, with the bookmaker it was taken from, if any,
-// and the model of its match (each side's expected goals) that prices a Crear Apuesta, when VYROX IA forecast it
+// the model of its match (each side's expected goals) that prices a Crear Apuesta, when VYROX IA forecast it, and
+// the stake the slip should start from, for a hedge
 export type SlipLeg = Pick<
   ParlayLeg,
   'match_id' | 'home_team' | 'away_team' | 'kickoff_label' | 'market_selection' | 'market_category' | 'odd'
-> & { bookmaker?: string; model?: [number, number] }
+> & { bookmaker?: string; model?: [number, number]; stake?: number }
 export type TicketStatus = 'pending' | 'won' | 'lost'
 export type TicketLeg = SlipLeg & { status: TicketStatus }
 // A registered play ("Mis Jugadas"), kept in localStorage and settled with the final scores the page loads

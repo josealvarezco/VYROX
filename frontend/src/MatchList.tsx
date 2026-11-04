@@ -100,7 +100,7 @@ function MatchRow({
       <button
         type="button"
         onClick={() => onSelect(match)}
-        className={`grid min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium sm:px-4 ${
+        className={`grid min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium sm:px-4 compact:px-2.5 compact:py-1.5 compact:text-xs ${
           showLeague ? 'grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]'
         } ${forecast ? 'basis-full @xl:basis-0' : 'basis-0'}`}
       >
@@ -109,14 +109,15 @@ function MatchRow({
             src={match.league.league_logo}
             alt={match.league.league_name}
             title={match.league.league_name}
-            className="size-5 rounded bg-white/90 object-contain p-px"
+            className="size-5 rounded bg-white/90 object-contain p-px compact:size-4"
           />
         )}
         <span className="flex min-w-0 items-center justify-end gap-2">
           <span className="truncate">{match.homeTeam.shortName}</span>
-          <img src={match.homeTeam.crest} alt="" className="size-5 shrink-0 object-contain" />
+          <img src={match.homeTeam.crest} alt="" className="size-5 shrink-0 object-contain compact:size-4" />
         </span>
-        <span className="flex flex-col items-center gap-0.5 leading-tight">
+        {/* Compact rows read like a table, score and status on one line; a live badge needs its own. */}
+        <span className={`flex flex-col items-center gap-0.5 leading-tight ${live ? '' : 'compact:flex-row compact:justify-center compact:gap-1.5'}`}>
           {home === null ? (
             <span className="rounded-full bg-chip px-2 py-0.5 font-num text-xs font-semibold whitespace-nowrap text-cream">
               {kickoffTime(match)}
@@ -138,7 +139,7 @@ function MatchRow({
           )}
         </span>
         <span className="flex min-w-0 items-center gap-2">
-          <img src={match.awayTeam.crest} alt="" className="size-5 shrink-0 object-contain" />
+          <img src={match.awayTeam.crest} alt="" className="size-5 shrink-0 object-contain compact:size-4" />
           <span className="truncate">{match.awayTeam.shortName}</span>
         </span>
       </button>
@@ -150,7 +151,7 @@ function MatchRow({
             quick.columns.map(([key]) => {
               const pick = forecast.picks[key]
               // A side with no chance has no odd, and a backend older than the page has no such pick: an empty slot keeps the columns in line.
-              if (!pick?.odd) return <span key={key} className="w-[52px]" />
+              if (!pick?.odd) return <span key={key} className="w-[52px] compact:w-[46px]" />
               const { market_selection, market_category, odd } = pick
               return (
                 <OddButton
@@ -158,7 +159,7 @@ function MatchRow({
                   pick={{ match_id: match.id, home_team: forecast.home_team, away_team: forecast.away_team, kickoff_label: forecast.kickoff_label, market_selection, market_category, odd, model }}
                   slip={quick.slip}
                   trend={pick.trend}
-                  className="min-w-[52px] px-2.5 py-1.5 text-xs"
+                  className="min-w-[52px] px-2.5 py-1.5 text-xs compact:min-w-[46px] compact:px-2 compact:py-1 compact:text-[11px]"
                 >
                   {odd.toFixed(2)}
                 </OddButton>
@@ -219,17 +220,17 @@ export function MatchCard({
   highlight?: boolean
   actions?: ReactNode // controls under the title
 }) {
-  const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight'
+  const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight compact:px-3 compact:py-1.5'
   // The quick odds' column names right over the rows' odds, while the card is open and any of its matches has them:
   // in the header on a wide column, and on a line of their own under it on a narrow one, where the odds drop too.
   const columns = !collapsed && quick && matches.some(quick.odds) ? quick.columns : []
   // The rows' odds end before the compare and pin buttons, so the names leave their room too.
-  const room = pin ? 'mr-8' : ''
+  const room = pin ? 'mr-8 compact:mr-9' : '' // the compact header's padding is 4 px narrower
   const labels = (className: string) =>
     columns.length > 0 && (
       <span aria-hidden="true" className={`gap-1 font-num text-[11px] font-semibold text-muted ${className}`}>
         {columns.map(([key, label]) => (
-          <span key={key} className="w-[52px] text-center">
+          <span key={key} className="w-[52px] text-center compact:w-[46px]">
             {label}
           </span>
         ))}
@@ -264,7 +265,7 @@ export function MatchCard({
           </span>
         )}
       </h2>
-      {actions && <div className="flex flex-wrap items-center gap-2 px-4 pb-3 text-xs">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 px-4 pb-3 text-xs compact:px-3 compact:pb-1.5">{actions}</div>}
       {labels(`-mt-2 flex justify-end pb-1.5 @xl:hidden ${pin ? 'pr-18.5' : 'pr-10.5'}`)}
       <Collapse open={!collapsed}>
         <ul className="divide-y divide-line border-t border-line">

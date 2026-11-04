@@ -30,7 +30,8 @@ const isLeg = (leg: Record<string, unknown>) =>
   leg.odd > 0 &&
   ['home_team', 'away_team', 'kickoff_label', 'market_selection', 'market_category'].every((field) => typeof leg[field] === 'string') &&
   (leg.bookmaker === undefined || typeof leg.bookmaker === 'string') &&
-  (leg.model === undefined || (Array.isArray(leg.model) && leg.model.length === 2 && leg.model.every((goals) => typeof goals === 'number' && goals > 0)))
+  (leg.model === undefined || (Array.isArray(leg.model) && leg.model.length === 2 && leg.model.every((goals) => typeof goals === 'number' && goals > 0))) &&
+  (leg.stake === undefined || (typeof leg.stake === 'number' && leg.stake > 0))
 
 const isTicket = (ticket: Record<string, unknown>) =>
   typeof ticket.id === 'string' &&

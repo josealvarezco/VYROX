@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { BankrollAnalytics } from './Bankroll'
-import { CheckIcon, Chevron, CrossIcon, LayersCombineIcon, ShareIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
+import { CheckIcon, Chevron, CrossIcon, LayersCombineIcon, ShareIcon, ShieldCheckLockIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
 import { STAKES, pesos, signed } from './money'
 import { bestHouse } from './bookmakers'
+import { calculateHedge, getOppositeMarket, pickToCover, suggestedHedgeOdd } from './hedgeCalculator'
 import { ShareButton } from './ShareButton'
 import { byMatch, matchOdd, totalOdd } from './sameGameParlay'
 import { playCard } from './shareCard'
@@ -100,14 +101,16 @@ export function StakeSimulator({
   slip,
   onRegister,
   houses,
+  initialStake = STAKES[0],
 }: {
   odd: number
   slip: Slip
   onRegister?: (stake: number) => void
+  initialStake?: number
   houses?: ReturnType<typeof bestHouse> // the bet slip's comparison of the bookmakers that quote every pick
 }) {
   const [byBank, setByBank] = useState(false)
-  const [stake, setStake] = useState(STAKES[0])
+  const [stake, setStake] = useState(initialStake)
   const [profile, setProfile] = useState(1) // Moderado, VYROX IA's suggestion
   const chance = 100 / odd // the probability the odd implies: VYROX IA's, a few points off for the bookmaker's margin
   const { low, high } = PROFILES[profile]
@@ -232,6 +235,143 @@ export function StakeSimulator({
   )
 }
 
+// The sums for covering one pick of a play with its opposite market, at a price the user can correct for their bookmaker.
+function HedgeSums({ ticket, slip, cover }: { ticket: SavedTicket; slip: Slip; cover: NonNullable<ReturnType<typeof pickToCover>> }) {
+  const { leg, others } = cover
+  const [odd, setOdd] = useState(String(suggestedHedgeOdd(leg.odd)))
+  const [strategy, setStrategy] = useState<'equal' | 'zero'>('equal')
+  const opposite = getOppositeMarket(leg)
+  const hedgeOdd = Number(odd)
+  const sums = opposite && hedgeOdd > 1.01 ? calculateHedge(ticket.stake, ticket.potential_return, hedgeOdd)[strategy] : null
+  const net = (value: number) => `${signed(value)} COP netos`
+  if (!opposite) return null
+
+  return (
+    <div className="mt-2 space-y-2 rounded-xl border border-yellow/50 bg-yellow/5 p-2.5 text-xs">
+      <p>
+        <span className="text-muted">Partido a cubrir: </span>
+        <span className="font-semibold">
+          {leg.home_team} - {leg.away_team}
+        </span>
+      </p>
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1">
+          <span className="block text-muted">Mercado opuesto</span>
+          <span className="font-bold">{opposite.market_selection}</span>
+        </p>
+        <label className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1">
+          <span className="text-muted">Cuota</span>
+          <input
+            type="number"
+            min={1.02}
+            step={0.01}
+            inputMode="decimal"
+            value={odd}
+            onChange={(event) => setOdd(event.target.value)}
+            aria-label="Cuota del mercado opuesto"
+            className="w-12 bg-transparent text-right font-num text-sm font-bold text-ink outline-none"
+          />
+        </label>
+      </div>
+      <p className="text-[11px] text-muted">Cuota estimada por VYROX antes del inicio: cámbiala por la que te ofrezca tu casa.</p>
+      <div role="group" aria-label="Estrategia de cobertura" className="flex flex-wrap gap-1.5">
+        {(
+          [
+            ['equal', 'Asegurar Ganancia Fija'],
+            ['zero', 'Salvar mi Inversión ($0 riesgo)'],
+          ] as const
+        ).map(([value, label]) => (
+          <button key={value} type="button" onClick={() => setStrategy(value)} aria-pressed={strategy === value} className={pill(strategy === value)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {sums?.hedgeStake ? (
+        <>
+          <dl aria-live="polite" className="space-y-1.5 rounded-xl bg-forest px-3 py-2.5 text-cream">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="font-semibold">Apostar a la contra</dt>
+              <dd className="text-right font-num text-base font-bold text-yellow">{pesos(sums.hedgeStake)} COP</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-cream/70">Escenario A (Se da tu Parlay)</dt>
+              <dd className={`text-right font-num font-bold ${sums.netProfitIfParlayWins < 0 ? 'text-orange' : 'text-yellow'}`}>{net(sums.netProfitIfParlayWins)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-cream/70">Escenario B (Se da la Contra)</dt>
+              <dd className={`text-right font-num font-bold ${sums.netProfitIfHedgeWins < 0 ? 'text-orange' : 'text-yellow'}`}>
+                {strategy === 'zero' ? '$0 COP · Inversión recuperada' : net(sums.netProfitIfHedgeWins)}
+              </dd>
+            </div>
+          </dl>
+          {Math.min(sums.netProfitIfParlayWins, sums.netProfitIfHedgeWins) < 0 && (
+            <p className="text-warn">A esta cuota uno de los escenarios deja pérdida: mira si te conviene cubrir.</p>
+          )}
+          {others > 0 && (
+            <p className="text-warn">
+              Supone que {others === 1 ? 'la otra selección pendiente se cumple' : `las otras ${others} selecciones pendientes se cumplen`}: si falla, tu parlay pierde aunque también
+              pierda la contra.
+            </p>
+          )}
+          <button
+            type="button"
+            // The hedge is a bet of its own: inside a parlay its sums would no longer hold, so it takes the whole slip.
+            onClick={() =>
+              slip.replace([
+                {
+                  match_id: leg.match_id,
+                  home_team: leg.home_team,
+                  away_team: leg.away_team,
+                  kickoff_label: leg.kickoff_label,
+                  ...opposite,
+                  odd: hedgeOdd,
+                  stake: sums.hedgeStake,
+                },
+              ])
+            }
+            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-yellow py-2 font-bold text-forest transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <TicketSlipIcon className="size-4" />
+            Cargar cobertura en mi Cupón
+          </button>
+          {slip.legs.length > 0 && (
+            <p className="text-[11px] text-muted">Reemplaza {slip.legs.length === 1 ? 'la selección' : `las ${slip.legs.length} selecciones`} que tienes en el cupón.</p>
+          )}
+        </>
+      ) : (
+        <p className="text-warn">Escribe una cuota mayor a 1.01 para calcular la cobertura.</p>
+      )}
+      <p className="text-[11px] text-muted">Simulación: VYROX no recibe apuestas. +18 · Juega con responsabilidad.</p>
+    </div>
+  )
+}
+
+function HedgePanel({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
+  const [open, setOpen] = useState(false)
+  const cover = pickToCover(ticket.legs)
+  if (!cover) return null
+  const last = cover.others === 0
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className={`flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-200 ease-out active:scale-[0.98] ${
+          last ? 'bg-yellow text-forest hover:-translate-y-0.5' : 'border border-line hover:bg-surface-2'
+        }`}
+      >
+        <ShieldCheckLockIcon />
+        {last ? '¡A 1 partido! · Calcular Cobertura Segura' : 'Simular Cobertura'}
+        <Chevron direction={open ? 'up' : 'down'} />
+      </button>
+      {/* Keyed by the pick: when another one settles and the target changes, the sums start over from its price. */}
+      {open && <HedgeSums key={slipKey(cover.leg)} ticket={ticket} slip={slip} cover={cover} />}
+    </div>
+  )
+}
+
 function TicketCard({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
   const { label, style, Icon } = BADGES[ticket.status]
   const pending = ticket.status === 'pending'
@@ -316,6 +456,7 @@ function TicketCard({ ticket, slip }: { ticket: SavedTicket; slip: Slip }) {
           </dd>
         </div>
       </dl>
+      {pending && <HedgePanel ticket={ticket} slip={slip} />}
     </article>
   )
 }
@@ -526,7 +667,15 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
                     {total.toFixed(2)}
                   </span>
                 </p>
-                <StakeSimulator odd={total} slip={slip} onRegister={slip.register} houses={bestHouse(slip.legs, slip.quotes)} />
+                {/* Remounted by a hedge's stake, so the slip starts from the amount the hedge calls for. */}
+                <StakeSimulator
+                  key={slip.legs[0]?.stake}
+                  initialStake={slip.legs[0]?.stake}
+                  odd={total}
+                  slip={slip}
+                  onRegister={slip.register}
+                  houses={bestHouse(slip.legs, slip.quotes)}
+                />
                 <button
                   type="button"
                   onClick={slip.clear}
