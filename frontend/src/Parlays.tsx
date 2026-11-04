@@ -43,7 +43,7 @@ function NextDay({ day, onDate }: { day: string; onDate: (day: string) => void }
 
 function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
   return (
-    <li className="flex items-center gap-3 border-b border-dashed border-line py-3 last:border-0 compact:gap-2 compact:py-1.5">
+    <li className="flex items-center gap-2 border-b border-dashed border-line py-2 last:border-0 compact:py-1.5">
       <img
         src={leg.league_logo}
         alt={leg.league_name}
@@ -51,8 +51,10 @@ function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
         className="size-5 shrink-0 rounded bg-white/90 object-contain p-px compact:size-4"
       />
       <button type="button" onClick={() => onSelect(leg.match_id)} className="group min-w-0 flex-1 cursor-pointer text-left">
-        <span className="block text-sm leading-snug font-bold group-hover:underline compact:text-xs">{leg.market_selection}</span>
-        <span className="block text-xs text-muted compact:text-[11px]">
+        <span title={leg.market_selection} className="line-clamp-2 text-[13px] leading-snug font-bold group-hover:underline compact:text-xs">
+          {leg.market_selection}
+        </span>
+        <span className="block truncate text-xs text-muted compact:text-[11px]">
           {leg.home_team} - {leg.away_team}
         </span>
         {leg.live_label ? (
@@ -62,7 +64,7 @@ function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
         )}
       </button>
       <div className="flex shrink-0 flex-col items-center gap-1">
-        <OddButton pick={leg} slip={slip} className="min-w-14 px-2 py-1.5 text-sm compact:min-w-[46px] compact:py-1 compact:text-[11px]">
+        <OddButton pick={leg} slip={slip} className="min-w-12 px-2 py-1.5 text-sm compact:min-w-[46px] compact:py-1 compact:text-[11px]">
           {leg.odd.toFixed(2)}
         </OddButton>
         <span className="flex items-center gap-0.5 text-[11px] whitespace-nowrap text-muted italic compact:hidden">
@@ -77,36 +79,38 @@ function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
 function ParlayCard({ parlay, slip, onSelect }: Props & { parlay: Parlay }) {
   return (
     // overflow-clip, not hidden: the ribbon overhangs the corner, and a hidden overflow can still be scrolled sideways by focus or find.
-    <article className="relative flex flex-col overflow-clip rounded-2xl border border-line bg-surface p-3.5 compact:p-2.5">
+    // On desktop the cards share their rows (subgrid), so titles, picks and totals line up across the three.
+    <article className="relative flex flex-col overflow-clip rounded-2xl border border-line bg-surface p-3 compact:p-2.5 lg:row-span-5 lg:grid lg:grid-rows-subgrid lg:gap-y-0">
       <span
-        className={`absolute top-[19px] -right-9 w-32 rotate-45 py-0.5 text-center font-num text-[11px] font-bold text-forest shadow-sm ${RIBBON[parlay.key]}`}
+        className={`absolute top-[17px] -right-9 w-32 rotate-45 py-0.5 text-center text-[10px] font-extrabold tracking-wide text-forest shadow-sm ${RIBBON[parlay.key]}`}
       >
         {parlay.badge}
       </span>
-      <h3 className="flex items-center gap-1.5 pr-12 font-bold compact:text-sm">
+      <h3 className="flex items-center gap-1.5 pr-12 text-sm font-bold">
         {parlay.title}
         <DoubleChevronUpIcon className="size-4 text-orange" />
       </h3>
-      {/* Compact cards keep one height, however many legs a slip has: the legs scroll inside. */}
-      <ul className="mt-1 flex-1 compact:max-h-36 compact:overflow-y-auto">
+      <ul className="mt-1 flex-1 lg:row-span-3 lg:grid lg:grid-rows-subgrid lg:gap-y-0">
         {parlay.legs.map((leg) => (
           <Leg key={leg.match_id} leg={leg} slip={slip} onSelect={onSelect} />
         ))}
       </ul>
-      <p className="mt-2 text-xs text-muted compact:mt-1">
-        Probabilidad de acierto: <span className="font-num font-semibold text-ink">{parlay.probability}%</span>
-      </p>
-      <button
-        type="button"
-        onClick={() => slip.add(parlay.legs)}
-        className="mt-2 flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-chip px-3 py-2.5 text-left text-[11px] font-bold whitespace-nowrap text-cream 2xl:text-xs compact:mt-1 compact:py-1.5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(13_51_30/0.5)] active:translate-y-0"
-      >
-        <span className="flex items-center gap-1">
-          AGREGAR AL CUPÓN
-          <DoubleChevronRightIcon className="size-3.5 text-yellow" />
-        </span>
-        <span className="font-num text-base text-yellow">{parlay.total_odd.toFixed(2)}</span>
-      </button>
+      <div>
+        <p className="mt-1 text-xs text-muted">
+          Probabilidad de acierto: <span className="font-num font-semibold text-ink">{parlay.probability}%</span>
+        </p>
+        <button
+          type="button"
+          onClick={() => slip.add(parlay.legs)}
+          className="mt-1.5 flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-chip px-3 py-2 text-left text-[11px] font-bold whitespace-nowrap text-cream 2xl:text-xs compact:mt-1 compact:py-1.5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(13_51_30/0.5)] active:translate-y-0"
+        >
+          <span className="flex items-center gap-1">
+            AGREGAR AL CUPÓN
+            <DoubleChevronRightIcon className="size-3.5 text-yellow" />
+          </span>
+          <span className="font-num text-base text-yellow">{parlay.total_odd.toFixed(2)}</span>
+        </button>
+      </div>
     </article>
   )
 }
@@ -155,7 +159,7 @@ function ParlayGrid({ date, slip, onSelect, onDate }: Props & { date: string; on
     <div className="space-y-3 pt-3">
       {data.simulated && <Simulated />}
       {/* On desktop the three slips always share one row; where the center column is too narrow for three cards of 208px, the row scrolls sideways. */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[repeat(3,minmax(13rem,1fr))] lg:overflow-x-auto">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[repeat(3,minmax(13rem,1fr))] lg:gap-y-0 lg:overflow-x-auto">
         {data.parlays.map((parlay) => (
           <ParlayCard key={parlay.key} parlay={parlay} slip={slip} onSelect={onSelect} />
         ))}

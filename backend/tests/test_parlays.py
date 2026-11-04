@@ -108,9 +108,11 @@ def check_slips(body):
     """Three slips of upcoming matches whose odds are estimated market odds and whose total is their product."""
     assert body["message"] is None
     assert [p["title"] for p in body["parlays"]] == ["Combinada Segura IA", "Multi Valor VYROX", "Selecciones en Tendencia"]
+    picks = [(leg["match_id"], leg["market_selection"]) for parlay in body["parlays"] for leg in parlay["legs"]]
+    assert len(picks) == len(set(picks))  # no slip repeats a pick another one took
     for parlay in body["parlays"]:
         ids = [leg["match_id"] for leg in parlay["legs"]]
-        assert len(ids) == len(set(ids)) and not {7, 9, 99} & set(ids)  # one leg per match, only upcoming ones
+        assert len(ids) == len(set(ids)) <= 3 and not {7, 9, 99} & set(ids)  # one leg per match, only upcoming ones
         assert parlay["total_odd"] == round(math.prod(leg["odd"] for leg in parlay["legs"]), 2)
         assert parlay["probability"] == round(math.prod(leg["probability"] / 100 for leg in parlay["legs"]) * 100)
         for leg in parlay["legs"]:
@@ -129,17 +131,14 @@ def test_three_parlays_from_one_forecast(api):
     assert body["simulated"] is False
     segura, valor, tendencia = body["parlays"]
     assert [(leg["match_id"], leg["market_selection"]) for leg in segura["legs"]] == [
-        (4, "Más de 1.5 - Goles totales"),
-        (3, "Más de 1.5 - Goles totales"),
+        (3, "Arsenal - Resultado del partido"),
         (6, "Más de 1.5 - Goles totales"),
-        (5, "Más de 1.5 - Goles totales"),
+        (4, "Más de 1.5 - Goles totales"),
     ]
-    assert (segura["probability"], segura["badge"], segura["total_odd"]) == (47, "47% IA", 2.5)
-    assert [leg["odd"] for leg in segura["legs"]] == [1.22, 1.22, 1.28, 1.31]  # 88 % and 85 % stop at the 1.22 floor
-    assert (valor["badge"], valor["total_odd"], len(valor["legs"])) == ("MIXTA IA", 9.7, 5)
-    assert {leg["market_category"] for leg in segura["legs"]} == {"over_1_5"}
-    assert {leg["market_category"] for leg in valor["legs"]} == {"result", "btts", "goals"}
-    assert tendencia["badge"] == f"{tendencia['total_odd']:.2f}" and len(tendencia["legs"]) == 5
+    # The three likeliest (88, 85 and 80 %) would total 1.91, under the 2.00 a safe slip starts from.
+    assert (segura["probability"], segura["badge"], segura["total_odd"]) == (56, "BAJO RIESGO", 2.26)
+    assert [(leg["match_id"], leg["market_category"]) for leg in valor["legs"]] == [(2, "result"), (5, "btts"), (1, "goals")]
+    assert (valor["badge"], tendencia["badge"]) == ("VALOR IA", "TENDENCIA") and len(tendencia["legs"]) == 3
 
     millonarios = next(leg for leg in valor["legs"] if leg["match_id"] == 2)
     assert (millonarios["home_team"], millonarios["away_team"], millonarios["kickoff_label"]) == ("Millonarios", "Nacional", "28/10 20:05")
@@ -148,6 +147,14 @@ def test_three_parlays_from_one_forecast(api):
     prompt = api["prompts"][0]
     assert prompt.startswith("Eres VYROX IA") and prompt.index("- 3: Arsenal") < prompt.index("- 1: Menor A")  # top leagues first
     assert "Wolves U18" not in prompt
+
+
+def test_the_safe_slip_falls_back_to_the_likeliest_picks_when_none_fit_its_band(api):
+    api["matches"] = api["matches"][:3]  # 1, 2 and 3: too few picks at 1.22-1.52 for a total from 2.00
+
+    segura = get().json()["parlays"][0]
+
+    assert len(segura["legs"]) == 3 and segura["badge"] == "BAJO RIESGO"
 
 
 def test_forecast_is_cached_per_date_for_6_hours(api):

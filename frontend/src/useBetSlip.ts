@@ -73,6 +73,7 @@ export function useBetSlip() {
   const [legs, setLegs] = useState<SlipLeg[]>(() => stored(KEY, isLeg))
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<'slip' | 'tickets'>('slip')
+  const [flash, setFlash] = useState(0) // each one lights the panel up once
   const [matches, setMatches] = useState<Match[]>([])
   const [quotes, setQuotes] = useState<Record<number, MatchOdds>>({}) // bookmaker odds opened in the Match Center, this visit only
   // One state, so settling a play and paying its return into the bank happen in the same pure update.
@@ -108,6 +109,12 @@ export function useBetSlip() {
     setLegs(merge([], picks))
     setView('slip')
     setOpen(true)
+  }
+  // The header's Bank: the user's plays, with a flash that shows where they are.
+  const showTickets = () => {
+    setView('tickets')
+    setOpen(true)
+    setFlash((count) => count + 1)
   }
   const addQuotes = useCallback((matchId: number, odds: MatchOdds) => setQuotes((current) => ({ ...current, [matchId]: odds })), [])
   // Every pick at one bookmaker's odds, in the slip's order: a parlay is placed at a single house.
@@ -184,6 +191,8 @@ export function useBetSlip() {
     removeTicket,
     view,
     setView,
+    flash,
+    showTickets,
     // In the Match Center the slip docks beside the match while it has picks or shows the user's plays.
     docks: legs.length > 0 || (view === 'tickets' && tickets.length > 0),
     matches,

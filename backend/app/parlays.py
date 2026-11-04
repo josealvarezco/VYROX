@@ -1,5 +1,6 @@
 """Popular parlays: one VYROX IA forecast per date for the upcoming matches, combined into three slips."""
 import asyncio
+import itertools
 import math
 import os
 import random
@@ -18,7 +19,12 @@ from app.odds import PICK, live_odd, odds_1x2, pick_odd, prob_to_market_odd
 FORECAST_TTL = 21600  # 6 hours: one VYROX IA call per date and period
 RETRY_TTL = 300  # never ask VYROX IA again within 5 minutes, even after a failure
 MAX_CANDIDATES = 12  # top leagues first; keeps the single daily prompt short
-LEGS = 5  # the most selections a slip takes
+ENOUGH_MATCHES = 5  # with fewer still to be played, the live ones join and VYROX IA is asked about any left uncovered
+SLIP_LEGS = 3  # the selections a slip takes
+SAFE_CHANCE = 62  # what a pick of the Combinada Segura needs, in percent
+SAFE_ODD = (1.22, 1.52)
+SAFE_TOTAL = (2.0, 2.9)
+MIX = ("result", "btts", "goals")  # the markets the Multi Valor goes through
 LIVE_UNTIL = 75  # from this minute a live match no longer goes into a slip
 MIN_MATCHES = 3  # with fewer matches open today, the page points to tomorrow's
 NO_MATCHES = "No hay suficientes partidos por jugar en esta fecha para armar combinadas."
@@ -133,40 +139,66 @@ def _leg(match: dict, selection: tuple[str, int, str, float]) -> dict:
     }
 
 
-def _parlay(key: str, title: str, rows: list[tuple[dict, tuple[str, int, str, float]]]) -> dict:
+def _parlay(key: str, title: str, badge: str, rows: list[tuple[dict, tuple[str, int, str, float]]]) -> dict:
     legs = [_leg(match, selection) for match, selection in rows]
     return {
         "key": key,
         "title": title,
+        "badge": badge,
         "legs": legs,
         "total_odd": round(math.prod(leg["odd"] for leg in legs), 2),
         "probability": round(math.prod(leg["probability"] / 100 for leg in legs) * 100),  # different matches: independent
     }
 
 
+def _safest(rows: list[tuple[dict, dict]]) -> list[tuple[dict, tuple]]:
+    """The Combinada Segura: the likeliest three picks of different matches, each from 62 % at 1.22-1.52, whose total
+    falls within 2.00-2.90. With no such three, the likeliest pick of the likeliest matches."""
+    picks = [
+        (match, option)
+        for match, options in rows
+        for option in options.values()
+        if option[1] >= SAFE_CHANCE and option[3] and SAFE_ODD[0] <= option[3] <= SAFE_ODD[1]
+    ]
+    trios = [
+        trio
+        for trio in itertools.combinations(picks, SLIP_LEGS)
+        if len({match["id"] for match, _ in trio}) == SLIP_LEGS and SAFE_TOTAL[0] <= math.prod(option[3] for _, option in trio) <= SAFE_TOTAL[1]
+    ]
+    if trios:
+        return list(max(trios, key=lambda trio: math.prod(option[1] for _, option in trio)))
+    likeliest = ((match, max(options.values(), key=lambda option: option[1])) for match, options in rows)
+    return sorted(likeliest, key=lambda row: -row[1][1])[:SLIP_LEGS]
+
+
+def _fresh(rows: list[tuple[dict, dict]], used: set[tuple[int, str]], choose) -> list[tuple[dict, tuple]]:
+    """Up to three picks of different matches that no earlier slip took, each what `choose` prefers among those of its
+    match. Matches no slip touched come first, so the slips differ in their matches when the day has enough."""
+    touched = {match_id for match_id, _ in used}
+    slip = []
+    for match, options in sorted(rows, key=lambda row: row[0]["id"] in touched):
+        fresh = [option for option in options.values() if option[3] and (match["id"], option[0]) not in used]
+        if fresh and len(slip) < SLIP_LEGS:
+            slip.append((match, choose(fresh, len(slip))))
+    used.update((match["id"], option[0]) for match, option in slip)
+    return slip
+
+
 def _build(forecasts: list[tuple[dict, MatchForecast]]) -> list[dict]:
     rows = [(match, options) for match, forecast in forecasts if (options := _options(match, forecast))]
     if len(rows) < 2:
         return []
-    by_safety = sorted(
-        ((match, max(options["result"], options["over_1_5"], key=lambda option: option[1])) for match, options in rows),
-        key=lambda row: -row[1][1],
-    )
-    safe = by_safety[:4] if len(by_safety) >= 4 and by_safety[3][1][1] >= 70 else by_safety[:3]
-    mixed = [(match, options[("result", "btts", "goals")[i % 3]]) for i, (match, options) in enumerate(rows[:LEGS])]
+    safe = _safest(rows)
+    used = {(match["id"], option[0]) for match, option in safe}  # no slip repeats a pick another one took
+    mixed = _fresh(rows, used, lambda fresh, leg: next((option for option in fresh if option[2] == MIX[leg % 3]), fresh[0]))
     # "Attractive" picks: the market closest to 55 %, an odd near 1.75, from the most popular leagues.
-    trending = [
-        (match, min((options["result"], options["goals"], options["btts"]), key=lambda option: abs(option[1] - 55)))
-        for match, options in rows[:LEGS]
+    trending = _fresh(rows, used, lambda fresh, _: min(fresh, key=lambda option: abs(option[1] - 55)))
+    slips = [
+        _parlay("segura", "Combinada Segura IA", "BAJO RIESGO", safe),
+        _parlay("valor", "Multi Valor VYROX", "VALOR IA", mixed),
+        _parlay("tendencia", "Selecciones en Tendencia", "TENDENCIA", trending),
     ]
-    segura = _parlay("segura", "Combinada Segura IA", safe)
-    valor = _parlay("valor", "Multi Valor VYROX", mixed)
-    tendencia = _parlay("tendencia", "Selecciones en Tendencia", trending)
-    # The badge shows the whole slip's chance: a per-leg "85%" would read as the slip's chance.
-    segura["badge"] = f"{segura['probability']}% IA"
-    valor["badge"] = "MIXTA IA"  # odds with a bookmaker's margin carry no edge, so no "value" claim
-    tendencia["badge"] = f"{tendencia['total_odd']:.2f}"
-    return [segura, valor, tendencia]
+    return [slip for slip in slips if len(slip["legs"]) >= 2]
 
 
 def simulated_forecast(match_id: int) -> MatchForecast:
@@ -193,7 +225,7 @@ async def day_forecasts(day: date, candidates: list[dict]) -> dict[int, MatchFor
             return forecasts
         covered = sum(m["id"] in forecasts for m in candidates) if forecasts else 0
         # Asked again when it expires, or when kickoffs left it without enough of the upcoming matches.
-        if age < FORECAST_TTL and (age < RETRY_TTL or covered >= min(len(candidates), LEGS)):
+        if age < FORECAST_TTL and (age < RETRY_TTL or covered >= min(len(candidates), ENOUGH_MATCHES)):
             return forecasts
         lines = "\n".join(
             f"- {m['id']}: {m['homeTeam']['shortName']} vs {m['awayTeam']['shortName']}, {m['league']['league_name']}, {kickoff(m)}"
@@ -226,7 +258,7 @@ async def open_rows(day: date) -> tuple[list[tuple[dict, MatchForecast]], bool]:
     a slip's worth does not remain, the live ones before minute 75 at their score. None with fewer than 3 in all."""
     matches, _ = await fetch_matches(day)
     candidates = upcoming(matches)
-    live = [m for group in group_by_league(matches) for m in group["matches"] if still_open(m, LIVE_UNTIL)] if len(candidates) < LEGS else []
+    live = [m for group in group_by_league(matches) for m in group["matches"] if still_open(m, LIVE_UNTIL)] if len(candidates) < ENOUGH_MATCHES else []
     if len(candidates) + len(live) < MIN_MATCHES:
         return [], False
     forecasts = (await day_forecasts(day, candidates) if os.environ.get("GEMINI_API_KEY") else None) or {}
