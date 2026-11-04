@@ -19,6 +19,7 @@
   --animate-grow: grow 500ms ease-out;
   --animate-pop: pop 300ms ease-out;
   --animate-bump: bump 250ms ease-out;
+  --animate-flash: flash 900ms ease-out both;
   --animate-goal: goal-glow 1s ease-in-out infinite;
 }
 
@@ -183,6 +184,15 @@
   }
 }
 /* The bet slip confirming a change: a quick bounce with a brand-yellow glow. */
+@keyframes flash {
+  from {
+    box-shadow: inset 0 0 0 3px #f4d56d, inset 0 0 32px rgb(244 213 109 / 0.55);
+  }
+  to {
+    box-shadow: inset 0 0 0 3px transparent, inset 0 0 32px transparent;
+  }
+}
+
 @keyframes bump {
   40% {
     scale: 1.1;

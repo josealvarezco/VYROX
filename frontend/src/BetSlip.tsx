@@ -580,12 +580,13 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
 
       <aside
         aria-label="Cupón de Apuestas VYROX"
-        className={`fixed inset-x-4 bottom-4 ${layer} ${slip.open && !empty ? 'flex' : 'hidden'} ${panelAt} max-h-[calc(100dvh-2rem)] animate-tab-in flex-col overflow-hidden rounded-3xl border border-line bg-modal text-sm text-ink shadow-2xl sm:left-auto sm:w-96 ${
+        className={`fixed inset-x-4 bottom-4 ${layer} ${slip.open && (!empty || slip.view === 'tickets') ? 'flex' : 'hidden'} ${panelAt} max-h-[calc(100dvh-2rem)] animate-tab-in flex-col overflow-hidden rounded-3xl border border-line bg-modal text-sm text-ink shadow-2xl sm:left-auto sm:w-96 ${
           docked
             ? 'lg:static lg:ml-4 lg:max-h-[92vh]'
             : 'lg:sticky lg:inset-auto lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:w-auto lg:rounded-2xl lg:bg-surface lg:shadow-none'
         }`}
       >
+        {slip.flash > 0 && <span key={slip.flash} aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 animate-flash rounded-[inherit]" />}
         <header className="hero flex shrink-0 items-center gap-2 px-3 py-2.5">
           <TicketSlipIcon className="size-5 text-yellow" />
           <div role="tablist" aria-label="Cupón de Apuestas VYROX" className="flex min-w-0 gap-1">

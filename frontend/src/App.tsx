@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
 import { Comparator } from './Comparator'
 import { GoalToasts } from './GoalToasts'
@@ -27,6 +27,7 @@ import { MatchCard, type Quick } from './MatchList'
 import { LiveMultiView } from './LiveMultiView'
 import { MatchCenter } from './MatchCenter'
 import { SLOTS, toggleSlot } from './multiView'
+import { pesos } from './money'
 import { Parlays, Simulated } from './Parlays'
 import { Radar } from './Radar'
 import { Sidebar } from './Sidebar'
@@ -108,6 +109,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Todos')
   const [query, setQuery] = useState('')
+  const searchBox = useRef<HTMLInputElement>(null)
   const [league, setLeague] = useState<number | null>(null)
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const [showSidebar, setShowSidebar] = useState(false)
@@ -121,7 +123,8 @@ export default function App() {
   const slip = useBetSlip()
   const { track } = slip
   // The user's picks, in the slip or in a play still open: the "Solo mis parlays" alerts and the anchored matches.
-  const myLegs = [...slip.legs, ...slip.tickets.filter((ticket) => ticket.status === 'pending').flatMap((ticket) => ticket.legs)]
+  const openTickets = slip.tickets.filter((ticket) => ticket.status === 'pending')
+  const myLegs = [...slip.legs, ...openTickets.flatMap((ticket) => ticket.legs)]
   const mine = new Set(myLegs.map((leg) => leg.match_id))
   const goalAlerts = useGoalAlerts(mine)
   const { check } = goalAlerts
@@ -171,6 +174,18 @@ export default function App() {
       clearInterval(id)
     }
   }, [date, track, check])
+
+  // "/" jumps to the list's filter, unless the user is already typing somewhere.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const typing = event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(event.target.tagName))
+      if (event.key !== '/' || typing || event.ctrlKey || event.metaKey || event.altKey) return
+      event.preventDefault()
+      searchBox.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const goTo = (day: string) => {
     if (!(day in DAYS) || day === date) return
@@ -302,7 +317,7 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 xl:px-6">
-      <header className="hero mb-5 flex items-center justify-between gap-3 rounded-3xl px-5 py-5 sm:px-7">
+      <header className="hero mb-5 flex flex-wrap items-center justify-between gap-2 rounded-3xl px-5 py-5 sm:px-7">
         <a
           href="/"
           onClick={resetAll}
@@ -314,14 +329,25 @@ export default function App() {
           </h1>
           <p className="mt-1.5 hidden text-sm text-cream/70 sm:block">Analítica de fútbol en tiempo real</p>
         </a>
-        <div className="flex items-center gap-2">
+        {/* On a phone the controls join the logo's line and the Bank takes a line of its own under them. */}
+        <div className="contents sm:flex sm:items-center sm:gap-2">
+          <button
+            type="button"
+            onClick={slip.showTickets}
+            aria-label={`Bank: ${pesos(slip.bank)} COP${openTickets.length ? `, ${openTickets.length} jugadas activas` : ''}. Abrir Mis Jugadas`}
+            title="Abrir Mis Jugadas"
+            className="order-last flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-cream/20 bg-cream/10 px-3 text-sm font-semibold whitespace-nowrap text-cream transition-all duration-200 ease-out hover:bg-cream/15 focus-visible:ring-2 focus-visible:ring-yellow focus-visible:outline-none active:scale-[0.98] sm:order-first sm:w-auto"
+          >
+            Bank: <span className="font-num font-bold text-yellow">{pesos(slip.bank)} COP</span>
+            {openTickets.length > 0 && <span className="rounded-full bg-orange px-1.5 font-num text-[11px] leading-4 font-bold text-forest">{openTickets.length}</span>}
+          </button>
           <button
             type="button"
             onClick={() => setShowSidebar(!showSidebar)}
             aria-expanded={showSidebar}
             className="cursor-pointer rounded-full border border-cream/25 px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-cream/10 active:scale-[0.98] md:hidden"
           >
-            Ligas y equipos
+            Ligas<span className="hidden sm:inline"> y equipos</span>
           </button>
           <VyroxDropdown
             label="Alertas de gol en vivo"
@@ -356,7 +382,7 @@ export default function App() {
             league={league}
             onLeague={pickLeague}
             followed={followed.teams}
-            onUnfollow={followed.toggle}
+            onFollow={followed.toggle}
             onTeam={pickTeam}
           />
         </aside>
@@ -453,12 +479,24 @@ export default function App() {
               <label className="flex min-w-40 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm">
                 <FilterIcon />
                 <input
+                  ref={searchBox}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => event.key === 'Escape' && setQuery('')}
                   placeholder="Filtrar equipo o liga..."
                   aria-label="Buscar equipo o liga"
+                  aria-keyshortcuts="/"
                   className="w-full min-w-0 bg-transparent outline-none placeholder:text-xs placeholder:text-muted"
                 />
+                {query ? (
+                  <button type="button" onClick={() => setQuery('')} aria-label="Limpiar filtro" title="Limpiar filtro" className="grid size-4 shrink-0 cursor-pointer place-items-center text-muted hover:text-ink">
+                    <CrossIcon className="size-3.5" />
+                  </button>
+                ) : (
+                  <kbd aria-hidden="true" title="Pulsa / para buscar" className="hidden shrink-0 rounded border border-line px-1 font-num text-[10px] leading-4 text-muted lg:block">
+                    /
+                  </kbd>
+                )}
               </label>
               <button
                 type="button"

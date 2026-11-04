@@ -3,6 +3,7 @@ import { Collapse } from './Collapse'
 import { Chevron, FilterIcon, Flag, StarIcon } from './icons'
 import { TOP_LEAGUES, byCountry, countryLabel, fold, leagueLogo } from './leagues'
 import type { Competition, Team } from './types'
+import { VyroxDropdown } from './VyroxDropdown'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -103,19 +104,50 @@ function AllLeagues({ groups, league, onLeague }: { groups: Competition[]; leagu
   )
 }
 
+// Follow or unfollow any team of the date's list without opening a match first.
+function FollowTeam({ groups, followed, onFollow }: { groups: Competition[]; followed: Team[]; onFollow: (team: Team) => void }) {
+  const teams = new Map(
+    groups.flatMap((group) => group.matches.flatMap((match) => [match.homeTeam, match.awayTeam].map((team) => [team.id, { team, league: group.league_name }] as const))),
+  )
+  if (!teams.size) return null
+  return (
+    <VyroxDropdown
+      label="Seguir o dejar de seguir un equipo"
+      value={null}
+      searchable
+      options={[...teams.values()]
+        .sort((a, b) => a.team.shortName.localeCompare(b.team.shortName, 'es'))
+        .map(({ team, league }) => ({
+          value: team.id,
+          label: team.shortName,
+          icon: <img src={team.crest} alt="" loading="lazy" className="size-5 shrink-0 object-contain" />,
+          detail: followed.some(({ id }) => id === team.id) ? 'Siguiendo · toca para dejar de seguir' : league,
+          keywords: league,
+        }))}
+      onChange={(id) => {
+        const chosen = teams.get(id)
+        if (chosen) onFollow(chosen.team)
+      }}
+      className="mt-2 rounded-full border border-line px-3 py-1 text-xs font-semibold transition-all duration-200 ease-out hover:border-yellow hover:bg-surface-2"
+    >
+      + Seguir equipo
+    </VyroxDropdown>
+  )
+}
+
 export function Sidebar({
   groups,
   league,
   onLeague,
   followed,
-  onUnfollow,
+  onFollow,
   onTeam,
 }: {
   groups: Competition[]
   league: number | null
   onLeague: (id: number) => void
   followed: Team[]
-  onUnfollow: (team: Team) => void
+  onFollow: (team: Team) => void
   onTeam: (team: Team) => void
 }) {
   return (
@@ -135,7 +167,7 @@ export function Sidebar({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onUnfollow(team)}
+                  onClick={() => onFollow(team)}
                   aria-label={`Dejar de seguir a ${team.shortName}`}
                   className="cursor-pointer rounded-xl px-2 py-1.5 text-gold transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98]"
                 >
@@ -149,6 +181,7 @@ export function Sidebar({
             Abre un partido y toca <StarIcon className="inline-block size-3.5 align-[-2px]" /> junto a un equipo para seguirlo.
           </p>
         )}
+        <FollowTeam groups={groups} followed={followed} onFollow={onFollow} />
       </Card>
 
       <Card title="Mejores ligas">
