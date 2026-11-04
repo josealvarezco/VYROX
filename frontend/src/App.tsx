@@ -15,6 +15,7 @@ import {
   FilterIcon,
   Flag,
   FlameIcon,
+  GridMultiViewIcon,
   PinIcon,
   RadarIcon,
   ScaleCompareIcon,
@@ -23,7 +24,9 @@ import {
 } from './icons'
 import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard, type Quick } from './MatchList'
+import { LiveMultiView } from './LiveMultiView'
 import { MatchCenter } from './MatchCenter'
+import { SLOTS, toggleSlot } from './multiView'
 import { Parlays, Simulated } from './Parlays'
 import { Radar } from './Radar'
 import { Sidebar } from './Sidebar'
@@ -34,6 +37,7 @@ import { useBetSlip } from './useBetSlip'
 import { useFollowed } from './useFollowed'
 import { useForecasts } from './useForecasts'
 import { ALERT_MODES, useGoalAlerts, type AlertMode } from './useGoalAlerts'
+import { useMultiView } from './useMultiView'
 import { usePinned } from './usePinned'
 import { VyroxDropdown } from './VyroxDropdown'
 import { playRefereeWhistle } from './whistle'
@@ -52,7 +56,7 @@ function shiftDay(day: string, offset: number) {
 
 // API-Football's free plan only serves yesterday, today and tomorrow (the backend rejects other dates).
 const DAYS = { [shiftDay(TODAY, -1)]: 'Ayer', [TODAY]: 'Hoy', [shiftDay(TODAY, 1)]: 'Mañana' }
-const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA', 'Partidos Calientes'] as const
+const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA', 'Partidos Calientes', 'Multivista'] as const
 const ALERT_ICONS = { all: <BellRingIcon />, my_parlays: <TicketSlipIcon />, off: <BellRingIcon muted /> }
 const hot = (match: Match) => match.momentum_status === 'high_voltage' // a live match Momentum IA measured as hot
 // The list's quick odds, one market at a time: each column is a pick of the date's VYROX IA forecast.
@@ -113,6 +117,7 @@ export default function App() {
   const [compact, setCompact] = useState(storedCompact)
   const followed = useFollowed()
   const pins = usePinned()
+  const { ids: gridIds, setIds: setGridIds } = useMultiView()
   const slip = useBetSlip()
   const { track } = slip
   // The user's picks, in the slip or in a play still open: the "Solo mis parlays" alerts and the anchored matches.
@@ -195,6 +200,7 @@ export default function App() {
 
   const pickLeague = (id: number | null) => {
     setLeague(id)
+    if (id !== null && filter === 'Multivista') setFilter('Todos')
     setShowSidebar(false)
     window.scrollTo({ top: 0 })
   }
@@ -202,6 +208,7 @@ export default function App() {
   const pickTeam = (team: Team) => {
     setQuery(team.shortName)
     setLeague(null)
+    if (filter === 'Multivista') setFilter('Todos')
     setShowSidebar(false)
   }
 
@@ -238,17 +245,26 @@ export default function App() {
     .find(({ match }) => match.id === selectedId)
   const open = (match: Match) => setSelectedId(match.id)
   const showParlays = data !== null && allGroups.length > 0 && filter === 'Todos' && league === null && !search
-  const quickShown = filter !== 'Radar IA' && shown.some(quick.odds)
+  const multiView = filter === 'Multivista'
+  const everyMatch = allGroups.flatMap((group) => group.matches)
+  const listed = new Set(everyMatch.map((match) => match.id))
+  const gridCount = gridIds.filter((id) => listed.has(id)).length
+  const multi = {
+    has: (id: number) => gridIds.includes(id),
+    full: gridCount >= SLOTS,
+    toggle: (id: number) => setGridIds(toggleSlot(gridIds, id, (other) => listed.has(other))),
+  }
+  const quickShown = filter !== 'Radar IA' && !multiView && shown.some(quick.odds)
   // Anchored on top: the pinned matches and, with Auto-anclar on, those of the user's plays. With it off the section
   // stays while the list has matches of their plays, so its switch is still at hand.
   const anchored = shown.filter((match) => pins.pinned(match.id) || (pins.auto && mine.has(match.id)))
-  const showAnchored = filter !== 'Radar IA' && (anchored.length > 0 || shown.some((match) => mine.has(match.id)))
+  const showAnchored = filter !== 'Radar IA' && !multiView && (anchored.length > 0 || shown.some((match) => mine.has(match.id)))
   const played = (id: number) => [...new Set(myLegs.filter((leg) => leg.match_id === id).map((leg) => leg.market_selection))].join(' · ')
 
   // The center column's sections that fold: the league cards (Radar IA and Por horario have none) and the parlays,
   // with the smart builder inside them.
   const folds = [
-    ...(filter === 'Radar IA' || filter === 'Por horario' ? [] : groups.map((group) => collapsed.has(group.league_id))),
+    ...(filter === 'Radar IA' || filter === 'Por horario' || multiView ? [] : groups.map((group) => collapsed.has(group.league_id))),
     ...(showParlays ? [!parlaysOpen] : []),
   ]
   const areAllCollapsed = folds.length > 0 && folds.every(Boolean)
@@ -262,6 +278,23 @@ export default function App() {
       // storage blocked: the view still changes until the page reloads
     }
   }
+  const marketPicker = (
+    <div role="group" aria-label="Mercado de las cuotas rápidas" className="flex gap-0.5 rounded-full border border-line bg-surface p-0.5">
+      {Object.entries(QUICK_MARKETS).map(([value, { name }]) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setMarket(value as QuickMarket)}
+          aria-pressed={market === value}
+          className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-all duration-200 ease-out ${
+            market === value ? 'bg-yellow text-forest' : 'text-muted hover:text-ink'
+          }`}
+        >
+          {name}
+        </button>
+      ))}
+    </div>
+  )
   const handleToggleCollapseAll = () => {
     setCollapsed(areAllCollapsed ? new Set() : new Set(allGroups.map((group) => group.league_id)))
     setParlaysOpen(areAllCollapsed)
@@ -385,7 +418,7 @@ export default function App() {
                 className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
                   filter === name
                     ? 'border-yellow bg-yellow text-forest'
-                    : name === 'Radar IA'
+                    : name === 'Radar IA' || name === 'Multivista'
                       ? 'border-yellow bg-surface text-gold hover:bg-surface-2'
                       : name === 'Partidos Calientes'
                         ? 'border-orange bg-surface text-warn hover:bg-surface-2'
@@ -395,9 +428,11 @@ export default function App() {
                 {name === 'En vivo' && <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-orange" />}
                 {name === 'Radar IA' && <RadarIcon />}
                 {name === 'Partidos Calientes' && <FlameIcon />}
+                {name === 'Multivista' && <GridMultiViewIcon />}
                 {name}
                 {name === 'En vivo' && liveCount > 0 && <span className="font-num opacity-70">{liveCount}</span>}
                 {name === 'Partidos Calientes' && hotCount > 0 && <span className="font-num opacity-70">{hotCount}</span>}
+                {name === 'Multivista' && gridCount > 0 && <span className="font-num opacity-70">({gridCount}/{SLOTS})</span>}
               </button>
             ))}
             <button
@@ -457,7 +492,7 @@ export default function App() {
           {error && <Message alert>No se pudieron cargar los partidos. Se reintentará en un minuto.</Message>}
           {!data && !error && <Message>Cargando partidos…</Message>}
           {data && allGroups.length === 0 && <Message>No hay partidos en esta fecha.</Message>}
-          {data && allGroups.length > 0 && shown.length === 0 && (
+          {data && allGroups.length > 0 && shown.length === 0 && !multiView && (
             <Message>
               {filter === 'Partidos Calientes'
                 ? 'Ningún partido en vivo medido por Momentum IA está caliente ahora. VYROX IA mide la presión de un partido en vivo cada vez que abres su Match Center, y la cartelera la muestra 10 minutos.'
@@ -511,6 +546,7 @@ export default function App() {
               compare={compare}
               quick={quick}
               pin={pins}
+              multi={multi}
               played={played}
             />
           )}
@@ -533,25 +569,11 @@ export default function App() {
                 Cuotas rápidas <span className="text-xs font-semibold text-muted">VYROX IA · cuotas estimadas de mercado</span>
               </p>
               {forecasts?.simulated && <Simulated />}
-              <div role="group" aria-label="Mercado de las cuotas rápidas" className="flex gap-0.5 rounded-full border border-line bg-surface p-0.5">
-                {Object.entries(QUICK_MARKETS).map(([value, { name }]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setMarket(value as QuickMarket)}
-                    aria-pressed={market === value}
-                    className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-all duration-200 ease-out ${
-                      market === value ? 'bg-yellow text-forest' : 'text-muted hover:text-ink'
-                    }`}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
+              {marketPicker}
             </div>
           )}
 
-          {following.length > 0 && filter !== 'Radar IA' && (
+          {following.length > 0 && filter !== 'Radar IA' && !multiView && (
             <MatchCard
               title={
                 <span className="inline-flex items-center gap-1.5 text-gold">
@@ -566,10 +588,26 @@ export default function App() {
               compare={compare}
               quick={quick}
               pin={pins}
+              multi={multi}
             />
           )}
 
-          {filter === 'Radar IA'
+          {multiView
+            ? data && (
+                <LiveMultiView
+                  ids={gridIds}
+                  setIds={setGridIds}
+                  matches={everyMatch}
+                  myLegs={myLegs}
+                  tickets={slip.tickets.filter((ticket) => ticket.status === 'pending').flatMap((ticket) => ticket.legs)}
+                  slipLegs={slip.legs}
+                  scored={goalAlerts.glowing}
+                  quick={quick}
+                  marketPicker={marketPicker}
+                  onSelect={open}
+                />
+              )
+            : filter === 'Radar IA'
             ? data && allGroups.length > 0 && <Radar date={date} slip={slip} onSelect={setSelectedId} compare={compare} />
             : filter === 'Por horario'
             ? shown.length > 0 && (
@@ -582,6 +620,7 @@ export default function App() {
                   compare={compare}
                   quick={quick}
                   pin={pins}
+                  multi={multi}
                 />
               )
             : groups.map((group) => (
@@ -603,6 +642,7 @@ export default function App() {
                   compare={compare}
                   quick={quick}
                   pin={pins}
+                  multi={multi}
                 />
               ))}
         </main>

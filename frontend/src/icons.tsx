@@ -354,6 +354,27 @@ export function DensityCompactIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// Multivista: a sports monitor's four panels.
+export function GridMultiViewIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <rect x="3" y="3" width="6.25" height="6.25" rx="1.25" />
+      <rect x="10.75" y="3" width="6.25" height="6.25" rx="1.25" />
+      <rect x="3" y="10.75" width="6.25" height="6.25" rx="1.25" />
+      <rect x="10.75" y="10.75" width="6.25" height="6.25" rx="1.25" />
+    </svg>
+  )
+}
+
+// Opens a quadrant's match in full.
+export function MaximizeExpandIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <path d="M11.5 3.5h5v5M16.5 3.5l-6 6M8.5 16.5h-5v-5M3.5 16.5l6-6" />
+    </svg>
+  )
+}
+
 // Vista Cómoda: two roomy blocks.
 export function DensityComfortableIcon({ className = 'size-4', label }: IconProps) {
   return (
