@@ -216,7 +216,8 @@ def test_without_key_parlays_are_simulated_and_stable(api, monkeypatch):
 def test_too_few_upcoming_matches(api):
     api["matches"] = [match(2, 239, "Millonarios", "Nacional", "20:05"), match(7, 239, "Junior", "America", "18:00", status="FINISHED")]
 
-    assert get().json() == {"parlays": [], "simulated": False, "message": parlays.NO_MATCHES}
+    tomorrow = colombia_today() + timedelta(days=1)
+    assert get().json() == {"parlays": [], "simulated": False, "message": parlays.NO_MATCHES, "next_date": str(tomorrow)}
     assert api["prompts"] == []
 
 

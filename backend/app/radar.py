@@ -3,10 +3,12 @@ import os
 from datetime import date
 
 from app.api_football import colombia_today, fetch_matches, group_by_league
+from app.momentum import LIVE
 from app.odds import PICK, odds_1x2, pick_odd, prob_to_market_odd
-from app.parlays import MAX_CANDIDATES, MatchForecast, day_forecasts, kickoff, simulated_forecast, upcoming
+from app.parlays import MAX_CANDIDATES, MatchForecast, day_forecasts, kickoff, live_forecast, parlays_cache, prices, simulated_forecast, still_open, upcoming
 
 LOW, HIGH = 55, 92  # a trend starts at 55 %, and no pick is shown as surer than 92 %
+CLOSING = 85  # from this minute the list's live odds are suspended, as bookmakers do near the end
 PER_MARKET = 8
 CATEGORIES = [
     ("bankers_1x2", "Fijos del Día (1X2)"),
@@ -66,8 +68,9 @@ def _item(match: dict, pick: tuple[str, int, str, str, float]) -> dict:
 
 
 async def forecast_rows(day: date) -> tuple[list[tuple[dict, MatchForecast]], bool, bool]:
-    """The date's matches with their forecast, as (rows, simulated, played), for the radar and the smart builder:
-    the matches still to be played, or all of them once the day is played; one VYROX IA call per date."""
+    """The date's matches with their forecast, as (rows, simulated, played), for the radar and the comparator, and for
+    the builder on a day already played: the matches still to be played, or all of them once the day is played; one
+    VYROX IA call per date."""
     matches, _ = await fetch_matches(day)
     candidates = upcoming(matches)
     played = not candidates
@@ -106,18 +109,19 @@ def _forecast(match: dict, forecast: MatchForecast) -> dict:
     and both sides of over 2.5 and of both-score."""
     home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
     r = forecast.result
-    prices = odds_1x2(r.home, r.draw, r.away)
-    team, percent, odd = (home, r.home, prices["home"]) if r.home >= r.away else (away, r.away, prices["away"])
+    book, price = prices(match, forecast)
+    team, percent, odd = (home, r.home, book["home"]) if r.home >= r.away else (away, r.away, book["away"])
     picks = {
         "favourite": (f"{team} - Resultado del partido", percent, "result", odd),
-        "home": (f"{home} - Resultado del partido", r.home, "result", prices["home"]),
-        "draw": ("Empate - Resultado del partido", r.draw, "result", prices["draw"]),
-        "away": (f"{away} - Resultado del partido", r.away, "result", prices["away"]),
-        "over_2_5": ("Más de 2.5 - Goles totales", forecast.over_2_5, "goals", prob_to_market_odd(forecast.over_2_5)),
-        "under_2_5": ("Menos de 2.5 - Goles totales", 100 - forecast.over_2_5, "goals", prob_to_market_odd(100 - forecast.over_2_5)),
-        "btts_yes": ("Sí - Ambos anotan", forecast.btts, "btts", prob_to_market_odd(forecast.btts)),
-        "btts_no": ("No - Ambos anotan", 100 - forecast.btts, "btts", prob_to_market_odd(100 - forecast.btts)),
+        "home": (f"{home} - Resultado del partido", r.home, "result", book["home"]),
+        "draw": ("Empate - Resultado del partido", r.draw, "result", book["draw"]),
+        "away": (f"{away} - Resultado del partido", r.away, "result", book["away"]),
+        "over_2_5": ("Más de 2.5 - Goles totales", forecast.over_2_5, "goals", price(forecast.over_2_5)),
+        "under_2_5": ("Menos de 2.5 - Goles totales", 100 - forecast.over_2_5, "goals", price(100 - forecast.over_2_5)),
+        "btts_yes": ("Sí - Ambos anotan", forecast.btts, "btts", price(forecast.btts)),
+        "btts_no": ("No - Ambos anotan", 100 - forecast.btts, "btts", price(100 - forecast.btts)),
     }
+    floor = 0 if match["status"] in LIVE else PICK[0]  # in play a pick pays what its chance says
     league = match["league"]
     return {
         "match_id": match["id"],
@@ -130,10 +134,20 @@ def _forecast(match: dict, forecast: MatchForecast) -> dict:
         "kickoff_label": kickoff(match),
         # The parlays' 1.22 floor, so a pick shared with them or the radar has the same odd in the bet slip.
         "picks": {
-            key: {"market_selection": selection, "market_category": category, "probability": chance, "odd": max(price, PICK[0]) if price else None}
-            for key, (selection, chance, category, price) in picks.items()
+            key: {"market_selection": selection, "market_category": category, "probability": chance, "odd": max(quote, floor) if quote else None}
+            for key, (selection, chance, category, quote) in picks.items()
         },
     }
+
+
+def with_live_picks(matches: list[dict], day: date) -> list[dict]:
+    """The list's matches, the live ones before the closing stretch with their odds at the score: from the day's cached
+    forecast or an average match, with no request of any kind."""
+    forecasts = parlays_cache.get(day, (0, None))[1] or {}
+    return [
+        {**m, "live_picks": _forecast(m, live_forecast(m, forecasts.get(m["id"])))["picks"]} if still_open(m, CLOSING) else m
+        for m in matches
+    ]
 
 
 async def get_forecasts(day: date | None = None) -> dict:

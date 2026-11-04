@@ -124,6 +124,8 @@ def test_maps_api_football_fixtures_to_frontend_format(upstream):
         "league_logo": "https://media.api-sports.io/football/leagues/239.png",
         "country_flag": "https://media.api-sports.io/flags/co.svg",
     }
+    live_picks = primera_a["matches"][0].pop("live_picks")  # minute 67: its odds at the score (tests/test_live.py)
+    assert live_picks["home"]["odd"] < live_picks["away"]["odd"]
     assert primera_a == {
         **league,
         "matches": [

@@ -4,8 +4,9 @@ import math
 from datetime import date
 
 from app.api_football import colombia_today
-from app.odds import PICK, odds_1x2, prob_to_market_odd
-from app.parlays import MatchForecast, _leg
+from app.momentum import LIVE
+from app.odds import PICK
+from app.parlays import MatchForecast, _leg, next_date, open_rows, prices
 from app.radar import forecast_rows
 
 MAX_ODD = 2.65  # the builder also takes picks a little riskier than the parlays' favourites
@@ -15,17 +16,18 @@ LEG_ODD = 1.55  # "auto" splits the target into legs of about this odd, inside t
 TOP = 10  # "Otra combinación" rotates through the best mixes of matches
 MARKETS = {"all": {"result", "over_1_5", "goals", "btts"}, "1x2": {"result"}, "goals": {"over_1_5", "goals"}, "btts": {"btts"}}
 NO_MATCHES = "No hay suficientes partidos con este mercado para armar la combinada."
+EMPTY = {"legs": [], "total_odd": 0, "probability": 0, "legs_count": 0, "on_target": False, "simulated": False, "played": False, "message": NO_MATCHES, "next_date": None}
 
 
 def _picks(match: dict, forecast: MatchForecast, markets: set[str]) -> list[tuple[str, int, str, float]]:
     """Every selection of one match the builder may take: (selection, probability, slip category, market odd)."""
     home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
     r = forecast.result
-    prices = odds_1x2(r.home, r.draw, r.away)
+    book, price = prices(match, forecast)
     options = [
-        (f"{home} - Resultado del partido", r.home, "result", prices["home"]),
-        ("Empate - Resultado del partido", r.draw, "result", prices["draw"]),
-        (f"{away} - Resultado del partido", r.away, "result", prices["away"]),
+        (f"{home} - Resultado del partido", r.home, "result", book["home"]),
+        ("Empate - Resultado del partido", r.draw, "result", book["draw"]),
+        (f"{away} - Resultado del partido", r.away, "result", book["away"]),
     ]
     two_way = [
         ("Más de 1.5 - Goles totales", "Menos de 1.5 - Goles totales", forecast.over_1_5, "over_1_5"),
@@ -33,9 +35,12 @@ def _picks(match: dict, forecast: MatchForecast, markets: set[str]) -> list[tupl
         ("Sí - Ambos anotan", "No - Ambos anotan", forecast.btts, "btts"),
     ]
     for yes, no, percent, category in two_way:
-        options += [(yes, percent, category, prob_to_market_odd(percent)), (no, 100 - percent, category, prob_to_market_odd(100 - percent))]
+        options += [(yes, percent, category, price(percent)), (no, 100 - percent, category, price(100 - percent))]
+    options = [option for option in options if option[2] in markets and option[3] and option[3] <= MAX_ODD]
+    if match["status"] in LIVE:  # what the score all but settled stays out: under the floor it would pay more than it is worth
+        return [option for option in options if option[3] >= PICK[0]]
     # The parlays' 1.22 floor, so a pick shared with them has the same odd and the bet slip treats both as one.
-    return [(label, percent, category, max(odd, PICK[0])) for label, percent, category, odd in options if category in markets and odd and odd <= MAX_ODD]
+    return [(label, percent, category, max(odd, PICK[0])) for label, percent, category, odd in options]
 
 
 def _mixes(rows: list[tuple[dict, MatchForecast]], target: float, count: int, market: str) -> list[tuple[float, float, tuple]]:
@@ -71,7 +76,13 @@ def _mixes(rows: list[tuple[dict, MatchForecast]], target: float, count: int, ma
 
 async def get_builder(day: date | None, target: float, legs: int | None, market: str, variant: int) -> dict:
     """VYROX IA's slip nearest `target`: the variant-th of the best mixes on target (or of the closest ones)."""
-    rows, simulated, played = await forecast_rows(day or colombia_today())
+    day = day or colombia_today()
+    rows, simulated = await open_rows(day)
+    played = False
+    if not rows and next_date(day):  # today is over: the page points to tomorrow instead of a reference nobody can play
+        return {**EMPTY, "next_date": next_date(day)}
+    if not rows:
+        rows, simulated, played = await forecast_rows(day)
     mixes = []
     # "Auto" tries the leg counts whose per-leg odd is nearest 1.55 first, until one lands on target: a market whose
     # picks all pay 1.55 or more needs fewer legs to reach x7.5.
@@ -82,7 +93,7 @@ async def get_builder(day: date | None, target: float, legs: int | None, market:
             break
         mixes = mixes or found  # none on target: the closest slips of the likeliest count
     if not mixes:
-        return {"legs": [], "total_odd": 0, "probability": 0, "legs_count": 0, "on_target": False, "simulated": False, "played": False, "message": NO_MATCHES}
+        return EMPTY
     pool = ([mix for mix in mixes if abs(math.log(mix[0] / target)) <= TOLERANCE] or mixes)[:TOP]
     odd, chance, slip = pool[variant % len(pool)]
     return {
@@ -94,4 +105,5 @@ async def get_builder(day: date | None, target: float, legs: int | None, market:
         "simulated": simulated,
         "played": played,  # a day already played: the slip is a reference that takes no plays
         "message": None,
+        "next_date": None,
     }

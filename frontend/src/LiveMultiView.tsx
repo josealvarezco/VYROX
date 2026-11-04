@@ -3,7 +3,7 @@ import { CrossIcon, FlameIcon, GridMultiViewIcon, MaximizeExpandIcon } from './i
 import { LiveMinute, QuickOdds, type Quick } from './MatchList'
 import { PressureBar } from './Momentum'
 import { SLOTS, parlayMatches, toggleSlot, topLive, trackLeg, type Track } from './multiView'
-import { LIVE, kickoffTime, statusText } from './status'
+import { LIVE, hasOdds, kickoffTime, statusText } from './status'
 import type { Match, SlipLeg, TicketLeg } from './types'
 import { VyroxDropdown } from './VyroxDropdown'
 
@@ -32,7 +32,6 @@ function Quadrant({ match, plays, goal, quick, onSelect, onRemove }: { match: Ma
   const live = LIVE.has(match.status)
   const hot = match.momentum_status === 'high_voltage'
   const label = `${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`
-  const forecast = quick.odds(match)
   return (
     <article className={`flex flex-col gap-3 rounded-2xl border bg-surface p-3 ${goal ? 'animate-goal border-yellow' : hot ? 'border-orange/70' : 'border-line'}`}>
       <header className="flex items-center gap-2">
@@ -109,9 +108,9 @@ function Quadrant({ match, plays, goal, quick, onSelect, onRemove }: { match: Ma
         </div>
       ))}
 
-      {forecast && (
+      {hasOdds(match, quick.odds(match)) && (
         <div className="mt-auto flex gap-1.5">
-          <QuickOdds match={match} forecast={forecast} quick={quick} labeled slot="flex-1" button="w-full py-1.5 text-sm" />
+          <QuickOdds match={match} quick={quick} labeled slot="flex-1" button="w-full py-1.5 text-sm" />
         </div>
       )}
     </article>

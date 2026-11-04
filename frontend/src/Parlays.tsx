@@ -2,12 +2,12 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Thinking } from './AiPrediction'
 import { OddButton } from './BetSlip'
 import { Collapse } from './Collapse'
-import { Chevron, DoubleChevronRightIcon, DoubleChevronUpIcon, FlameIcon, RefreshIcon, TicketSlipIcon, WandSparklesIcon } from './icons'
+import { ArrowLeftIcon, Chevron, DoubleChevronRightIcon, DoubleChevronUpIcon, FlameIcon, RefreshIcon, TicketSlipIcon, WandSparklesIcon } from './icons'
 import { TARGETS, fetchSmartParlay, type Market } from './smartParlay'
 import type { Parlay, ParlayLeg, ParlaysResponse, SmartParlay } from './types'
 import type { useBetSlip } from './useBetSlip'
 
-// Cheap: the backend answers from its cache and drops the legs of matches that kicked off.
+// Cheap: the backend answers from its cache, with the matches that still take plays.
 const REFRESH_MS = 300_000
 const RIBBON = { segura: 'bg-orange', valor: 'bg-yellow', tendencia: 'bg-orange' } as const
 const NOTE = 'rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-muted'
@@ -19,8 +19,27 @@ const MARKETS = [
   ['btts', 'Ambos Anotan'],
 ] as const
 
+const TABS = [
+  ['parlays', 'Combinadas Populares', FlameIcon],
+  ['builder', 'Constructor por Cuota IA', WandSparklesIcon],
+] as const
+
 type Slip = ReturnType<typeof useBetSlip>
 type Props = { slip: Slip; onSelect: (matchId: number) => void }
+
+// Today ran out of matches: instead of an empty box, a way to plan tomorrow's.
+function NextDay({ day, onDate }: { day: string; onDate: (day: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onDate(day)}
+      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-yellow px-4 py-3 text-sm font-bold text-forest transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(244_213_109/0.7)] active:translate-y-0"
+    >
+      Jornada de hoy finalizando · Ver Combinadas de Mañana
+      <ArrowLeftIcon className="size-4 rotate-180" />
+    </button>
+  )
+}
 
 function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
   return (
@@ -36,7 +55,11 @@ function Leg({ leg, slip, onSelect }: Props & { leg: ParlayLeg }) {
         <span className="block text-xs text-muted compact:text-[11px]">
           {leg.home_team} - {leg.away_team}
         </span>
-        <span className="block font-num text-xs text-muted compact:hidden">{leg.kickoff_label}</span>
+        {leg.live_label ? (
+          <span className="block font-num text-xs font-semibold text-win compact:text-[11px]">{leg.live_label}</span>
+        ) : (
+          <span className="block font-num text-xs text-muted compact:hidden">{leg.kickoff_label}</span>
+        )}
       </button>
       <div className="flex shrink-0 flex-col items-center gap-1">
         <OddButton pick={leg} slip={slip} className="min-w-14 px-2 py-1.5 text-sm compact:min-w-[46px] compact:py-1 compact:text-[11px]">
@@ -89,7 +112,7 @@ function ParlayCard({ parlay, slip, onSelect }: Props & { parlay: Parlay }) {
 }
 
 // Remounted per date (key), so the previous date's slips never show while the new ones load.
-function ParlayGrid({ date, slip, onSelect }: Props & { date: string }) {
+function ParlayGrid({ date, slip, onSelect, onDate }: Props & { date: string; onDate: (day: string) => void }) {
   const [data, setData] = useState<ParlaysResponse | null>(null)
   const [error, setError] = useState(false)
 
@@ -126,12 +149,13 @@ function ParlayGrid({ date, slip, onSelect }: Props & { date: string }) {
       </div>
     )
   }
+  if (data.next_date) return <div className="pt-3"><NextDay day={data.next_date} onDate={onDate} /></div>
   if (data.message) return <p className={`mt-3 ${NOTE}`}>{data.message}</p>
   return (
     <div className="space-y-3 pt-3">
       {data.simulated && <Simulated />}
-      {/* On desktop the three slips always share one row; where the center column is too narrow for three cards of 220px, the row scrolls sideways. */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[repeat(3,minmax(13.75rem,1fr))] lg:overflow-x-auto">
+      {/* On desktop the three slips always share one row; where the center column is too narrow for three cards of 208px, the row scrolls sideways. */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[repeat(3,minmax(13rem,1fr))] lg:overflow-x-auto">
         {data.parlays.map((parlay) => (
           <ParlayCard key={parlay.key} parlay={parlay} slip={slip} onSelect={onSelect} />
         ))}
@@ -163,9 +187,7 @@ function Choices({ label, children }: { label: string; children: ReactNode }) {
 }
 
 // Constructor Inteligente VYROX IA: the slip nearest a target odd, built from the forecast the parlays already read.
-function SmartBuilder({ date, slip, onSelect, compact }: Props & { date: string; compact: boolean }) {
-  const [unfolded, setUnfolded] = useState<boolean | null>(null) // until the user chooses, closed in the compact view to save the first screen
-  const shown = unfolded ?? !compact
+function SmartBuilder({ date, slip, onSelect, onDate }: Props & { date: string; onDate: (day: string) => void }) {
   const [target, setTarget] = useState(5)
   const [free, setFree] = useState('')
   const [legs, setLegs] = useState<number | null>(null)
@@ -195,166 +217,169 @@ function SmartBuilder({ date, slip, onSelect, compact }: Props & { date: string;
   }
 
   return (
-    <section aria-label="Constructor Inteligente VYROX IA" className="mt-3 overflow-hidden rounded-2xl border border-line bg-surface">
-      <h3>
-        <button
-          type="button"
-          onClick={() => setUnfolded(!shown)}
-          aria-expanded={shown}
-          className="hero flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left compact:px-3 compact:py-1.5"
-        >
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-yellow text-forest compact:size-7">
-            <WandSparklesIcon className="size-5 compact:size-4" />
-          </span>
-          <span>
-            <span className="block font-bold compact:text-sm">Constructor Inteligente VYROX IA</span>
-            <span className="block text-xs text-cream/70">Arma tu parlay por cuota objetivo</span>
-          </span>
-          <Chevron direction={shown ? 'up' : 'down'} className="ml-auto" />
-        </button>
-      </h3>
+    <section aria-label="Constructor Inteligente VYROX IA" className="space-y-3 pt-3 text-sm compact:space-y-2">
+      <Choices label="Cuota objetivo">
+        {TARGETS.map(([value, name]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={!free && target === value}
+            onClick={() => {
+              setFree('')
+              aim(value)
+            }}
+            className={choice(!free && target === value)}
+          >
+            <span className="font-num font-bold">x{value.toFixed(1)}</span> {name}
+          </button>
+        ))}
+        <label className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs">
+          <span className="font-semibold text-muted">Cuota libre</span>
+          <input
+            type="number"
+            min={1.5}
+            max={50}
+            step={0.5}
+            inputMode="decimal"
+            value={free}
+            placeholder="7.5"
+            aria-label="Cuota objetivo libre, de 1.5 a 50"
+            onChange={(event) => {
+              setFree(event.target.value)
+              const value = Number(event.target.value)
+              if (value >= 1.5 && value <= 50) aim(value)
+            }}
+            className="w-12 bg-transparent font-num font-semibold text-ink outline-none"
+          />
+        </label>
+      </Choices>
+      <Choices label="Partidos">
+        {LEG_COUNTS.map((count) => (
+          <button
+            key={count ?? 'auto'}
+            type="button"
+            aria-pressed={legs === count}
+            onClick={() => {
+              setLegs(count)
+              setVariant(0)
+            }}
+            className={`${choice(legs === count)} ${count ? 'font-num' : ''}`}
+          >
+            {count ?? 'Auto'}
+          </button>
+        ))}
+      </Choices>
+      <Choices label="Mercado">
+        {MARKETS.map(([value, name]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={market === value}
+            onClick={() => {
+              setMarket(value)
+              setVariant(0)
+            }}
+            className={choice(market === value)}
+          >
+            {name}
+          </button>
+        ))}
+      </Choices>
 
-      <Collapse open={shown}>
-      <div className="space-y-3 p-4 text-sm compact:space-y-2 compact:p-2.5">
-        <Choices label="Cuota objetivo">
-          {TARGETS.map(([value, name]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={!free && target === value}
-              onClick={() => {
-                setFree('')
-                aim(value)
-              }}
-              className={choice(!free && target === value)}
-            >
-              <span className="font-num font-bold">x{value.toFixed(1)}</span> {name}
-            </button>
-          ))}
-          <label className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs">
-            <span className="font-semibold text-muted">Cuota libre</span>
-            <input
-              type="number"
-              min={1.5}
-              max={50}
-              step={0.5}
-              inputMode="decimal"
-              value={free}
-              placeholder="7.5"
-              aria-label="Cuota objetivo libre, de 1.5 a 50"
-              onChange={(event) => {
-                setFree(event.target.value)
-                const value = Number(event.target.value)
-                if (value >= 1.5 && value <= 50) aim(value)
-              }}
-              className="w-12 bg-transparent font-num font-semibold text-ink outline-none"
-            />
-          </label>
-        </Choices>
-        <Choices label="Partidos">
-          {LEG_COUNTS.map((count) => (
-            <button
-              key={count ?? 'auto'}
-              type="button"
-              aria-pressed={legs === count}
-              onClick={() => {
-                setLegs(count)
-                setVariant(0)
-              }}
-              className={`${choice(legs === count)} ${count ? 'font-num' : ''}`}
-            >
-              {count ?? 'Auto'}
-            </button>
-          ))}
-        </Choices>
-        <Choices label="Mercado">
-          {MARKETS.map(([value, name]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={market === value}
-              onClick={() => {
-                setMarket(value)
-                setVariant(0)
-              }}
-              className={choice(market === value)}
-            >
-              {name}
-            </button>
-          ))}
-        </Choices>
-
-        <div aria-live="polite" className="space-y-3">
-          {error ? (
-            <p className={NOTE}>VYROX IA no pudo armar la combinada. Intenta de nuevo en un momento.</p>
-          ) : !built ? (
-            <Thinking>VYROX IA está armando tu combinada...</Thinking>
-          ) : built.message ? (
-            <p className={NOTE}>{built.message}</p>
-          ) : (
-            <>
-              {built.simulated && <Simulated />}
-              {built.played && <p className="text-xs text-muted">Estos partidos ya se jugaron: la combinada queda solo como referencia.</p>}
-              <ul className="rounded-2xl border border-line px-3">
-                {built.legs.map((leg) => (
-                  <Leg key={leg.match_id} leg={leg} slip={slip} onSelect={onSelect} />
-                ))}
-              </ul>
-              <p className="text-xs text-muted">
-                {built.legs_count} selecciones, una por partido · Probabilidad conjunta VYROX IA:{' '}
-                <span className="font-num font-semibold text-ink">{built.probability}%</span>
-                {legs && built.legs_count < legs && ' · no hay más partidos con este mercado'}
-                {!built.on_target && ` · la más cercana a x${target} con los partidos de esta fecha`}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => slip.replace(built.legs)}
-                  disabled={built.played}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-yellow px-4 py-2.5 font-bold whitespace-nowrap text-forest transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(244_213_109/0.7)] active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-                >
-                  <TicketSlipIcon className="size-4" />
-                  Cargar en mi Cupón
-                  <DoubleChevronRightIcon className="size-3.5" />
-                  <span className="font-num text-base">{built.total_odd.toFixed(2)}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVariant(variant + 1)}
-                  className="flex cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line px-4 py-2.5 font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98]"
-                >
-                  <RefreshIcon />
-                  Otra combinación
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+      <div aria-live="polite" className="space-y-3">
+        {error ? (
+          <p className={NOTE}>VYROX IA no pudo armar la combinada. Intenta de nuevo en un momento.</p>
+        ) : !built ? (
+          <Thinking>VYROX IA está armando tu combinada...</Thinking>
+        ) : built.next_date ? (
+          <NextDay day={built.next_date} onDate={onDate} />
+        ) : built.message ? (
+          <p className={NOTE}>{built.message}</p>
+        ) : (
+          <>
+            {built.simulated && <Simulated />}
+            {built.played && <p className="text-xs text-muted">Estos partidos ya se jugaron: la combinada queda solo como referencia.</p>}
+            <ul className="rounded-2xl border border-line px-3">
+              {built.legs.map((leg) => (
+                <Leg key={leg.match_id} leg={leg} slip={slip} onSelect={onSelect} />
+              ))}
+            </ul>
+            <p className="text-xs text-muted">
+              {built.legs_count} selecciones, una por partido · Probabilidad conjunta VYROX IA:{' '}
+              <span className="font-num font-semibold text-ink">{built.probability}%</span>
+              {legs && built.legs_count < legs && ' · no hay más partidos con este mercado'}
+              {!built.on_target && ` · la más cercana a x${target} con los partidos de esta fecha`}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => slip.replace(built.legs)}
+                disabled={built.played}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-yellow px-4 py-2.5 font-bold whitespace-nowrap text-forest transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(244_213_109/0.7)] active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+              >
+                <TicketSlipIcon className="size-4" />
+                Cargar en mi Cupón
+                <DoubleChevronRightIcon className="size-3.5" />
+                <span className="font-num text-base">{built.total_odd.toFixed(2)}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVariant(variant + 1)}
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line px-4 py-2.5 font-semibold whitespace-nowrap transition-all duration-200 ease-out hover:bg-surface-2 active:scale-[0.98]"
+              >
+                <RefreshIcon />
+                Otra combinación
+              </button>
+            </div>
+          </>
+        )}
       </div>
-      </Collapse>
     </section>
   )
 }
 
-export function Parlays({ date, slip, onSelect, open, onToggle, compact }: Props & { date: string; open: boolean; onToggle: () => void; compact: boolean }) {
+// One box with two tabs. Both stay mounted, so the constructor keeps its settings when the user comes back to it.
+export function Parlays({ date, slip, onSelect, open, onToggle, onDate }: Props & { date: string; open: boolean; onToggle: () => void; onDate: (day: string) => void }) {
+  const [tab, setTab] = useState<(typeof TABS)[number][0]>('parlays')
   return (
-    <section>
-      <h2>
+    <section className="rounded-2xl border border-line bg-surface p-3 compact:p-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {TABS.map(([key, name, Icon]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={tab === key}
+            onClick={() => {
+              setTab(key)
+              if (!open) onToggle()
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-bold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] compact:py-1 compact:text-xs ${
+              tab === key ? 'border-yellow bg-yellow text-forest' : 'border-line bg-surface text-ink hover:bg-surface-2'
+            }`}
+          >
+            <Icon className="size-4" />
+            {name}
+          </button>
+        ))}
+        <span className="ml-auto hidden text-xs font-semibold text-muted @3xl:inline">VYROX IA · cuotas estimadas de mercado</span>
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-left text-sm font-extrabold tracking-wide transition-all duration-200 ease-out hover:bg-surface-2/60 compact:px-3 compact:py-1.5"
+          aria-label={open ? 'Cerrar combinadas y constructor' : 'Abrir combinadas y constructor'}
+          title={open ? 'Cerrar combinadas y constructor' : 'Abrir combinadas y constructor'}
+          className="ml-auto grid size-7 shrink-0 cursor-pointer place-items-center rounded-full text-muted transition-all duration-200 ease-out hover:bg-surface-2 hover:text-ink @3xl:ml-0"
         >
-          <FlameIcon className="size-5" />
-          COMBINADAS POPULARES
-          <span className="hidden text-xs font-semibold tracking-normal text-muted @xl:inline">VYROX IA · cuotas estimadas de mercado</span>
-          <Chevron direction={open ? 'up' : 'down'} className="ml-auto text-muted" />
+          <Chevron direction={open ? 'up' : 'down'} />
         </button>
-      </h2>
+      </div>
       <Collapse open={open}>
-        <ParlayGrid key={date} date={date} slip={slip} onSelect={onSelect} />
-        <SmartBuilder key={`builder-${date}`} date={date} slip={slip} onSelect={onSelect} compact={compact} />
+        <div hidden={tab !== 'parlays'}>
+          <ParlayGrid key={date} date={date} slip={slip} onSelect={onSelect} onDate={onDate} />
+        </div>
+        <div hidden={tab !== 'builder'}>
+          <SmartBuilder key={`builder-${date}`} date={date} slip={slip} onSelect={onSelect} onDate={onDate} />
+        </div>
       </Collapse>
     </section>
   )

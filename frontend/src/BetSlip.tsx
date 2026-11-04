@@ -45,7 +45,7 @@ export function TrendCorner({ trend }: { trend?: Quote['trend'] }) {
 }
 
 // An odd that adds its pick to the slip or takes it out again: it gives under the finger, and glows yellow while the pick is in.
-export function OddButton({ pick, slip, className, children, trend }: { pick: SlipLeg; slip: Slip; className: string; children: ReactNode; trend?: Quote['trend'] }) {
+export function OddButton({ pick, slip, className, children, trend, live = false }: { pick: SlipLeg; slip: Slip; className: string; children: ReactNode; trend?: Quote['trend']; live?: boolean }) {
   const picked = slip.has(pick)
   const moved = trend === 'up' ? ', subió' : trend === 'down' ? ', bajó' : ''
   return (
@@ -53,12 +53,14 @@ export function OddButton({ pick, slip, className, children, trend }: { pick: Sl
       type="button"
       onClick={() => slip.toggle(pick)}
       aria-pressed={picked}
-      aria-label={`${picked ? 'Quitar del' : 'Agregar al'} cupón: ${pick.market_selection}, cuota ${pick.odd.toFixed(2)}${moved}`}
+      aria-label={`${picked ? 'Quitar del' : 'Agregar al'} cupón: ${pick.market_selection}, cuota ${live ? 'en vivo ' : ''}${pick.odd.toFixed(2)}${moved}`}
+      title={live ? 'Cuota en vivo, estimada por el marcador y el minuto' : undefined}
       className={`relative cursor-pointer rounded-xl border font-num font-bold transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-95 ${
         picked ? 'border-yellow bg-yellow text-forest shadow-[0_0_14px_rgb(244_213_109/0.6)] ring-2 ring-yellow/40' : 'border-line bg-surface-2 text-ink hover:border-yellow'
       } ${className}`}
     >
       <TrendCorner trend={trend} />
+      {live && <span aria-hidden="true" className="absolute top-1 left-1 size-1 animate-pulse rounded-full bg-win" />}
       {children}
     </button>
   )
@@ -504,13 +506,15 @@ function MyBets({ slip }: { slip: Slip }) {
 function QuickFill({ date, slip }: { date: string; slip: Slip }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
-  const fill = (target: number) => {
+  const fill = (target: number, day = date): Promise<void> => {
     setBusy(true)
     setNote('')
-    fetchSmartParlay(date, target, null, 'all', 0)
-      .then((built) =>
-        built.legs.length && !built.played ? slip.replace(built.legs) : setNote(built.message ?? 'Ya no quedan partidos por jugar en esta fecha.'),
-      )
+    return fetchSmartParlay(day, target, null, 'all', 0)
+      .then((built) => {
+        if (built.next_date) return fill(target, built.next_date) // today ran out of matches: tomorrow's slip
+        if (built.legs.length && !built.played) slip.replace(built.legs)
+        else setNote(built.message ?? 'Ya no quedan partidos por jugar en esta fecha.')
+      })
       .catch(() => setNote('VYROX IA no pudo armar la combinada. Intenta de nuevo.'))
       .finally(() => setBusy(false))
   }

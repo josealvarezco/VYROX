@@ -354,6 +354,16 @@ export function DensityCompactIcon({ className = 'size-4', label }: IconProps) {
   )
 }
 
+// A suspended market's odd.
+export function LockClosedIcon({ className = 'size-4', label }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" {...stroked} className={`shrink-0 ${className}`} {...a11y(label)}>
+      <rect x="4.5" y="9" width="11" height="8" rx="2" />
+      <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
+    </svg>
+  )
+}
+
 // Multivista: a sports monitor's four panels.
 export function GridMultiViewIcon({ className = 'size-4', label }: IconProps) {
   return (

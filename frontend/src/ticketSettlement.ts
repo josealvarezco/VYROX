@@ -1,6 +1,6 @@
 // Imports with their extension, so Node runs this file's test without a bundler.
 import { LIVE } from './status.ts'
-import type { Match, SavedTicket, SlipLeg, TicketLeg } from './types.ts'
+import type { ForecastMatch, Match, SavedTicket, SlipLeg, TicketLeg } from './types.ts'
 
 // Whether a pick wins with a final score; null for the free-text recommended play, which only the user can settle.
 export function legResult(leg: SlipLeg, home: number, away: number): boolean | null {
@@ -14,6 +14,17 @@ export function legResult(leg: SlipLeg, home: number, away: number): boolean | n
   if (leg.market_category === 'over_3_5') return side.startsWith('Más') ? goals > 3.5 : goals < 3.5
   if (leg.market_category === 'btts') return (side === 'Sí') === (home > 0 && away > 0)
   return null
+}
+
+// Whether a quick-odds column won with a final score, to mark it on a finished match.
+export const COLUMN_WON: Partial<Record<keyof ForecastMatch['picks'], (home: number, away: number) => boolean>> = {
+  home: (home, away) => home > away,
+  draw: (home, away) => home === away,
+  away: (home, away) => away > home,
+  over_2_5: (home, away) => home + away > 2.5,
+  under_2_5: (home, away) => home + away < 2.5,
+  btts_yes: (home, away) => home > 0 && away > 0,
+  btts_no: (home, away) => home === 0 || away === 0,
 }
 
 // Goals only add up, so once a live score passes a line or both teams have scored, these markets cannot change:

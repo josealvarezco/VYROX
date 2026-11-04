@@ -1,9 +1,11 @@
 import math
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app import builder
+from app.api_football import colombia_today
 from app.main import app
 from app.odds import PICK
 from test_parlays import api  # noqa: F401  (the parlays' fake match list and fake VYROX IA)
@@ -73,7 +75,7 @@ def test_a_day_already_played_builds_a_reference(radar_api):
     for finished in radar_api["matches"]:
         finished["status"] = "FINISHED"
 
-    body = build(target_odd=3).json()
+    body = build(target_odd=3, date=str(colombia_today() - timedelta(days=1))).json()
 
     assert body["played"] is True and body["legs"]
 

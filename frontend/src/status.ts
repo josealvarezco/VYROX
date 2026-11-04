@@ -11,6 +11,9 @@ const STATUS_LABEL: Record<string, string> = {
   AWARDED: 'Adjudicado',
 }
 
+// Whether a row has odd boxes: a match of the forecast that still takes plays, and every live or finished match.
+export const hasOdds = (match: Match, forecast: unknown) => LIVE.has(match.status) || match.status === 'FINISHED' || !!forecast
+
 export function kickoffTime(match: Match) {
   return new Date(match.utcDate).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Bogota' })
 }
