@@ -10,6 +10,8 @@ BOOK_1X2 = 1.075  # home, draw and away add up to 107.5 %
 DRAW = (3.10, 3.60)
 FAVOURITE = (1.45, 2.25)
 PICK = (1.22, 2.35)  # what a single selection of the parlays and the radar pays
+LIVE_MARGIN = 0.13  # in play a side's implied chance grows by 0.13 x p x (1 - p): 6.5 % over a 50-50 market, less near the ends
+SUSPENDED = 1  # a side this close to certain or impossible is off the board, as bookmakers suspend it
 
 
 def _within(value: float, low: float, high: float) -> float:
@@ -22,6 +24,15 @@ def prob_to_market_odd(percent: float) -> float | None:
     if not percent:
         return None
     return round(1 / (TWO_WAY_BOOK / 2 + SHRINK * (percent / 100 - 0.5)), 2)
+
+
+def live_odd(percent: float) -> float | None:
+    """Odd of one side of any market in play, by its chance at the current score. The margin holds at every chance,
+    so a near-certain pick never pays more than it is worth; None when the side is suspended."""
+    if not SUSPENDED < percent < 100 - SUSPENDED:
+        return None
+    chance = percent / 100
+    return round(1 / (chance + LIVE_MARGIN * chance * (1 - chance)), 2)
 
 
 def odds_1x2(home: float, draw: float, away: float) -> dict[str, float | None]:

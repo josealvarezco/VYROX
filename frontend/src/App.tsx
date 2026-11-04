@@ -254,7 +254,7 @@ export default function App() {
     full: gridCount >= SLOTS,
     toggle: (id: number) => setGridIds(toggleSlot(gridIds, id, (other) => listed.has(other))),
   }
-  const quickShown = filter !== 'Radar IA' && !multiView && shown.some(quick.odds)
+  const quickShown = filter !== 'Radar IA' && !multiView
   // Anchored on top: the pinned matches and, with Auto-anclar on, those of the user's plays. With it off the section
   // stays while the list has matches of their plays, so its switch is still at hand.
   const anchored = shown.filter((match) => pins.pinned(match.id) || (pins.auto && mine.has(match.id)))
@@ -408,14 +408,14 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             {FILTERS.map((name) => (
               <button
                 key={name}
                 type="button"
                 onClick={() => setFilter(name)}
                 aria-pressed={filter === name}
-                className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
+                className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
                   filter === name
                     ? 'border-yellow bg-yellow text-forest'
                     : name === 'Radar IA' || name === 'Multivista'
@@ -439,22 +439,25 @@ export default function App() {
               type="button"
               onClick={() => setComparing(true)}
               disabled={forecastById.size < 2}
+              aria-label="Comparar (VS)"
               title={forecastById.size < 2 ? 'VYROX IA aún no pronostica partidos de esta fecha' : 'Comparar dos partidos'}
-              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-yellow bg-forest px-3.5 py-1.5 text-sm font-semibold text-yellow transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100"
+              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-yellow bg-forest px-3 py-1.5 text-[13px] font-semibold text-yellow transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100"
             >
               <ScaleCompareIcon />
-              Comparar (VS)
+              {/* Short where the column is narrow, so the search and the odds' market share its line. */}
+              <span className="@4xl:hidden">VS</span>
+              <span className="hidden @4xl:inline">Comparar (VS)</span>
             </button>
-            {/* Its minimum width makes it wrap to a line of its own instead of squeezing in after the pills. */}
-            <div className="flex w-full min-w-0 items-center gap-2 sm:ml-auto sm:w-auto sm:min-w-66 sm:max-w-85 sm:flex-1">
-              <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm">
+            {/* It follows the pills and takes the rest of their last line, or a line of its own when that is too short. */}
+            <div className="flex min-w-0 grow basis-lg flex-wrap items-center gap-2">
+              <label className="flex min-w-40 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm">
                 <FilterIcon />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Filtro"
+                  placeholder="Filtrar equipo o liga..."
                   aria-label="Buscar equipo o liga"
-                  className="w-full min-w-0 bg-transparent outline-none placeholder:text-muted"
+                  className="w-full min-w-0 bg-transparent outline-none placeholder:text-xs placeholder:text-muted"
                 />
               </label>
               <button
@@ -470,8 +473,17 @@ export default function App() {
               <button type="button" onClick={toggleDensity} aria-label={densityLabel} title={densityLabel} className={toolButton(compact)}>
                 {compact ? <DensityCompactIcon className="size-5" /> : <DensityComfortableIcon className="size-5" />}
               </button>
+              {quickShown && (
+                <div className="ml-auto flex items-center gap-2">
+                  <span title="VYROX IA · cuotas estimadas de mercado" className="text-xs font-bold whitespace-nowrap">
+                    Cuotas rápidas:
+                  </span>
+                  {marketPicker}
+                </div>
+              )}
             </div>
           </div>
+          {quickShown && forecasts?.simulated && <Simulated />}
 
           {league !== null && (
             <div className="flex items-center gap-3">
@@ -559,18 +571,8 @@ export default function App() {
               onSelect={setSelectedId}
               open={parlaysOpen}
               onToggle={() => setParlaysOpen(!parlaysOpen)}
-              compact={compact}
+              onDate={goTo}
             />
-          )}
-
-          {quickShown && (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="mr-auto text-sm font-bold tracking-tight">
-                Cuotas rápidas <span className="text-xs font-semibold text-muted">VYROX IA · cuotas estimadas de mercado</span>
-              </p>
-              {forecasts?.simulated && <Simulated />}
-              {marketPicker}
-            </div>
           )}
 
           {following.length > 0 && filter !== 'Radar IA' && !multiView && (

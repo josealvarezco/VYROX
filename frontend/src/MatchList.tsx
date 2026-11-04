@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { OddButton } from './BetSlip'
 import { Collapse } from './Collapse'
-import { Chevron, FlameIcon, GridMultiViewIcon, PinIcon, ScaleCompareIcon } from './icons'
+import { Chevron, FlameIcon, GridMultiViewIcon, LockClosedIcon, PinIcon, ScaleCompareIcon } from './icons'
 import { PressureBar } from './Momentum'
 import { fitModel } from './sameGameParlay'
-import { LIVE, kickoffTime, statusText } from './status'
+import { LIVE, hasOdds, kickoffLabel, kickoffTime, statusText } from './status'
+import { COLUMN_WON } from './ticketSettlement'
 import type { ForecastMatch, Match } from './types'
 import type { useBetSlip } from './useBetSlip'
 
@@ -21,27 +22,57 @@ export type Pin = { pinned: (matchId: number) => boolean; toggle: (matchId: numb
 // Adding a match to the Multivista's grid.
 export type Multi = { has: (matchId: number) => boolean; full: boolean; toggle: (matchId: number) => void }
 
-// A match's quick odds in the active market. The match's model goes with each one, to price picks of one match as a
-// Crear Apuesta in the slip.
-export function QuickOdds({ match, forecast, quick, slot, button, labeled = false }: { match: Match; forecast: ForecastMatch; quick: Quick; slot: string; button: string; labeled?: boolean }) {
-  const { picks } = forecast
-  const model = picks.home && picks.away ? fitModel(picks.home.probability, picks.away.probability, picks.over_2_5.probability) : undefined
+// A match's boxes in the active market: odds to tap before kickoff and in play (with a green dot), a lock on a
+// suspended side and in the closing stretch, and the options to read once finished, with the winner in green.
+export function QuickOdds({ match, quick, slot, button, labeled = false }: { match: Match; quick: Quick; slot: string; button: string; labeled?: boolean }) {
+  const { home, away } = match.score.fullTime
+  const live = LIVE.has(match.status)
+  const forecast = quick.odds(match)
+  const picks = live ? match.live_picks : forecast?.picks
+  // The match's model goes with each pre-match odd, to price picks of one match as a Crear Apuesta in the slip; in
+  // play the score has left it behind.
+  const model = !live && picks?.home && picks.away && picks.over_2_5 ? fitModel(picks.home.probability, picks.away.probability, picks.over_2_5.probability) : undefined
   return quick.columns.map(([key, label]) => {
-    const pick = picks[key]
-    // A side with no chance has no odd, and a backend older than the page has no such pick: an empty slot keeps the columns in line.
-    if (!pick?.odd) return <span key={key} className={slot} />
-    const { market_selection, market_category, odd } = pick
-    const box = (
+    if (match.status === 'FINISHED' && home !== null && away !== null) {
+      const won = COLUMN_WON[key]?.(home, away)
+      return (
+        <span key={key} className={`rounded-xl border text-center font-num font-bold ${won ? 'border-[#22C55E] bg-[#22C55E]/20 text-ink' : 'border-line text-muted'} ${button}`}>
+          {label}
+          {won && <span className="sr-only">, ganadora</span>}
+        </span>
+      )
+    }
+    const pick = picks?.[key]
+    const box = pick?.odd ? (
       <OddButton
         key={key}
-        pick={{ match_id: match.id, home_team: forecast.home_team, away_team: forecast.away_team, kickoff_label: forecast.kickoff_label, market_selection, market_category, odd, model }}
+        pick={{
+          match_id: match.id,
+          home_team: match.homeTeam.shortName,
+          away_team: match.awayTeam.shortName,
+          kickoff_label: forecast?.kickoff_label ?? kickoffLabel(match),
+          market_selection: pick.market_selection,
+          market_category: pick.market_category,
+          odd: pick.odd,
+          model,
+        }}
         slip={quick.slip}
         trend={pick.trend}
+        live={live}
         className={button}
       >
-        {odd.toFixed(2)}
+        {pick.odd.toFixed(2)}
       </OddButton>
+    ) : (
+      live && (
+        <span key={key} title="Mercado suspendido" className={`grid place-items-center rounded-xl border border-line bg-surface-2/40 text-muted ${button}`}>
+          <LockClosedIcon label="Mercado suspendido" className="h-[1lh] w-3.5" />
+        </span>
+      )
     )
+    // A side with no chance has no odd: an empty slot keeps the columns in line. A row with no boxes at all only needs
+    // it where the odds share the row with the teams.
+    if (!box) return <span key={key} className={`${hasOdds(match, forecast) ? '' : 'hidden @xl:block'} ${slot}`} />
     return labeled ? (
       <span key={key} className={`text-center ${slot}`}>
         <span aria-hidden="true" className="mb-1 block font-num text-[11px] font-semibold text-muted">{label}</span>
@@ -119,7 +150,7 @@ function MatchRow({
   const { home, away } = match.score.fullTime
   const live = LIVE.has(match.status)
   const note = match.status === 'TIMED' || live ? null : statusText(match)
-  const forecast = quick?.odds(match)
+  const boxes = quick && hasOdds(match, quick.odds(match))
   const comparable = compare?.can(match.id) ? compare : undefined
   const onGrid = multi?.has(match.id)
   const pinned = pin?.pinned(match.id)
@@ -136,7 +167,7 @@ function MatchRow({
         onClick={() => onSelect(match)}
         className={`grid min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-medium sm:px-4 compact:px-2.5 compact:py-1.5 compact:text-xs ${
           showLeague ? 'grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]'
-        } ${forecast ? 'basis-full @xl:basis-0' : 'basis-full @md:basis-0'}`}
+        } ${boxes ? 'basis-full @xl:basis-0' : 'basis-full @md:basis-0'}`}
       >
         {showLeague && (
           <img
@@ -177,19 +208,22 @@ function MatchRow({
           <span className="truncate">{match.awayTeam.shortName}</span>
         </span>
       </button>
-      {(forecast || comparable || pin) && (
+      {(quick || comparable || pin) && (
         // On a narrow column the odds and the buttons drop under the teams, on a line of their own, so the names stay readable.
-        <span className={`ml-auto flex items-center gap-1 pr-2.5 ${forecast ? 'pb-2.5 @xl:pb-0' : 'pb-1.5 @md:pb-0'}`}>
-          {forecast && quick && (
+        <span className={`ml-auto flex items-center gap-1 pr-2.5 ${boxes ? 'pb-2.5 @xl:pb-0' : 'pb-1.5 @md:pb-0'}`}>
+          {quick && (
             <QuickOdds
               match={match}
-              forecast={forecast}
               quick={quick}
               slot="w-[52px] compact:w-[46px]"
-              button="min-w-[52px] px-2.5 py-1.5 text-xs compact:min-w-[46px] compact:px-2 compact:py-1 compact:text-[11px]"
+              button="w-[52px] px-1 py-1.5 text-xs compact:w-[46px] compact:py-1 compact:text-[11px]"
             />
           )}
-          {comparable && <CompareButton matchId={match.id} label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`} compare={comparable} />}
+          {comparable ? (
+            <CompareButton matchId={match.id} label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`} compare={comparable} />
+          ) : (
+            quick && <span className={`size-7 shrink-0 ${boxes ? '' : 'hidden @xl:block'}`} />
+          )}
           {multi && (
             <button
               type="button"
@@ -267,7 +301,7 @@ export function MatchCard({
   const header = 'flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-bold tracking-tight compact:px-3 compact:py-1.5'
   // The quick odds' column names right over the rows' odds, while the card is open and any of its matches has them:
   // in the header on a wide column, and on a line of their own under it on a narrow one, where the odds drop too.
-  const columns = !collapsed && quick && matches.some(quick.odds) ? quick.columns : []
+  const columns = !collapsed && quick && matches.some((match) => hasOdds(match, quick.odds(match))) ? quick.columns : []
   // The rows' odds end before the compare and pin buttons, so the names leave their room too.
   const room = pin ? 'mr-16 compact:mr-17' : '' // the compact header's padding is 4 px narrower
   const labels = (className: string) =>

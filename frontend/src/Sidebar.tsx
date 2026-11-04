@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Collapse } from './Collapse'
 import { Chevron, FilterIcon, Flag, StarIcon } from './icons'
-import { TOP_LEAGUES, WORLD, countryLabel, fold, leagueLogo } from './leagues'
+import { TOP_LEAGUES, byCountry, countryLabel, fold, leagueLogo } from './leagues'
 import type { Competition, Team } from './types'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
@@ -44,7 +44,7 @@ function AllLeagues({ groups, league, onLeague }: { groups: Competition[]; leagu
       leagues: !search || fold(countryLabel(country)).includes(search) ? leagues : leagues.filter((g) => fold(g.league_name).includes(search)),
     }))
     .filter(({ leagues }) => leagues.length)
-    .sort((a, b) => Number(b.country === WORLD) - Number(a.country === WORLD) || countryLabel(a.country).localeCompare(countryLabel(b.country), 'es'))
+    .sort((a, b) => byCountry(a.country, b.country))
 
   const toggle = (country: string) =>
     setOpen((current) => {

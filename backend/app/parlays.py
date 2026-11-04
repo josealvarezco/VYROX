@@ -4,18 +4,23 @@ import math
 import os
 import random
 import time
-from datetime import date, datetime, timezone
+from collections.abc import Callable
+from datetime import date, datetime, timedelta, timezone
 
 from pydantic import BaseModel
 
 from app.api_football import colombia_today, fetch_matches, group_by_league
 from app.gemini import Percent, Probabilities, ask_vyrox_ia
-from app.odds import odds_1x2, pick_odd, prob_to_market_odd
+from app.live import LEAGUE_GOALS, chances_at, expected_goals
+from app.momentum import LIVE
+from app.odds import PICK, live_odd, odds_1x2, pick_odd, prob_to_market_odd
 
 FORECAST_TTL = 21600  # 6 hours: one VYROX IA call per date and period
 RETRY_TTL = 300  # never ask VYROX IA again within 5 minutes, even after a failure
 MAX_CANDIDATES = 12  # top leagues first; keeps the single daily prompt short
 LEGS = 5  # the most selections a slip takes
+LIVE_UNTIL = 75  # from this minute a live match no longer goes into a slip
+MIN_MATCHES = 3  # with fewer matches open today, the page points to tomorrow's
 NO_MATCHES = "No hay suficientes partidos por jugar en esta fecha para armar combinadas."
 
 
@@ -51,16 +56,45 @@ def kickoff(match: dict) -> str:
     return datetime.fromisoformat(match["utcDate"]).strftime("%d/%m %H:%M")  # dates carry Colombia's offset
 
 
+def still_open(match: dict, until: int) -> bool:
+    """Whether a match is live before this minute; without a minute there is no telling."""
+    minute = match.get("minute")
+    return match["status"] in LIVE and minute is not None and minute < until
+
+
+def live_forecast(match: dict, forecast: MatchForecast | None) -> MatchForecast:
+    """A live match's chances at its score and minute, from its pre-match forecast or else from an average match."""
+    goals = expected_goals(forecast.result.home, forecast.result.away, forecast.over_2_5) if forecast else LEAGUE_GOALS
+    score = match["score"]["fullTime"]
+    chances = {key: round(value) for key, value in chances_at(goals, match["minute"], score["home"] or 0, score["away"] or 0).items()}
+    return MatchForecast(
+        match_id=match["id"],
+        result=Probabilities(home=chances["home"], draw=chances["draw"], away=chances["away"]),
+        over_1_5=chances["over_1_5"],
+        over_2_5=chances["over_2_5"],
+        btts=chances["btts"],
+    )
+
+
+def prices(match: dict, forecast: MatchForecast) -> tuple[dict[str, float | None], Callable[[float], float | None]]:
+    """A match's 1X2 odds and how it prices a two-way market. In play every side goes by its own chance: the
+    pre-match book's ranges no longer hold once the score moves."""
+    r = forecast.result
+    if match["status"] in LIVE:
+        return {"home": live_odd(r.home), "draw": live_odd(r.draw), "away": live_odd(r.away)}, live_odd
+    return odds_1x2(r.home, r.draw, r.away), prob_to_market_odd
+
+
 def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, str, float | None]]:
     """The likeliest side of each market, as (selection label, probability, market category, market odd)."""
     home, away = match["homeTeam"]["shortName"], match["awayTeam"]["shortName"]
     r = forecast.result
-    prices = odds_1x2(r.home, r.draw, r.away)
+    book, price = prices(match, forecast)
     result = max(
         [
-            (f"{home} - Resultado del partido", r.home, prices["home"]),
-            ("Empate - Resultado del partido", r.draw, prices["draw"]),
-            (f"{away} - Resultado del partido", r.away, prices["away"]),
+            (f"{home} - Resultado del partido", r.home, book["home"]),
+            ("Empate - Resultado del partido", r.draw, book["draw"]),
+            (f"{away} - Resultado del partido", r.away, book["away"]),
         ],
         key=lambda option: option[1],
     )
@@ -68,13 +102,20 @@ def _options(match: dict, forecast: MatchForecast) -> dict[str, tuple[str, int, 
     goals = ("Más de 2.5 - Goles totales", over) if over >= 50 else ("Menos de 2.5 - Goles totales", 100 - over)
     btts = ("Sí - Ambos anotan", forecast.btts) if forecast.btts >= 50 else ("No - Ambos anotan", 100 - forecast.btts)
     two_way = {"over_1_5": ("Más de 1.5 - Goles totales", forecast.over_1_5), "goals": goals, "btts": btts}
-    options = {"result": result} | {category: (label, percent, prob_to_market_odd(percent)) for category, (label, percent) in two_way.items()}
-    return {category: (label, percent, category, pick_odd(odd) if odd else None) for category, (label, percent, odd) in options.items()}
+    options = {"result": result} | {category: (label, percent, price(percent)) for category, (label, percent) in two_way.items()}
+    if match["status"] not in LIVE:
+        return {category: (label, percent, category, pick_odd(odd) if odd else None) for category, (label, percent, odd) in options.items()}
+    # In play a market the score all but settled takes no picks: it gives way to the likeliest open one, and with none
+    # open the match sits out. Under the 1.22 floor a pick is too close to settled to go into a slip.
+    priced = {category: (label, percent, category, odd) for category, (label, percent, odd) in options.items()}
+    fair = [option for option in priced.values() if option[3] and option[3] >= PICK[0]]
+    return {category: option if option in fair else max(fair, key=lambda other: other[1]) for category, option in priced.items()} if fair else {}
 
 
 def _leg(match: dict, selection: tuple[str, int, str, float]) -> dict:
     market, percent, category, odd = selection
     league = match["league"]
+    score = match["score"]["fullTime"]
     return {
         "match_id": match["id"],
         "league_name": league["league_name"],
@@ -83,6 +124,7 @@ def _leg(match: dict, selection: tuple[str, int, str, float]) -> dict:
         "home_team": match["homeTeam"]["shortName"],
         "away_team": match["awayTeam"]["shortName"],
         "kickoff_label": kickoff(match),
+        "live_label": f"En vivo {match['minute']}' · {score['home']} - {score['away']}" if match["status"] in LIVE else None,
         "market_selection": market,
         "market_category": category,  # the bet slip keeps one side per match and category
         "probability": percent,
@@ -102,8 +144,8 @@ def _parlay(key: str, title: str, rows: list[tuple[dict, tuple[str, int, str, fl
     }
 
 
-def _build(candidates: list[dict], forecasts: dict[int, MatchForecast]) -> list[dict]:
-    rows = [(match, _options(match, forecasts[match["id"]])) for match in candidates if match["id"] in forecasts]
+def _build(forecasts: list[tuple[dict, MatchForecast]]) -> list[dict]:
+    rows = [(match, options) for match, forecast in forecasts if (options := _options(match, forecast))]
     if len(rows) < 2:
         return []
     by_safety = sorted(
@@ -147,6 +189,8 @@ async def day_forecasts(day: date, candidates: list[dict]) -> dict[int, MatchFor
     async with _lock:  # concurrent first visits share one VYROX IA call
         asked, forecasts = parlays_cache.get(day, (-math.inf, None))
         age = time.monotonic() - asked
+        if not candidates:  # only live matches left: they read what is cached, and VYROX IA is not asked about them
+            return forecasts
         covered = sum(m["id"] in forecasts for m in candidates) if forecasts else 0
         # Asked again when it expires, or when kickoffs left it without enough of the upcoming matches.
         if age < FORECAST_TTL and (age < RETRY_TTL or covered >= min(len(candidates), LEGS)):
@@ -156,7 +200,8 @@ async def day_forecasts(day: date, candidates: list[dict]) -> dict[int, MatchFor
             for m in candidates
         )
         answer = await ask_vyrox_ia(PROMPT.format(lines=lines), DayForecast, f"parlays {day}")
-        forecasts = {f.match_id: f for f in answer.matches} if answer else None
+        # Added to the earlier ones: a match already live still starts its in-play chances from its own forecast.
+        forecasts = {**(forecasts or {}), **{f.match_id: f for f in answer.matches}} if answer else forecasts
         parlays_cache[day] = (time.monotonic(), forecasts)
         return forecasts
 
@@ -171,17 +216,32 @@ def upcoming(matches: list[dict]) -> list[dict]:
     ][:MAX_CANDIDATES]
 
 
-async def get_parlays(day: date | None = None) -> dict:
-    """The day's three parlays over matches still to be played: VYROX IA's, or flagged simulated ones without it."""
-    day = day or colombia_today()
+def next_date(day: date) -> str | None:
+    """Where the page sends the user once today runs out of matches; another date has nothing to point to."""
+    return (day + timedelta(days=1)).isoformat() if day == colombia_today() else None
+
+
+async def open_rows(day: date) -> tuple[list[tuple[dict, MatchForecast]], bool]:
+    """The matches that take plays now with their forecast, as (rows, simulated): those still to be played and, when
+    a slip's worth does not remain, the live ones before minute 75 at their score. None with fewer than 3 in all."""
     matches, _ = await fetch_matches(day)
     candidates = upcoming(matches)
-    if len(candidates) < 2:
-        return {"parlays": [], "simulated": False, "message": NO_MATCHES}
+    live = [m for group in group_by_league(matches) for m in group["matches"] if still_open(m, LIVE_UNTIL)] if len(candidates) < LEGS else []
+    if len(candidates) + len(live) < MIN_MATCHES:
+        return [], False
+    forecasts = (await day_forecasts(day, candidates) if os.environ.get("GEMINI_API_KEY") else None) or {}
+    simulated = sum(m["id"] in forecasts for m in candidates) < min(len(candidates), 2)
+    if simulated:  # without VYROX IA the section still works, with demo data the interface labels
+        forecasts = {**forecasts, **{m["id"]: simulated_forecast(m["id"]) for m in candidates}}
+    rows = [(m, forecasts[m["id"]]) for m in candidates if m["id"] in forecasts]
+    return rows + [(m, live_forecast(m, forecasts.get(m["id"]))) for m in live], simulated
 
-    forecasts = await day_forecasts(day, candidates) if os.environ.get("GEMINI_API_KEY") else None
-    parlays = _build(candidates, forecasts) if forecasts else []
-    simulated = not parlays  # without VYROX IA the section still works, with demo data the interface labels
-    if simulated:
-        parlays = _build(candidates, {m["id"]: simulated_forecast(m["id"]) for m in candidates})
-    return {"parlays": parlays, "simulated": simulated, "message": None}
+
+async def get_parlays(day: date | None = None) -> dict:
+    """The day's three parlays over the matches open to plays: VYROX IA's, or flagged simulated ones without it."""
+    day = day or colombia_today()
+    rows, simulated = await open_rows(day)
+    parlays = _build(rows)
+    if not parlays:
+        return {"parlays": [], "simulated": False, "message": NO_MATCHES, "next_date": next_date(day)}
+    return {"parlays": parlays, "simulated": simulated, "message": None, "next_date": None}

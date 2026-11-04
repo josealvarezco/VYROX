@@ -30,6 +30,8 @@ export type Match = Partial<Momentum> & {
   round?: string
   venue?: { name: string | null; city: string | null }
   referee?: string | null
+  // A live match before minute 85: each pick priced at the score; a null odd is a suspended side
+  live_picks?: Partial<ForecastMatch['picks']>
 }
 export type Competition = League & { matches: Match[] }
 export type MatchesResponse = { sample: boolean; competitions: Competition[] }
@@ -60,6 +62,7 @@ export type ParlayLeg = {
   home_team: string
   away_team: string
   kickoff_label: string // "28/10 20:05", Colombia time
+  live_label?: string | null // "En vivo 60' · 1 - 0" on a live match, priced at that score
   market_selection: string
   market_category: string // result, over_1_5, goals (2.5) or btts; "recommended" for the Match Center's play
   probability: number
@@ -84,6 +87,7 @@ export type SmartParlay = {
   simulated: boolean
   played: boolean // a day already played: a reference that takes no plays
   message: string | null
+  next_date?: string | null // today ran out of matches: the date to go to
 }
 // GET /api/forecasts: VYROX IA's forecast per match of the date (up to 12), priced like the radar, for the comparator
 // trend: how the page saw VYROX IA move this pick's price during the visit, never a guess
@@ -127,7 +131,7 @@ export type SavedTicket = {
   fromBank: boolean // the stake left the user's bank, so a win pays the return back into it
 }
 // simulated: VYROX IA was unavailable, so the slips are stable demo data
-export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null }
+export type ParlaysResponse = { parlays: Parlay[]; simulated: boolean; message: string | null; next_date?: string | null }
 
 // GET /api/radar: the date's strongest picks per market, from the parlays' VYROX IA forecast
 export type RadarItem = Omit<ParlayLeg, 'odd' | 'popularity_label'> & {

@@ -1,7 +1,25 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { legResult, settle } from './ticketSettlement.ts'
+import { COLUMN_WON, legResult, settle } from './ticketSettlement.ts'
 import type { Match, SavedTicket, TicketLeg } from './types.ts'
+
+test('a quick-odds column wins exactly when its pick would settle as won', () => {
+  const picks = {
+    home: ['result', 'Millonarios - Resultado del partido'],
+    draw: ['result', 'Empate - Resultado del partido'],
+    away: ['result', 'Nacional - Resultado del partido'],
+    over_2_5: ['goals', 'Más de 2.5 - Goles totales'],
+    under_2_5: ['goals', 'Menos de 2.5 - Goles totales'],
+    btts_yes: ['btts', 'Sí - Ambos anotan'],
+    btts_no: ['btts', 'No - Ambos anotan'],
+  } as const
+  for (const [column, [category, selection]] of Object.entries(picks)) {
+    const pick = { match_id: 1, home_team: 'Millonarios', away_team: 'Nacional', kickoff_label: '', market_selection: selection, market_category: category, odd: 2 }
+    for (let home = 0; home <= 6; home++) for (let away = 0; away <= 6; away++) assert.equal(COLUMN_WON[column as keyof typeof picks]?.(home, away), legResult(pick, home, away), `${column} ${home}-${away}`)
+  }
+  // The example of a 1 - 3: the 2, the +2.5 and the Sí.
+  assert.deepEqual(Object.keys(picks).filter((column) => COLUMN_WON[column as keyof typeof picks]?.(1, 3)), ['away', 'over_2_5', 'btts_yes'])
+})
 
 const leg = (match_id: number, market_category: string, market_selection: string): TicketLeg => ({
   match_id,
