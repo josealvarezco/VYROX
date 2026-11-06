@@ -1,17 +1,17 @@
-# Graph Report - VYROX  (2026-11-03)
+# Graph Report - VYROX  (2026-11-06)
 
 ## Corpus Check
-- 90 files · ~63,509 words
+- 90 files · ~63,591 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .example 1, .css 1)
 
 ## Summary
-- 906 nodes · 2480 edges · 45 communities (42 shown, 3 thin omitted)
+- 906 nodes · 2480 edges · 44 communities (41 shown, 3 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 69 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6465e5da`
+- Built from commit: `ccfaf038`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -60,7 +60,6 @@
 - test_bookmakers.py
 - useBetSlip.ts
 - usePinned.ts
-- ThemeToggle.tsx
 
 ## God Nodes (most connected - your core abstractions)
 1. `App()` - 49 edges
@@ -89,7 +88,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (45 total, 3 thin omitted)
+## Communities (44 total, 3 thin omitted)
 
 ### Community 0 - "test_matches.py"
 Cohesion: 0.16
@@ -188,12 +187,12 @@ Cohesion: 0.13
 Nodes (13): group_by_league(), kickoff(), simulated_forecast(), still_open(), upcoming(), _forecast(), forecast_rows(), get_forecasts() (+5 more)
 
 ### Community 30 - "Parlays.tsx"
-Cohesion: 0.12
-Nodes (24): Collapse(), ArrowLeftIcon(), DoubleChevronUpIcon(), RefreshIcon(), choice(), Choices(), Leg(), LEG_COUNTS (+16 more)
+Cohesion: 0.13
+Nodes (23): ArrowLeftIcon(), DoubleChevronUpIcon(), RefreshIcon(), BADGE, choice(), Choices(), Leg(), LEG_COUNTS (+15 more)
 
 ### Community 31 - "icons.tsx"
-Cohesion: 0.15
-Nodes (26): StakeSimulator(), TicketCard(), a11y(), CARD, CardIcon(), CopyIcon(), CrossIcon(), DownloadIcon() (+18 more)
+Cohesion: 0.14
+Nodes (28): StakeSimulator(), TicketCard(), a11y(), CARD, CardIcon(), CopyIcon(), CrossIcon(), DownloadIcon() (+20 more)
 
 ### Community 32 - "test_builder.py"
 Cohesion: 0.31
@@ -216,8 +215,8 @@ Cohesion: 0.07
 Nodes (47): chances_at(), finished(), live_match(), test_a_forecast_keeps_its_chances_at_kickoff(), test_a_goal_moves_the_chances_toward_the_side_that_scored(), test_a_later_forecast_keeps_the_earlier_one_of_matches_already_live(), test_a_live_odd_always_carries_a_margin_and_a_settled_side_has_none(), test_a_slip_never_takes_what_the_score_settled() (+39 more)
 
 ### Community 38 - "Sidebar.tsx"
-Cohesion: 0.23
-Nodes (18): CheckIcon(), Chevron(), FilterIcon(), Flag(), byCountry(), countryLabel(), fold(), LEAD_COUNTRIES (+10 more)
+Cohesion: 0.20
+Nodes (20): Collapse(), CheckIcon(), Chevron(), FilterIcon(), Flag(), byCountry(), countryLabel(), fold() (+12 more)
 
 ### Community 39 - "live.py"
 Cohesion: 0.31
@@ -254,10 +253,6 @@ Nodes (11): settle(), isLeg(), isTicket(), merge(), same(), save(), slipKey(), S
 ### Community 50 - "usePinned.ts"
 Cohesion: 0.70
 Nodes (4): save(), stored(), storedAuto(), usePinned()
-
-### Community 51 - "ThemeToggle.tsx"
-Cohesion: 0.83
-Nodes (3): MoonIcon(), SunIcon(), ThemeToggle()
 
 ## Knowledge Gaps
 - **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
