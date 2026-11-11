@@ -3,6 +3,7 @@ from typing import Literal
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetch_matches, group_by_league
 from app.bookmakers import get_odds
@@ -14,6 +15,9 @@ from app.parlays import get_parlays
 from app.radar import get_forecasts, get_radar, with_live_picks
 
 app = FastAPI(title="VYROX API")
+# The frontend is served from another domain (Vercel) than this API (Render). The API sets no cookies and has no
+# login, so any origin may call it.
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 
 def check_available(day: date | None) -> None:
@@ -22,6 +26,11 @@ def check_available(day: date | None) -> None:
     if day and abs((day - today).days) > DAYS_AVAILABLE:
         first, last = today - timedelta(DAYS_AVAILABLE), today + timedelta(DAYS_AVAILABLE)
         raise HTTPException(status_code=400, detail=f"Solo hay partidos del {first} al {last} (plan gratuito de API-Football).")
+
+
+@app.get("/api/health")
+async def health():
+    return {"status": "ok", "service": "vyrox-api"}  # no upstream call: for the host's health check
 
 
 @app.get("/api/matches")

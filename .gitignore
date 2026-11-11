@@ -1,6 +1,12 @@
 graphify-out/cache/
 backend/.venv/
 .env
+.env.*
+!.env.example
+node_modules/
+dist/
+.venv/
+venv/
 __pycache__/
 .pytest_cache/
 graphify-out/.graphify_*

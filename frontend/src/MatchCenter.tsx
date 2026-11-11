@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './api'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { MarketOdds, PredictionView } from './AiPrediction'
 import { LiveMinute } from './MatchList'
@@ -524,7 +525,7 @@ export function MatchCenter({
 
   useEffect(() => {
     let current = true // drop the answer if the modal closed meanwhile
-    fetch(`/api/matches/${match.id}/details`)
+    fetch(`${API_BASE_URL}/api/matches/${match.id}/details`)
       .then((response) => {
         if (!response.ok) throw new Error(response.statusText)
         return response.json()

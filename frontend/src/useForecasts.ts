@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './api'
 import { useEffect, useRef, useState } from 'react'
 import type { ForecastPick, ForecastsResponse } from './types'
 
@@ -12,7 +13,7 @@ export function useForecasts(date: string) {
   useEffect(() => {
     let current = true // drop answers for a date the user already left
     const load = () =>
-      fetch(`/api/forecasts?date=${date}`)
+      fetch(`${API_BASE_URL}/api/forecasts?date=${date}`)
         .then((response) => (response.ok ? response.json() : null))
         .then((body: ForecastsResponse | null) => {
           if (!current) return

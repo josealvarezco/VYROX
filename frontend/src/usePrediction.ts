@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './api'
 import { useRef, useState } from 'react'
 import type { Match, Prediction } from './types'
 
@@ -11,7 +12,7 @@ export function usePrediction(match: Match, league: string) {
     if (requested.current) return
     requested.current = true
     setState('loading')
-    fetch('/api/predictions', {
+    fetch(`${API_BASE_URL}/api/predictions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

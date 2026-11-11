@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './api'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
 import { Comparator } from './Comparator'
@@ -153,7 +154,7 @@ export default function App() {
   useEffect(() => {
     let current = true // drop answers for a date the user already left
     const load = () =>
-      fetch(`/api/matches?date=${date}`)
+      fetch(`${API_BASE_URL}/api/matches?date=${date}`)
         .then((response) => {
           if (!response.ok) throw new Error(response.statusText)
           return response.json()

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './api'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Thinking } from './AiPrediction'
 import { OddButton } from './BetSlip'
@@ -124,7 +125,7 @@ function ParlayGrid({ date, slip, onSelect, onDate }: Props & { date: string; on
   useEffect(() => {
     let current = true
     const load = () =>
-      fetch(`/api/parlays?date=${date}`)
+      fetch(`${API_BASE_URL}/api/parlays?date=${date}`)
         .then((response) => {
           if (!response.ok) throw new Error(response.statusText)
           return response.json()

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './api'
 import { useState } from 'react'
 import type { MatchOdds } from './types'
 
@@ -9,7 +10,7 @@ export function useMatchOdds(matchId: number, onOdds: (matchId: number, odds: Ma
   const load = () => {
     if (odds || state === 'loading') return
     setState('loading')
-    fetch(`/api/matches/${matchId}/odds`)
+    fetch(`${API_BASE_URL}/api/matches/${matchId}/odds`)
       .then((response) => {
         if (!response.ok) throw new Error(response.statusText)
         return response.json()
