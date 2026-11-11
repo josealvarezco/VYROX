@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './api'
 import { useEffect, useState } from 'react'
 import { Thinking } from './AiPrediction'
 import { OddButton } from './BetSlip'
@@ -84,7 +85,7 @@ function RadarGrid({ date, market, slip, onSelect, compare }: Props & { date: st
   useEffect(() => {
     let current = true
     const load = () =>
-      fetch(`/api/radar?date=${date}`)
+      fetch(`${API_BASE_URL}/api/radar?date=${date}`)
         .then((response) => {
           if (!response.ok) throw new Error(response.statusText)
           return response.json()

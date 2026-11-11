@@ -89,6 +89,11 @@ def expire_cache():
         entry["at"] -= api_football.CACHE_TTL + 1
 
 
+def test_health_answers_without_calling_upstream(upstream):
+    assert TestClient(app).get("/api/health").json() == {"status": "ok", "service": "vyrox-api"}
+    assert upstream["dates"] == []
+
+
 def test_without_key_serves_sample_grouped_by_league(monkeypatch):
     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
 
