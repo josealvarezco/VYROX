@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>VYROX · Anuncio</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* One global clock: every animation's delay is its moment in the video, so render.mjs can pause them all and set the
+   same currentTime on each to draw any frame. Opened in a browser, the page simply plays. */
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #06180e; }
+body { font-family: 'Inter Tight', system-ui, sans-serif; color: #f7f5eb; -webkit-font-smoothing: antialiased; }
+.y { color: #f4d56d; }
+
+.stage { position: absolute; inset: 0; background: linear-gradient(160deg, #06180e 40%, #0e172c); overflow: hidden; }
+.glow { position: absolute; border-radius: 50%; filter: blur(120px); animation: drift 24s linear both; }
+.glow.a { width: 900px; height: 900px; left: -250px; top: -420px; background: rgb(244 213 109 / 0.22); --dx: 380px; --dy: 160px; }
+.glow.b { width: 800px; height: 800px; right: -260px; bottom: -420px; background: rgb(238 118 27 / 0.16); --dx: -420px; --dy: -120px; }
+.grid { position: absolute; inset: 0; background-image: linear-gradient(rgb(247 245 235 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(247 245 235 / 0.035) 1px, transparent 1px); background-size: 96px 96px; mask-image: radial-gradient(ellipse at center, #000 30%, transparent 78%); }
+@keyframes drift { to { transform: translate(var(--dx), var(--dy)); } }
+
+.scene { position: absolute; inset: 0; opacity: 0; padding: 80px 100px; animation: fade-in 0.35s ease both, fade-out 0.35s ease forwards; animation-delay: var(--s), calc(var(--s) + var(--len) - 0.35s); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { to { opacity: 0; } }
+
+.in { animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--s) + var(--d, 0s)); }
+@keyframes rise { from { opacity: 0; transform: translateY(44px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+.pop { animation: pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--s) + var(--d, 0s)); }
+@keyframes pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+
+/* Intro and outro */
+.center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.mark { width: 180px; height: 180px; border-radius: 42px; background: #0d331e; box-shadow: 0 0 0 2px rgb(244 213 109 / 0.35), 0 40px 120px -20px rgb(244 213 109 / 0.45); display: grid; place-items: center; }
+.word { font-size: 190px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-top: 40px; display: flex; }
+.word span { display: inline-block; }
+.tag { font-size: 46px; color: #b8c7b9; margin-top: 18px; }
+.legal { font-size: 24px; color: rgb(184 199 185 / 0.75); margin-top: 54px; }
+
+/* Feature scenes: a short line on one side, a real screenshot on the other */
+.split { display: grid; grid-template-columns: 540px 1fr; gap: 56px; align-items: center; height: 100%; }
+.split.flip { grid-template-columns: 1fr 540px; }
+.kicker { font-size: 26px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: #f4d56d; display: flex; align-items: center; gap: 16px; }
+.kicker::before { content: ''; width: 56px; height: 4px; border-radius: 4px; background: #ee761b; }
+h2 { font-size: 76px; line-height: 1.02; font-weight: 800; letter-spacing: -0.02em; margin-top: 20px; }
+ul { list-style: none; padding: 0; margin-top: 36px; display: grid; gap: 20px; }
+li { display: flex; gap: 18px; align-items: flex-start; font-size: 32px; line-height: 1.28; font-weight: 500; }
+li::before { content: ''; flex: none; width: 40px; height: 40px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%23f4d56d'/%3E%3Cpath d='m7 12.5 3.2 3.2L17 9' fill='none' stroke='%230d331e' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.frame { border-radius: 26px; overflow: hidden; border: 2px solid rgb(247 245 235 / 0.16); background: #06180e; box-shadow: 0 60px 140px -30px rgb(0 0 0 / 0.75), 0 0 0 10px rgb(247 245 235 / 0.03); animation: frame-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--s) + 0.1s); }
+@keyframes frame-in { from { opacity: 0; transform: perspective(1800px) rotateY(-14deg) translateX(120px) scale(0.94); } to { opacity: 1; transform: none; } }
+.flip .frame { animation-name: frame-in-left; }
+@keyframes frame-in-left { from { opacity: 0; transform: perspective(1800px) rotateY(14deg) translateX(-120px) scale(0.94); } to { opacity: 1; transform: none; } }
+.bar { height: 44px; background: #0d331e; display: flex; align-items: center; gap: 10px; padding: 0 20px; border-bottom: 2px solid rgb(247 245 235 / 0.08); }
+.bar i { width: 13px; height: 13px; border-radius: 50%; background: rgb(247 245 235 / 0.22); }
+.view { aspect-ratio: 1440 / 900; overflow: hidden; position: relative; }
+.view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; transform-origin: var(--at, 50% 30%); animation: zoom var(--len) ease-in-out both; animation-delay: var(--s); }
+@keyframes zoom { from { transform: scale(1); } to { transform: scale(var(--z, 1.14)); } }
+/* A second screenshot crossfades over the first partway through the scene. */
+.view img.second { opacity: 0; animation: zoom var(--len) ease-in-out both, fade-in 0.5s ease both; animation-delay: var(--s), calc(var(--s) + var(--swap)); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="grid"></div>
+
+  <!-- Intro -->
+  <section class="scene center" style="--s: 0s; --len: 3s">
+    <div class="mark pop" style="--d: 0.1s">
+      <svg viewBox="0 0 64 64" width="136" height="136"><path fill="#F4D56D" d="M17 16h10l5 8 5-8h10L37 32l10 16H37l-5-8-5 8H17l10-16Z" /></svg>
+    </div>
+    <div class="word">
+      <span class="in" style="--d: 0.4s">V</span><span class="in" style="--d: 0.46s">Y</span><span class="in" style="--d: 0.52s">R</span><span class="in" style="--d: 0.58s">O</span><span class="in y" style="--d: 0.64s">X</span>
+    </div>
+    <p class="tag in" style="--d: 1s">Analítica de fútbol en tiempo real</p>
+  </section>
+
+  <!-- The match list -->
+  <section class="scene" style="--s: 3s; --len: 5s">
+    <div class="split">
+      <div>
+        <div class="kicker in">En vivo</div>
+        <h2 class="in" style="--d: 0.1s">Todo el fútbol del día, <span class="y">al minuto</span>.</h2>
+        <ul>
+          <li class="in" style="--d: 0.9s">Marcadores y cuotas en cada partido</li>
+          <li class="in" style="--d: 1.5s">Arma tu cupón con un toque</li>
+        </ul>
+      </div>
+      <div class="frame">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="view" style="--at: 55% 45%; --swap: 3.3s"><img src="shots/home-dark.png" alt="" /><img class="second" src="shots/home-light.png" alt="" /></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Match Center -->
+  <section class="scene" style="--s: 8s; --len: 4.5s">
+    <div class="split flip">
+      <div class="frame">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="view" style="--at: 50% 70%; --z: 1.2; --swap: 2.7s"><img src="shots/match-alineaciones.png" alt="" /><img class="second" src="shots/match-estadisticas.png" alt="" /></div>
+      </div>
+      <div>
+        <div class="kicker in">Match Center</div>
+        <h2 class="in" style="--d: 0.1s">Cada partido, <span class="y">a fondo</span>.</h2>
+        <ul>
+          <li class="in" style="--d: 0.9s">Cancha táctica y alineaciones</li>
+          <li class="in" style="--d: 1.5s">Estadísticas y presión en vivo</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- VYROX IA -->
+  <section class="scene" style="--s: 12.5s; --len: 4.5s">
+    <div class="split">
+      <div>
+        <div class="kicker in">VYROX IA</div>
+        <h2 class="in" style="--d: 0.1s">Pronósticos <span class="y">con IA</span>.</h2>
+        <ul>
+          <li class="in" style="--d: 0.9s">Las jugadas más probables del día</li>
+          <li class="in" style="--d: 1.5s">Combinadas listas por cuota objetivo</li>
+        </ul>
+      </div>
+      <div class="frame">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="view" style="--at: 55% 55%"><img src="shots/radar.png" alt="" /></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Following the plays -->
+  <section class="scene" style="--s: 17s; --len: 4.5s">
+    <div class="split flip">
+      <div class="frame">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="view" style="--at: 60% 55%; --swap: 2.4s"><img src="shots/multivista.png" alt="" /><img class="second" src="shots/mis-jugadas.png" alt="" style="--at: 88% 45%; --z: 1.3" /></div>
+      </div>
+      <div>
+        <div class="kicker in">Seguimiento</div>
+        <h2 class="in" style="--d: 0.1s">Tus jugadas, <span class="y">bajo control</span>.</h2>
+        <ul>
+          <li class="in" style="--d: 0.9s">Hasta 4 partidos en una pantalla</li>
+          <li class="in" style="--d: 2.5s">Tu bank y tu rendimiento, claros</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Outro: its fade-out starts after the video ends, so the last frame holds the logo -->
+  <section class="scene center" style="--s: 21.5s; --len: 4s">
+    <div class="mark pop" style="--d: 0.1s; width: 150px; height: 150px; border-radius: 36px">
+      <svg viewBox="0 0 64 64" width="112" height="112"><path fill="#F4D56D" d="M17 16h10l5 8 5-8h10L37 32l10 16H37l-5-8-5 8H17l10-16Z" /></svg>
+    </div>
+    <div class="word in" style="--d: 0.3s; font-size: 160px">VYRO<span class="y">X</span></div>
+    <p class="tag in" style="--d: 0.6s">Vive el fútbol con datos.</p>
+    <p class="legal in" style="--d: 1s">Simulación: VYROX no recibe apuestas · +18</p>
+  </section>
+</div>
+<script>
+  const DURATION = 24 // seconds
+  // A frame of the video: every animation paused at the same moment of the global clock.
+  window.seek = (ms) => {
+    for (const animation of document.getAnimations()) {
+      animation.pause()
+      animation.currentTime = ms
+    }
+    return new Promise((done) => requestAnimationFrame(() => done(true)))
+  }
+</script>
+</body>
+</html>
