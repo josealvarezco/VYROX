@@ -1,3 +1,4 @@
+import { m } from 'motion/react'
 import { API_BASE_URL } from './api'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { MarketOdds, PredictionView } from './AiPrediction'
@@ -551,8 +552,16 @@ export function MatchCenter({
   return (
     // A full-screen grid in the top layer: the match card and, on desktop, the bet slip docked to its right,
     // both sharp above the blur. Growing the slip's column from 0 slides the card left.
-    <dialog
+    // The CSS rise-in plays the entrance; leaving goes through onClose (Escape too), so the exit plays before it unmounts.
+    <m.dialog
       ref={dialog}
+      initial={false}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15, ease: [0.333, 0, 0.667, 1] } }}
+      onCancel={(event) => {
+        event.preventDefault()
+        onClose()
+      }}
       onClose={onClose}
       aria-label={`${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`}
       className={`m-0 size-full max-h-none max-w-none grid-cols-[minmax(0,48rem)] items-center justify-center overflow-hidden border-0 bg-transparent p-4 text-ink transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] open:grid ${
@@ -570,7 +579,7 @@ export function MatchCenter({
             </span>
             <button
               type="button"
-              onClick={() => dialog.current?.close()}
+              onClick={onClose}
               className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-3 py-1 font-semibold text-cream/85 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream active:scale-[0.98]"
             >
               Cerrar
@@ -680,6 +689,6 @@ export function MatchCenter({
         </div>
       </div>
       <BetSlip slip={slip} docked />
-    </dialog>
+    </m.dialog>
   )
 }
