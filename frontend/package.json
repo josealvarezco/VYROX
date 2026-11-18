@@ -11,6 +11,7 @@
     "test": "node --test src/ticketSettlement.test.ts src/goals.test.ts src/bankrollAnalytics.test.ts src/matchComparator.test.ts src/bookmakers.test.ts src/sameGameParlay.test.ts src/hedgeCalculator.test.ts src/multiView.test.ts"
   },
   "dependencies": {
+    "lucide-react": "^1.75.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "recharts": "^3.11.0"

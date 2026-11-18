@@ -57,24 +57,39 @@ def test_only_finished_matches_settle():
     assert history.settle(rows, matches) == {1: "won"}
 
 
-def test_the_week_adds_up_from_the_settled_rows():
+def test_the_record_adds_up_from_the_settled_rows():
     rows = [
         row(1, "won", TODAY, 1.5), row(2, "lost", TODAY, 2.0), row(3, "won", TODAY - timedelta(days=1), 2.5),
-        row(4, "won", TODAY - timedelta(days=6), 1.8), row(5, "won", TODAY - timedelta(days=7), 3.0),  # 8 days back: out
+        row(4, "won", TODAY - timedelta(days=3), 1.8), row(5, "won", TODAY - timedelta(days=30), 3.0),  # 31 days back: out
     ]
 
     body = history.summarize(rows, TODAY)
 
-    assert body["kpis"] == {"win_rate": 75, "avg_odd": 1.95, "roi": "+45.0%", "picks": 4}  # (1.5 + 2.5 + 1.8 - 4) / 4
-    assert [d["day"] for d in body["daily_trend"]] == ["Jue", "Vie", "Sáb", "Dom", "Lun", "Mar", "Mié"]
-    assert body["daily_trend"][-1] == {"day": "Mié", "won": 1, "lost": 1} and body["daily_trend"][0] == {"day": "Jue", "won": 1, "lost": 0}
-    assert [hit["date"] for hit in body["recent_hits"]] == ["18/11", "17/11", "12/11"]
+    # One unit per pick: +0.5 - 1 + 1.5 + 0.8 = +1.8 over 4 picks.
+    assert body["kpis"] == {"profit": 1.8, "win_rate": 75, "avg_odd": 1.95, "roi": "+45.0%", "picks": 4}
+    assert [(d["date"], d["day"], d["won"], d["lost"], d["profit"]) for d in body["daily"]] == [
+        ("14/11", "Sáb", 0, 0, 0.0),  # the day before the first settled pick: the curve starts at 0
+        ("15/11", "Dom", 1, 0, 0.8),
+        ("16/11", "Lun", 0, 0, 0.8),
+        ("17/11", "Mar", 1, 0, 2.3),
+        ("18/11", "Mié", 1, 1, 1.8),
+    ]
+    assert body["daily"][-1]["profit"] == body["kpis"]["profit"]
+    assert [hit["date"] for hit in body["recent_hits"]] == ["18/11", "17/11", "15/11"]
+
+
+def test_a_losing_record_runs_below_zero():
+    body = history.summarize([row(1, "lost", TODAY), row(2, "lost", TODAY - timedelta(days=1))], TODAY)
+
+    assert body["kpis"]["profit"] == -2.0 and body["kpis"]["roi"] == "-100.0%"
+    assert [d["profit"] for d in body["daily"]] == [0.0, -1.0, -2.0]
 
 
 def test_no_settled_picks_means_no_kpis_yet():
     body = history.summarize([], TODAY)
 
-    assert body["kpis"] is None and len(body["daily_trend"]) == 7 and body["recent_hits"] == []
+    assert body["kpis"] is None and body["recent_hits"] == []
+    assert body["daily"] == [{"date": "18/11", "day": "Mié", "won": 0, "lost": 0, "profit": 0.0}]
 
 
 @pytest.fixture
@@ -143,7 +158,7 @@ def test_performance_reads_the_real_record(table):
 
     body = TestClient(app).get("/api/performance").json()
 
-    assert body["kpis"] == {"win_rate": 100, "avg_odd": 1.9, "roi": "+90.0%", "picks": 1}  # a pending pick never counts
+    assert body["kpis"] == {"profit": 0.9, "win_rate": 100, "avg_odd": 1.9, "roi": "+90.0%", "picks": 1}  # a pending pick never counts
 
 
 def test_without_supabase_the_record_is_empty(monkeypatch):

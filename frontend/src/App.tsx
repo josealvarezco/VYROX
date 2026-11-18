@@ -7,6 +7,7 @@ import {
   ArrowLeftIcon,
   BellRingIcon,
   CalendarIcon,
+  ChartLineUpIcon,
   Chevron,
   CollapseAllIcon,
   CrossIcon,
@@ -47,7 +48,7 @@ import { playRefereeWhistle } from './whistle'
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
 const REFRESH_MS = 60_000
 // Loaded on its own: its chart library would double the code the match list waits for.
-const PerformanceWidget = lazy(() => import('./PerformanceWidget').then((module) => ({ default: module.PerformanceWidget })))
+const PerformanceView = lazy(() => import('./PerformanceView').then((module) => ({ default: module.PerformanceView })))
 
 // The backend picks matches by Colombia's date, so the date bar uses that day too.
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
@@ -60,7 +61,7 @@ function shiftDay(day: string, offset: number) {
 
 // API-Football's free plan only serves yesterday, today and tomorrow (the backend rejects other dates).
 const DAYS = { [shiftDay(TODAY, -1)]: 'Ayer', [TODAY]: 'Hoy', [shiftDay(TODAY, 1)]: 'Mañana' }
-const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA', 'Partidos Calientes', 'Multivista'] as const
+const FILTERS = ['Todos', 'En vivo', 'Por horario', 'Radar IA', 'Partidos Calientes', 'Multivista', 'Rendimiento IA'] as const
 const ALERT_ICONS = { all: <BellRingIcon />, my_parlays: <TicketSlipIcon />, off: <BellRingIcon muted /> }
 const hot = (match: Match) => match.momentum_status === 'high_voltage' // a live match Momentum IA measured as hot
 // The list's quick odds, one market at a time: each column is a pick of the date's VYROX IA forecast.
@@ -218,7 +219,7 @@ export default function App() {
 
   const pickLeague = (id: number | null) => {
     setLeague(id)
-    if (id !== null && filter === 'Multivista') setFilter('Todos')
+    if (id !== null && (filter === 'Multivista' || filter === 'Rendimiento IA')) setFilter('Todos')
     setShowSidebar(false)
     window.scrollTo({ top: 0 })
   }
@@ -226,7 +227,7 @@ export default function App() {
   const pickTeam = (team: Team) => {
     setQuery(team.shortName)
     setLeague(null)
-    if (filter === 'Multivista') setFilter('Todos')
+    if (filter === 'Multivista' || filter === 'Rendimiento IA') setFilter('Todos')
     setShowSidebar(false)
   }
 
@@ -264,6 +265,7 @@ export default function App() {
   const open = (match: Match) => setSelectedId(match.id)
   const showParlays = data !== null && allGroups.length > 0 && filter === 'Todos' && league === null && !search
   const multiView = filter === 'Multivista'
+  const fullView = multiView || filter === 'Rendimiento IA' // views that take the whole column, with no match list
   const everyMatch = allGroups.flatMap((group) => group.matches)
   const listed = new Set(everyMatch.map((match) => match.id))
   const gridCount = gridIds.filter((id) => listed.has(id)).length
@@ -272,17 +274,17 @@ export default function App() {
     full: gridCount >= SLOTS,
     toggle: (id: number) => setGridIds(toggleSlot(gridIds, id, (other) => listed.has(other))),
   }
-  const quickShown = filter !== 'Radar IA' && !multiView
+  const quickShown = filter !== 'Radar IA' && !fullView
   // Anchored on top: the pinned matches and, with Auto-anclar on, those of the user's plays. With it off the section
   // stays while the list has matches of their plays, so its switch is still at hand.
   const anchored = shown.filter((match) => pins.pinned(match.id) || (pins.auto && mine.has(match.id)))
-  const showAnchored = filter !== 'Radar IA' && !multiView && (anchored.length > 0 || shown.some((match) => mine.has(match.id)))
+  const showAnchored = filter !== 'Radar IA' && !fullView && (anchored.length > 0 || shown.some((match) => mine.has(match.id)))
   const played = (id: number) => [...new Set(myLegs.filter((leg) => leg.match_id === id).map((leg) => leg.market_selection))].join(' · ')
 
   // The center column's sections that fold: the league cards (Radar IA and Por horario have none) and the parlays,
   // with the smart builder inside them.
   const folds = [
-    ...(filter === 'Radar IA' || filter === 'Por horario' || multiView ? [] : groups.map((group) => collapsed.has(group.league_id))),
+    ...(filter === 'Radar IA' || filter === 'Por horario' || fullView ? [] : groups.map((group) => collapsed.has(group.league_id))),
     ...(showParlays ? [!parlaysOpen] : []),
   ]
   const areAllCollapsed = folds.length > 0 && folds.every(Boolean)
@@ -447,7 +449,7 @@ export default function App() {
                 className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
                   filter === name
                     ? 'border-yellow bg-yellow text-forest'
-                    : name === 'Radar IA' || name === 'Multivista'
+                    : name === 'Radar IA' || name === 'Multivista' || name === 'Rendimiento IA'
                       ? 'border-yellow bg-surface text-gold hover:bg-surface-2'
                       : name === 'Partidos Calientes'
                         ? 'border-orange bg-surface text-warn hover:bg-surface-2'
@@ -458,6 +460,7 @@ export default function App() {
                 {name === 'Radar IA' && <RadarIcon />}
                 {name === 'Partidos Calientes' && <FlameIcon />}
                 {name === 'Multivista' && <GridMultiViewIcon />}
+                {name === 'Rendimiento IA' && <ChartLineUpIcon />}
                 {name}
                 {name === 'En vivo' && liveCount > 0 && <span className="font-num opacity-70">{liveCount}</span>}
                 {name === 'Partidos Calientes' && hotCount > 0 && <span className="font-num opacity-70">{hotCount}</span>}
@@ -545,7 +548,7 @@ export default function App() {
           {error && <Message alert>No se pudieron cargar los partidos. Se reintentará en un minuto.</Message>}
           {!data && !error && <Message>Cargando partidos…</Message>}
           {data && allGroups.length === 0 && <Message>No hay partidos en esta fecha.</Message>}
-          {data && allGroups.length > 0 && shown.length === 0 && !multiView && (
+          {data && allGroups.length > 0 && shown.length === 0 && !fullView && (
             <Message>
               {filter === 'Partidos Calientes'
                 ? 'Ningún partido en vivo medido por Momentum IA está caliente ahora. VYROX IA mide la presión de un partido en vivo cada vez que abres su Match Center, y la cartelera la muestra 10 minutos.'
@@ -615,13 +618,8 @@ export default function App() {
               onDate={goTo}
             />
           )}
-          {showParlays && (
-            <Suspense fallback={null}>
-              <PerformanceWidget />
-            </Suspense>
-          )}
 
-          {following.length > 0 && filter !== 'Radar IA' && !multiView && (
+          {following.length > 0 && filter !== 'Radar IA' && !fullView && (
             <MatchCard
               title={
                 <span className="inline-flex items-center gap-1.5 text-gold">
@@ -640,7 +638,11 @@ export default function App() {
             />
           )}
 
-          {multiView
+          {filter === 'Rendimiento IA' ? (
+            <Suspense fallback={null}>
+              <PerformanceView />
+            </Suspense>
+          ) : multiView
             ? data && (
                 <LiveMultiView
                   ids={gridIds}

@@ -146,10 +146,11 @@ export type RadarCategory = { key: 'bankers_1x2' | 'over_2_5' | 'btts_yes' | 'un
 // played: the date has no match left to play, so its picks are a reference that takes no plays
 export type RadarResponse = { categories: RadarCategory[]; simulated: boolean; played: boolean; message: string | null }
 
-// GET /api/performance: VYROX IA's real record of the last 7 days, from the predictions saved in Supabase
+// GET /api/performance: VYROX IA's real record of the last 30 days, from the predictions saved in Supabase, at one
+// unit per pick
 export type Performance = {
-  kpis: { win_rate: number; avg_odd: number; roi: string; picks: number } | null // null until a pick is settled
-  daily_trend: { day: string; won: number; lost: number }[]
+  kpis: { profit: number; win_rate: number; avg_odd: number; roi: string; picks: number } | null // null until a pick is settled
+  daily: { date: string; day: string; won: number; lost: number; profit: number }[] // profit: running net, in units
   recent_hits: { match: string; market: string; odd: number; date: string }[]
 }
 
