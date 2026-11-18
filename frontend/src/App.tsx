@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './api'
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
 import { Comparator } from './Comparator'
 import { GoalToasts } from './GoalToasts'
@@ -46,6 +46,8 @@ import { playRefereeWhistle } from './whistle'
 
 // Cheap: the backend answers from its cache, so polling never spends API-Football quota.
 const REFRESH_MS = 60_000
+// Loaded on its own: its chart library would double the code the match list waits for.
+const PerformanceWidget = lazy(() => import('./PerformanceWidget').then((module) => ({ default: module.PerformanceWidget })))
 
 // The backend picks matches by Colombia's date, so the date bar uses that day too.
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
@@ -612,6 +614,11 @@ export default function App() {
               onToggle={() => setParlaysOpen(!parlaysOpen)}
               onDate={goTo}
             />
+          )}
+          {showParlays && (
+            <Suspense fallback={null}>
+              <PerformanceWidget />
+            </Suspense>
           )}
 
           {following.length > 0 && filter !== 'Radar IA' && !multiView && (
