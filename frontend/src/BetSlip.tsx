@@ -1,9 +1,12 @@
+import { m } from 'motion/react'
 import { useState, type ReactNode } from 'react'
 import { BankrollAnalytics } from './Bankroll'
 import { CheckIcon, Chevron, CrossIcon, LayersCombineIcon, ShareIcon, ShieldCheckLockIcon, StopwatchIcon, TicketSlipIcon, TrashIcon } from './icons'
 import { STAKES, pesos, signed } from './money'
 import { bestHouse } from './bookmakers'
 import { calculateHedge, getOppositeMarket, pickToCover, suggestedHedgeOdd } from './hedgeCalculator'
+import { Glide } from './Glide'
+import { tap } from './motion'
 import { ShareButton } from './ShareButton'
 import { byMatch, matchOdd, totalOdd } from './sameGameParlay'
 import { playCard } from './shareCard'
@@ -49,20 +52,22 @@ export function OddButton({ pick, slip, className, children, trend, live = false
   const picked = slip.has(pick)
   const moved = trend === 'up' ? ', subió' : trend === 'down' ? ', bajó' : ''
   return (
-    <button
+    <m.button
+      {...tap}
+      whileHover={{ y: -2 }}
       type="button"
       onClick={() => slip.toggle(pick)}
       aria-pressed={picked}
       aria-label={`${picked ? 'Quitar del' : 'Agregar al'} cupón: ${pick.market_selection}, cuota ${live ? 'en vivo ' : ''}${pick.odd.toFixed(2)}${moved}`}
       title={live ? 'Cuota en vivo, estimada por el marcador y el minuto' : undefined}
-      className={`relative cursor-pointer rounded-xl border font-num font-bold transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-95 ${
+      className={`relative cursor-pointer rounded-xl border font-num font-bold transition-[color,background-color,border-color,box-shadow] duration-200 ${
         picked ? 'border-yellow bg-yellow text-forest shadow-[0_0_14px_rgb(244_213_109/0.6)] ring-2 ring-yellow/40' : 'border-line bg-surface-2 text-ink hover:border-yellow'
       } ${className}`}
     >
       <TrendCorner trend={trend} />
       {live && <span aria-hidden="true" className="absolute top-1 left-1 size-1 animate-pulse rounded-full bg-win" />}
       {children}
-    </button>
+    </m.button>
   )
 }
 
@@ -211,15 +216,16 @@ export function StakeSimulator({
       {onRegister && (
         <>
           <div className="flex gap-2">
-            <button
+            <m.button
+              {...tap}
               type="button"
               onClick={() => onRegister(amount)}
               disabled={!amount || short}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-yellow py-2.5 font-bold text-forest transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-6px_rgb(244_213_109/0.7)] active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-yellow py-2.5 font-bold text-forest transition-[box-shadow,opacity] duration-200 hover:shadow-[0_6px_16px_-6px_rgb(244_213_109/0.7)] disabled:opacity-50 disabled:hover:shadow-none"
             >
               <TicketSlipIcon className="size-4" />
               Registrar Jugada
-            </button>
+            </m.button>
             <ShareButton
               draw={() => playCard(slip.legs, odd, amount, Math.round(amount * odd))}
               filename="vyrox-jugada-cupon.png" // not registered yet, so no play id
@@ -589,7 +595,7 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
         {slip.flash > 0 && <span key={slip.flash} aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 animate-flash rounded-[inherit]" />}
         <header className="hero flex shrink-0 items-center gap-2 px-3 py-2.5">
           <TicketSlipIcon className="size-5 text-yellow" />
-          <div role="tablist" aria-label="Cupón de Apuestas VYROX" className="flex min-w-0 gap-1">
+          <div role="tablist" aria-label="Cupón de Apuestas VYROX" className="isolate flex min-w-0 gap-1">
             {tabs.map(([view, label]) => (
               // The slip's pill remounts on every new count, so it bounces to confirm a pick went in or out.
               <button
@@ -598,10 +604,11 @@ export function BetSlip({ slip, docked = false, date }: { slip: Slip; docked?: b
                 role="tab"
                 aria-selected={slip.view === view}
                 onClick={() => slip.setView(view)}
-                className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-all duration-200 ease-out active:scale-[0.98] ${
-                  slip.view === view ? 'bg-yellow text-forest' : 'text-cream/80 hover:bg-cream/10 hover:text-cream'
+                className={`relative cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-colors duration-200 ${
+                  slip.view === view ? 'text-forest' : 'text-cream/80 hover:bg-cream/10 hover:text-cream'
                 } ${view === 'slip' ? 'animate-bump' : ''}`}
               >
+                {slip.view === view && <Glide id="slip-tab" />}
                 {label}
               </button>
             ))}

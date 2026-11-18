@@ -1,6 +1,8 @@
+import { AnimatePresence, m } from 'motion/react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { CheckIcon, Chevron, FilterIcon } from './icons'
 import { fold } from './leagues'
+import { popIn } from './motion'
 
 export type DropdownOption<T> = {
   value: T
@@ -121,11 +123,16 @@ export function VyroxDropdown<T extends string | number>({
         <Chevron direction={open ? 'up' : 'down'} className={`ml-auto opacity-70 ${chevron}`} />
       </button>
 
+      <AnimatePresence>
       {place && (
-        <div
+        <m.div
+          variants={popIn}
+          initial="hidden"
+          animate="shown"
+          exit="gone"
           onKeyDown={onKey}
-          style={place}
-          className="fixed z-50 max-w-[calc(100vw-2rem)] animate-tab-in rounded-2xl border border-menu-line bg-menu/95 p-1.5 text-ink shadow-2xl backdrop-blur-md"
+          style={{ ...place, transformOrigin: 'top' }}
+          className="fixed z-50 max-w-[calc(100vw-2rem)] rounded-2xl border border-menu-line bg-menu/95 p-1.5 text-ink shadow-2xl backdrop-blur-md"
         >
           {searchable && (
             <label className="mb-1.5 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm">
@@ -187,8 +194,9 @@ export function VyroxDropdown<T extends string | number>({
             })}
             {!shown.length && <p className="px-3.5 py-2.5 text-sm text-muted">Nada coincide con tu búsqueda.</p>}
           </div>
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,7 +1,9 @@
 import { API_BASE_URL } from './api'
+import { AnimatePresence, m } from 'motion/react'
 import { Suspense, lazy, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { BetSlip } from './BetSlip'
 import { Comparator } from './Comparator'
+import { Glide } from './Glide'
 import { GoalToasts } from './GoalToasts'
 import {
   ArrowLeftIcon,
@@ -28,6 +30,7 @@ import { TOP_LEAGUES, countryLabel, fold } from './leagues'
 import { MatchCard, type Quick } from './MatchList'
 import { LiveMultiView } from './LiveMultiView'
 import { MatchCenter } from './MatchCenter'
+import { cardIn } from './motion'
 import { SLOTS, toggleSlot } from './multiView'
 import { pesos } from './money'
 import { Parlays, Simulated } from './Parlays'
@@ -299,17 +302,18 @@ export default function App() {
     }
   }
   const marketPicker = (
-    <div role="group" aria-label="Mercado de las cuotas rápidas" className="flex gap-0.5 rounded-full border border-line bg-surface p-0.5">
+    <div role="group" aria-label="Mercado de las cuotas rápidas" className="isolate flex gap-0.5 rounded-full border border-line bg-surface p-0.5">
       {Object.entries(QUICK_MARKETS).map(([value, { name }]) => (
         <button
           key={value}
           type="button"
           onClick={() => setMarket(value as QuickMarket)}
           aria-pressed={market === value}
-          className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-all duration-200 ease-out ${
-            market === value ? 'bg-yellow text-forest' : 'text-muted hover:text-ink'
+          className={`relative cursor-pointer rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap transition-colors duration-200 ${
+            market === value ? 'text-forest' : 'text-muted hover:text-ink'
           }`}
         >
+          {market === value && <Glide id="quick-market" />}
           {name}
         </button>
       ))}
@@ -402,7 +406,7 @@ export default function App() {
               </span>
               <span className="block text-sm text-muted">{longDate(date)}</span>
             </p>
-            <div className="flex items-center gap-1.5">
+            <div className="isolate flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => goTo(shiftDay(date, -1))}
@@ -419,10 +423,11 @@ export default function App() {
                   onClick={() => goTo(day)}
                   aria-pressed={day === date}
                   aria-label={`${label}, ${longDate(day)}`}
-                  className={`flex w-14 cursor-pointer flex-col items-center rounded-2xl py-2 compact:py-1 transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
-                    day === date ? 'bg-yellow text-forest' : 'bg-chip text-cream hover:opacity-85'
+                  className={`relative flex w-14 cursor-pointer flex-col items-center rounded-2xl py-2 compact:py-1 transition-colors duration-200 ${
+                    day === date ? 'text-forest' : 'bg-chip text-cream hover:opacity-85'
                   }`}
                 >
+                  {day === date && <Glide id="day" radius={16} />}
                   <span className="font-num text-2xl leading-none font-bold compact:text-base">{day.slice(8)}</span>
                   <span className="mt-1 text-[11px] font-bold uppercase compact:mt-0 compact:text-[10px]">{shortWeekday(day)}</span>
                 </button>
@@ -439,16 +444,16 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="isolate flex flex-wrap items-center gap-1.5">
             {FILTERS.map((name) => (
               <button
                 key={name}
                 type="button"
                 onClick={() => setFilter(name)}
                 aria-pressed={filter === name}
-                className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${
+                className={`relative flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors duration-200 ${
                   filter === name
-                    ? 'border-yellow bg-yellow text-forest'
+                    ? 'border-yellow text-forest'
                     : name === 'Radar IA' || name === 'Multivista' || name === 'Rendimiento IA'
                       ? 'border-yellow bg-surface text-gold hover:bg-surface-2'
                       : name === 'Partidos Calientes'
@@ -456,6 +461,7 @@ export default function App() {
                         : 'border-line bg-surface text-ink hover:bg-surface-2'
                 }`}
               >
+                {filter === name && <Glide id="filter" />}
                 {name === 'En vivo' && <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-orange" />}
                 {name === 'Radar IA' && <RadarIcon />}
                 {name === 'Partidos Calientes' && <FlameIcon />}
@@ -638,6 +644,7 @@ export default function App() {
             />
           )}
 
+          <m.div key={filter} variants={cardIn} initial="hidden" animate="shown" className={compact ? 'space-y-2' : 'space-y-4'}>
           {filter === 'Rendimiento IA' ? (
             <Suspense fallback={null}>
               <PerformanceView />
@@ -695,12 +702,15 @@ export default function App() {
                   multi={multi}
                 />
               ))}
+          </m.div>
         </main>
 
         {/* With a match open, the Match Center docks the slip itself, above its blur. */}
         {!selected && !comparing && <BetSlip slip={slip} date={date} />}
       </div>
 
+      {/* Kept on screen while they close, so their exit can play. */}
+      <AnimatePresence>
       {selected && (
         <MatchCenter
           key={selected.match.id}
@@ -712,6 +722,7 @@ export default function App() {
           slip={slip}
         />
       )}
+      </AnimatePresence>
       {firstPick && !comparing && (
         <div
           role="status"
@@ -739,6 +750,7 @@ export default function App() {
           </button>
         </div>
       )}
+      <AnimatePresence>
       {comparing && forecasts && (
         <Comparator
           matches={forecasts.matches}
@@ -752,6 +764,7 @@ export default function App() {
           slip={slip}
         />
       )}
+      </AnimatePresence>
       <GoalToasts
         alerts={goalAlerts.alerts}
         tickets={slip.tickets}

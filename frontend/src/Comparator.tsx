@@ -1,3 +1,4 @@
+import { m } from 'motion/react'
 import { useEffect, useRef } from 'react'
 import { BetSlip, OddButton } from './BetSlip'
 import { CrossIcon, DoubleChevronRightIcon, ScaleCompareIcon, SparklesIcon } from './icons'
@@ -110,8 +111,16 @@ export function Comparator({
   const choose = (index: number, id: number) => onChange(index ? [ids[0], id] : [id, ids[1]])
 
   return (
-    <dialog
+    // The CSS rise-in plays the entrance; leaving goes through onClose (Escape too), so the exit plays before it unmounts.
+    <m.dialog
       ref={dialog}
+      initial={false}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15, ease: [0.333, 0, 0.667, 1] } }}
+      onCancel={(event) => {
+        event.preventDefault()
+        onClose()
+      }}
       onClose={onClose}
       aria-label="Comparador ¿A cuál le entro?"
       className={`m-0 size-full max-h-none max-w-none grid-cols-[minmax(0,48rem)] items-center justify-center overflow-hidden border-0 bg-transparent p-4 text-ink transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] open:grid ${
@@ -129,7 +138,7 @@ export function Comparator({
           </div>
           <button
             type="button"
-            onClick={() => dialog.current?.close()}
+            onClick={onClose}
             className="ml-auto inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold text-cream/85 transition-all duration-200 ease-out hover:bg-cream/10 hover:text-cream active:scale-[0.98]"
           >
             Cerrar
@@ -239,6 +248,6 @@ export function Comparator({
         </div>
       </div>
       <BetSlip slip={slip} docked />
-    </dialog>
+    </m.dialog>
   )
 }
