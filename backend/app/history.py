@@ -18,6 +18,7 @@ OUTCOME = {
     "btts_yes": lambda home, away: home > 0 and away > 0,
 }
 RECORD_EVERY = 600  # seconds: the radar's picks only change when its forecast does
+WINDOW = 30  # days of record the Rendimiento IA view charts
 _recorded_at = -float("inf")
 
 
@@ -88,30 +89,42 @@ async def resolve_pending() -> dict:
     return {"resolved": resolved, "pending": len(rows) - resolved - unreachable, "unreachable": unreachable}
 
 
+def net(row: dict) -> float:
+    """What a settled pick made, in units, at a stake of one unit: its odd less the stake, or the stake lost."""
+    return float(row["odd"]) - 1 if row["status"] == "won" else -1.0
+
+
 def summarize(rows: list[dict], today: date) -> dict:
-    """The record of the 7 days up to today from its settled rows: KPIs at a flat stake, each day and the last hits."""
-    days = [today - timedelta(days=back) for back in range(6, -1, -1)]
-    rows = [row for row in rows if row["date"] >= days[0].isoformat()]
+    """The record of the last 30 days from its settled rows: KPIs at a flat stake of one unit, the running net profit
+    day by day (from the day before the first settled pick, at 0) and the last hits."""
+    rows = [row for row in rows if row["date"] >= (today - timedelta(days=WINDOW - 1)).isoformat()]
     won = [row for row in rows if row["status"] == "won"]
     kpis = None
     if rows:
-        roi = (sum(float(row["odd"]) for row in won) - len(rows)) / len(rows) * 100
+        profit = sum(net(row) for row in rows)
         kpis = {
+            "profit": round(profit, 2),  # units
             "win_rate": round(100 * len(won) / len(rows)),
             "avg_odd": round(sum(float(row["odd"]) for row in rows) / len(rows), 2),
-            "roi": f"{roi:+.1f}%",
+            "roi": f"{profit / len(rows) * 100:+.1f}%",
             "picks": len(rows),
         }
+    start = date.fromisoformat(min(row["date"] for row in rows)) - timedelta(days=1) if rows else today
+    daily, running = [], 0.0
+    for back in range((today - start).days, -1, -1):
+        day = today - timedelta(days=back)
+        of_day = [row for row in rows if row["date"] == day.isoformat()]
+        running += sum(net(row) for row in of_day)
+        daily.append({
+            "date": day.strftime("%d/%m"),
+            "day": DAYS[day.weekday()],
+            "won": sum(1 for row in of_day if row["status"] == "won"),
+            "lost": sum(1 for row in of_day if row["status"] == "lost"),
+            "profit": round(running, 2),  # running net profit up to this day, in units
+        })
     return {
         "kpis": kpis,  # None until a pick is settled
-        "daily_trend": [
-            {
-                "day": DAYS[day.weekday()],
-                "won": sum(1 for row in won if row["date"] == day.isoformat()),
-                "lost": sum(1 for row in rows if row["status"] == "lost" and row["date"] == day.isoformat()),
-            }
-            for day in days
-        ],
+        "daily": daily,
         "recent_hits": [
             {"match": row["teams"], "market": row["prediction"], "odd": float(row["odd"]), "date": date.fromisoformat(row["date"]).strftime("%d/%m")}
             for row in sorted(won, key=lambda row: (row["date"], row["id"]), reverse=True)[:3]
@@ -121,4 +134,6 @@ def summarize(rows: list[dict], today: date) -> dict:
 
 async def get_performance() -> dict:
     today = colombia_today()
-    return summarize(await db.settled_since(today - timedelta(days=6)), today)
+    # shortcut: Supabase answers up to 1000 rows per query, about 33 settled picks a day for 30 days; page the query
+    # if the radar ever saves more
+    return summarize(await db.settled_since(today - timedelta(days=WINDOW - 1)), today)
