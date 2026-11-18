@@ -17,3 +17,6 @@ create index predictions_status_date on public.predictions (status, date);
 
 -- No policies: only the backend's service_role key, which bypasses row level security, reads and writes the table.
 alter table public.predictions enable row level security;
+
+-- New Supabase projects give API roles no privileges on tables made in SQL: the backend's role needs these.
+grant select, insert, update on public.predictions to service_role;
