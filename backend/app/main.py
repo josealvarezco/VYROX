@@ -12,6 +12,7 @@ from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
 from app.momentum import with_momentum
 from app.parlays import get_parlays
+from app.performance import get_performance
 from app.radar import get_forecasts, get_radar, with_live_picks
 
 app = FastAPI(title="VYROX API")
@@ -31,6 +32,11 @@ def check_available(day: date | None) -> None:
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "vyrox-api"}  # no upstream call: for the host's health check
+
+
+@app.get("/api/performance")
+async def performance():
+    return get_performance(colombia_today())  # demo numbers: VYROX keeps no history to measure
 
 
 @app.get("/api/matches")

@@ -146,6 +146,14 @@ export type RadarCategory = { key: 'bankers_1x2' | 'over_2_5' | 'btts_yes' | 'un
 // played: the date has no match left to play, so its picks are a reference that takes no plays
 export type RadarResponse = { categories: RadarCategory[]; simulated: boolean; played: boolean; message: string | null }
 
+// GET /api/performance: demo numbers (simulated), since VYROX keeps no history to measure VYROX IA's real record
+export type Performance = {
+  simulated: boolean
+  kpis: { win_rate: number; avg_odd: number; roi: string }
+  daily_trend: { day: string; won: number; lost: number }[]
+  recent_hits: { match: string; market: string; odd: number; date: string }[]
+}
+
 // GET /api/matches/{id}/details
 export type MatchEvent = { minute: string; team: Side } & (
   | { type: 'goal'; player: string; assist: string | null; detail: string | null }
