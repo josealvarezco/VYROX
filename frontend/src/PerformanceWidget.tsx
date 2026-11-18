@@ -4,8 +4,8 @@ import { API_BASE_URL } from './api'
 import { ChartLineUpIcon, CheckIcon } from './icons'
 import type { Performance } from './types'
 
-// Rendimiento IA: a week of demo numbers, labeled as such. VYROX keeps no history, so VYROX IA's real record cannot
-// be measured, and these numbers must never read as it.
+// Rendimiento IA: VYROX IA's real record of the last 7 days, from its Radar IA picks saved before kickoff and settled
+// with the final scores.
 export function PerformanceWidget() {
   const [data, setData] = useState<Performance | null>(null)
 
@@ -16,9 +16,9 @@ export function PerformanceWidget() {
       .catch(() => setData(null))
   }, [])
 
-  if (!data) return null
+  if (!data) return null // no history configured, or Supabase did not answer
   const { kpis, daily_trend, recent_hits } = data
-  const stats = [
+  const stats = !kpis ? [] : [
     ['Win Rate', `${kpis.win_rate}%`, 'text-yellow'],
     ['Cuota media', kpis.avg_odd.toFixed(2), 'text-cream'],
     ['ROI', kpis.roi, kpis.roi.startsWith('-') ? 'text-orange' : 'text-cream'],
@@ -31,13 +31,19 @@ export function PerformanceWidget() {
           <ChartLineUpIcon className="size-4 text-yellow" />
           RENDIMIENTO IA - ÚLTIMOS 7 DÍAS
         </h2>
-        {data.simulated && (
-          <span className="ml-auto rounded-full border border-orange/60 bg-orange/15 px-2.5 py-0.5 text-[11px] font-semibold text-peach">
-            Datos de demostración · no es el historial real de VYROX IA
+        {kpis && (
+          <span className="ml-auto text-[11px] text-cream/60">
+            <span className="font-num font-semibold text-cream">{kpis.picks}</span> pronósticos del Radar IA ya resueltos
           </span>
         )}
       </div>
 
+      {!kpis ? (
+        <p className="text-sm text-cream/70">
+          Aún no hay pronósticos resueltos. El historial se arma solo con los pronósticos del Radar IA de cada día, guardados
+          antes del partido y verificados con el marcador final.
+        </p>
+      ) : (
       <div className="grid gap-6 md:grid-cols-2">
         <div>
           <dl className="grid grid-cols-3 gap-3">
@@ -90,6 +96,7 @@ export function PerformanceWidget() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      )}
     </section>
   )
 }

@@ -1,8 +1,11 @@
+import logging
+import os
+import secrets
 from datetime import date, timedelta
 from typing import Literal
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api_football import DAYS_AVAILABLE, UpstreamError, colombia_today, fetch_matches, group_by_league
@@ -12,7 +15,7 @@ from app.details import MatchNotFound, get_details
 from app.gemini import MatchInfo, predict
 from app.momentum import with_momentum
 from app.parlays import get_parlays
-from app.performance import get_performance
+from app.history import get_performance, record_today, resolve_pending
 from app.radar import get_forecasts, get_radar, with_live_picks
 
 app = FastAPI(title="VYROX API")
@@ -36,7 +39,25 @@ async def health():
 
 @app.get("/api/performance")
 async def performance():
-    return get_performance(colombia_today())  # demo numbers: VYROX keeps no history to measure
+    try:
+        return await get_performance()
+    except Exception as error:  # Supabase down or misconfigured: the card hides itself
+        logging.getLogger(__name__).warning("Could not read the predictions: %r", error)
+        raise HTTPException(status_code=502, detail="No se pudo consultar el historial de pronósticos")
+
+
+@app.post("/api/admin/resolve-yesterday")
+async def resolve_yesterday(authorization: str = Header("")):
+    """Settles the pending picks with the final scores; for a daily cron, with `Authorization: Bearer <ADMIN_TOKEN>`."""
+    token = os.environ.get("ADMIN_TOKEN", "")
+    if not token:
+        raise HTTPException(status_code=503, detail="ADMIN_TOKEN no está configurado")
+    if not secrets.compare_digest(authorization.encode(), f"Bearer {token}".encode()):
+        raise HTTPException(status_code=401, detail="Token inválido")
+    try:
+        return await resolve_pending()
+    except (httpx.HTTPError, UpstreamError) as error:
+        raise HTTPException(status_code=502, detail=f"No se pudo consultar API-Football: {error}")
 
 
 @app.get("/api/matches")
@@ -92,8 +113,10 @@ async def parlay_builder(
 
 
 @app.get("/api/forecasts")
-async def forecasts(day: date | None = Query(None, alias="date")):
+async def forecasts(background: BackgroundTasks, day: date | None = Query(None, alias="date")):
     check_available(day)
+    if (day or colombia_today()) == colombia_today():
+        background.add_task(record_today)  # every visit asks for today's forecast: today's radar picks get saved
     try:
         return await get_forecasts(day)
     except (httpx.HTTPError, UpstreamError) as error:
